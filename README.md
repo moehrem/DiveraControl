@@ -1,10 +1,10 @@
 # DiveraControl
 
---
+---
 
 **DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Ausserdem fehlen noch ein paar geplante Funktionen. Falls Fehler gefunden werden oder Funktionen gewünscht sind, erstellt bitte einen Issue. Vielen Dank!**
 
---
+---
 
 **DiveraControl** ist eine Integration von Divera 24/7 in den HomeAssistant. Ziel dieser Integration ist es, einen umfangreichen Datenaustausch mit Divera 24/7 zu ermöglichen.
 
@@ -41,7 +41,7 @@ Die Abfragen erfolgen in einem regelmäßigen Turnus, der bei der Einrichtung de
 - Berechtigungen
 
 ### Datenübergabe
-Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in HomeAssistant Services implementiert. Umgesetzt sind folgende Endpunkte:
+Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in HomeAssistant entsprechende Services implementiert. Umgesetzt sind folgende Endpunkte:
 - Nutzerstatus (erweitert und einfach)
 - Alarmerstellung
 - Alarmänderung
