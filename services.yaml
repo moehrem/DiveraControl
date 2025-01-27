@@ -1,0 +1,428 @@
+post_user_status_advanced:
+  name: Nutzerstatus setzen, erweitert
+  description: Aktualisiert den Nutzerstatus in Divera 24/7. Kann keinen Status für denselben Nutzer unterschiedlicher Einheiten sezten!
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    id:
+      name: Status-ID
+      description: Die ID des neuen Status. Zu finden in den Attributen des Statussensors.
+      required: true
+      example: 67890
+    vehicle:
+      name: Fahrzeug-ID
+      description: (Optional) Die ID des Fahrzeugs, das dem Nutzer zugewiesen werden soll. Zu finden in den Attributen des Fahrzeugsensors. Erlischt bei erneutem Statuswechsel.
+      required: false
+      example: 13467
+    note:
+      name: Notiz
+      description: (Optional) Freitext zur Statusmeldung. Erlischt bei erneutem Statuswechsel.
+      required: false
+      example: "Komme mit dem Fahrrad"
+    reset_date:
+      name: Reset-Datum
+      description: (Optional) Zeitpunkt als UNIX-Zeitstempel, an dem der Status zurückgesetzt werden soll.
+      required: false
+      example: 1735562283
+    reset_to:
+      name: Zurücksetzen auf
+      description: (Optional) Status-ID, auf die zurückgesetzt werden soll.
+      required: false
+      example: 13468
+    alarm_skip:
+      name: Alarm überspringen
+      description: (Optional) Statusänderung ignorieren wenn gerade ein Einsatz anliegt.
+      required: false
+      example: false
+    status_skip_statusplan:
+      name: Statusplan ignorieren
+      description: (Optional) Alle Termine im Zeitraum überschreiben.
+      required: false
+      example: false
+    status_skip_geofence:
+      name: Geofence ignorieren
+      description: (Optional) Alle Geofences im Zeitraum ignorieren.
+      required: false
+      example: false
+
+
+post_user_status_simple:
+  name: Nutzerstatus setzen, einfach
+  description: Aktualisiert den Nutzerstatus in Divera 24/7. Setzt den Status je Einheit, kann jedoch keine weiteren Details übergeben.
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    status_id:
+      name: Status-ID
+      description: Die ID des neuen Status. Zu finden in den Attributen des Statussensors.
+      required: true
+      example: 67890
+
+
+post_vehicle_status:
+  name: Fahrzeugstatus und -daten setzen
+  description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    vehicle_id:
+      name: Fahrzeug-ID
+      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
+      required: true
+      example: 123456
+    status:
+      name: Status
+      description: (Optional) Reguläre Nummer des Status 0 bis 9 entsprechen dem bekannten Status (0 = Notruf, 1 = Einsatzbereit über Funk, 2 = Einsatzbereit auf Wache, 3 = Einsatz übernommen, 4 = Einsatzstelle an, 5 = Sprechwunsch, 6 = Nicht einsatzbereit, 7 = Patient aufgenommen, 8 = Am Transportziel, 9 = Sonstiger Status nach örtlicher Verwendung)
+      required: false
+      example: 123456
+    status_id:
+      name: Status-ID
+      description: (Optional) 1 bis 9 entsprechen dem jeweiligen FMS-Status (z.B. ID 5 = 'Status 5 - Sprechwunsch', ID 10 bedeutet 'Status 0' (Notruf), alternativ zu 'status'
+      required: false
+      example: 67890
+    status_note:
+      name: Status-Freitext
+      description: (Optional) Freitext-Rückmeldung
+      required: false
+      example: "Stärke 1/8"
+    lat:
+      name: Breitengrad
+      description: (Optional) Breitengrad
+      required: false
+      example: 51.2584996
+    lng:
+      name: Längengrad
+      description: (Optional) Längengrad
+      required: false
+      example: 7.2309561
+
+
+post_alarm:
+  name: Alarm erstellen
+  description: Erstellt einen neuen Alarm in Divera 24/7.
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    title:
+      name: Stichwort
+      description: Alarmstichwort
+      required: true
+      example: FEU
+    notification_type:
+      name: Empfänger
+      description: Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
+      required: true
+      example: 2
+    foreign_id:
+      name: Einsatznummer/Fremdschlüssel
+      description: (Optional) Eine frei wählbare optinale Einsatznummer.
+      required: false
+      example: 2025-123
+    priority:
+      name: Sonderrechte
+      description: (Optional) Freigabe für den Einsatz von Sonderrechten.
+      required: false
+      example: false
+    text:
+      name: Meldung
+      description: (Optional) Zusatztext zur Alarmierung
+      required: false
+      example: "Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"
+    address:
+      name: Adresse
+      description: (Optional) Einsatzort. Damit die Adresse im Kartenplugin des Dachboards korrekt angezeigt wird, muss sie vollständig mit Strasse, PLZ, Ort und Land angegeben werden.
+      required: false
+      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
+    lat:
+      name: Breitengrad
+      description: (Optional) Breitengrad
+      required: false
+      example: 51.2584996
+    lng:
+      name: Längengrad
+      description: (Optional) Längengrad
+      required: false
+      example: 7.2309561
+    response_time:
+      name: Rückmeldezeit
+      description: (Optional) Zeitraum in Sekunden in dem eine Rückmeldung zulässig ist.
+      required: false
+      example: 3600
+    send_push:
+      name: Pushbenachrichtigung
+      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
+      required: false
+      example: true
+    send_sms:
+      name: SMS-Benachrichtigung (kostenpflichtig!)
+      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_call:
+      name: Sprachanruf (kostenpflichtig!)
+      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_mail:
+      name: Email-Benachrichtigung
+      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
+      required: false
+      example: false
+    send_pager:
+      name: Pager-Benachrichtigung
+      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
+      required: false
+      example: false
+    closed:
+      name: Einsatz beendet
+      description: (Optional) Einsatz beendet
+      required: false
+      example: false
+    notification_filter_access:
+      name: Einsatzsichtbarkeit
+      description: (Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen
+      required: false
+      example: true
+    group:
+      name: zu alarmierende Gruppen
+      description: (Optional) Liste mit IDs der zu alarmierenden Gruppen. Kann leer sein, wenn nicht benötigt. Wird übersteuert, wenn "zu alarmierende Benutzer" ebenfalls gesetzt ist.
+      required: false
+      example: 1, 2, 3, 4
+    user_cluster_relation:
+      name: zu alarmierende Benutzer
+      description: (Optional) Liste mit IDs der zu alarmierenden Benutzer. Kann leer sein, wenn nicht benötigt. Übersteuert "zu alarmierende Gruppen".
+      required: false
+      example: 1, 2, 3, 4
+    notification_filter_vehicle:
+      name: Alarmierung für bestimmte Fahrzeuge
+      description: (Optional) Nur Personen alarmieren, die sich auf einem zugeteilten Fahrzeuge befinden
+      required: false
+      example: false
+    vehicle:
+      name: Liste der zu alarmierende Fahrzeuge
+      description: (Optional) IDs der Fahrzeuge/Einsatzmittel. "Alarmierung für bestimmte Fahrzeuge" muss gesetzt sein.
+      required: false
+      example: 1, 2, 3, 4
+    notification_filter_status:
+      name: Alarmierung für bestimmte Status
+      description: (Optional) Nur Personen alarmieren, die sich in einem bestimmten Status befinden
+      required: false
+      example: false
+    status:
+      name: Liste mit zu alarmierenden Status
+      description: (Optional) IDs der ausgewählten Status. "Alarmierung für bestimmte Status" muss gesetzt sein. Status-IDs finden sich in den Attributen des Statussensors.
+      required: false
+      example: 1, 2, 3, 4
+
+
+put_alarm:
+  name: Alarm ändern/aktualisieren
+  description: Ändert einen bestehenden Alarm in Divera 24/7. Es ist ausreichend, die zu ändernden Parameter mitzugeben.
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Alarm aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    alarm_id:
+      name: Alarm-ID
+      description: Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
+      required: true
+      example: 54321
+    title:
+      name: Stichwort
+      description: Alarmstichwort
+      required: true
+      example: FEU G
+    notification_type:
+      name: Empfänger
+      description: Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
+      required: true
+      example: 2
+    foreign_id:
+      name: Einsatznummer/Fremdschlüssel
+      description: (Optional) Eine frei wählbare optinale Einsatznummer.
+      required: false
+      example: 2025-123
+    alarmcode_id:
+      name: Alarmvorlage
+      description: (Optional) ID der Alarmvorlage (Achtung, die Vorgaben der Vorlage werden nicht automatisch auf den Alarm übertragen)
+      required: false
+      example: 123456789
+    priority:
+      name: Sonderrechte
+      description: (Optional) Freigabe für den Einsatz von Sonderrechten.
+      required: false
+      example: false
+    text:
+      name: Meldung
+      description: (Optional) Zusatztext zur Alarmierung
+      required: false
+      example: 'Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt'
+    address:
+      name: Adresse
+      description: (Optional) Einsatzort. Damit die Adresse im Kartenplugin des Dachboards korrekt angezeigt wird, muss sie vollständig mit Strasse, PLZ, Ort und Land angegeben werden.
+      required: false
+      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
+    lat:
+      name: Breitengrad
+      description: (Optional) Breitengrad
+      required: false
+      example: 51.2584996
+    lng:
+      name: Längengrad
+      description: (Optional) Längengrad
+      required: false
+      example: 7.2309561
+    report:
+      name: Einsatzbericht
+      description: (Optional) Einsatzbericht
+      required: false
+      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
+    private_mode:
+      name: Sichtbarkeit privat
+      description: (Optional) Einsatz ist nur für alarmierte Personen oder Gruppen sichtbar.
+      required: false
+      example: false
+    send_push:
+      name: Pushbenachrichtigung
+      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
+      required: false
+      example: true
+    send_sms:
+      name: SMS-Benachrichtigung (kostenpflichtig!)
+      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_call:
+      name: Sprachanruf (kostenpflichtig!)
+      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_mail:
+      name: Email-Benachrichtigung
+      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
+      required: false
+      example: false
+    send_pager:
+      name: Pager-Benachrichtigung
+      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
+      required: false
+      example: false
+    response_time:
+      name: Rückmeldezeit
+      description: (Optional) Zeitraum in Sekunden in dem eine Rückmeldung zulässig ist.
+      required: false
+      example: 3600
+    closed:
+      name: Einsatz beendet
+      description: (Optional) Einsatz beendet
+      required: false
+      example: false
+    ts_publish:
+      name: Alarmierungszeit
+      description: (Optional) Alarmierung zeitgesteuert auslösen nach UNIX-Timestamp
+      required: false
+      example: 1717755979
+    notification_filter_access:
+      name: Einsatzsichtbarkeit
+      description: (Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen
+      required: false
+      example: true
+    group:
+      name: zu alarmierende Gruppen
+      description: (Optional) Liste mit IDs der zu alarmierenden Gruppen. Kann leer sein, wenn nicht benötigt. Wird übersteuert, wenn "zu alarmierende Benutzer" ebenfalls gesetzt ist.
+      required: false
+      example: 1, 2, 3, 4
+    user_cluster_relation:
+      name: zu alarmierende Benutzer
+      description: (Optional) Liste mit IDs der zu alarmierenden Benutzer. Kann leer sein, wenn nicht benötigt. Übersteuert "zu alarmierende Gruppen".
+      required: false
+      example: 1, 2, 3, 4
+    notification_filter_vehicle:
+      name: Alarmierung für bestimmte Fahrzeuge
+      description: (Optional) Nur Personen alarmieren, die sich auf einem zugeteilten Fahrzeuge befinden
+      required: false
+      example: false
+    vehicle:
+      name: Liste der zu alarmierende Fahrzeuge
+      description: (Optional) IDs der Fahrzeuge/Einsatzmittel. "Alarmierung für bestimmte Fahrzeuge" muss gesetzt sein.
+      required: false
+      example: 1, 2, 3, 4
+    notification_filter_status:
+      name: Alarmierung für bestimmte Status
+      description: (Optional) Nur Personen alarmieren, die sich in einem bestimmten Status befinden
+      required: false
+      example: false
+    status:
+      name: Liste mit zu alarmierenden Status
+      description: (Optional) IDs der ausgewählten Status. "Alarmierung für bestimmte Status" muss gesetzt sein. Status-IDs finden sich in den Attributen des Statussensors.
+      required: false
+      example: 1, 2, 3, 4
+
+
+post_close_alarm:
+  name: Alarm schließen
+  description: Schließt einen offenen Alarm (je nach Setup um den Einsatz im Monitor zu verbergen und die Rückmeldung einzuschränken).
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    alarm_id:
+      name: Alarm-ID
+      description: Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
+      required: true
+      example: 54321
+    closed:
+      name: Geschlossen
+      description: Status des Alarms; offen=false, geschlossen=true
+      required: true
+      example: true
+    report:
+      name: Einsatzbericht
+      description: Einsatzbericht
+      required: false
+      example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
+
+
+post_message:
+  name: Sende Nachricht
+  description: Ermöglicht das Senden einer Nachricht in einen bestimmten Kanal.
+  fields:
+    hub_id:
+      name: HUB-ID
+      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 123456
+    message_channel_id:
+      name: Nachrichtenkanal-ID
+      description: Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
+      required: false
+      example: 54321
+    alarm_id:
+      name: Alarm-ID
+      description: Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
+      required: false
+      example: 54321
+    text:
+      name: Nachricht
+      description: Text der Nachricht.
+      required: false
+      example: 'Dies ist eine Testnachricht.'
+
+
+
