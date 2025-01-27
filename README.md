@@ -1,5 +1,11 @@
 # DiveraControl
 
+--
+
+**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Ausserdem fehlen noch ein paar geplante Funktionen. Falls Fehler gefunden werden oder Funktionen gewünscht sind, erstellt bitte einen Issue. Vielen Dank!**
+
+--
+
 **DiveraControl** ist eine Integration von Divera 24/7 in den HomeAssistant. Ziel dieser Integration ist es, einen umfangreichen Datenaustausch mit Divera 24/7 zu ermöglichen.
 
 Feuerwehrgebäude, Fahrzeuge und Gerätschaften werden zunehmend smarter. Jedoch gibt es kaum einen (oder zumindest für kleine Feuerwehren kaum einen erschwinglichen) integrativen Anbieter für eine zentrale Verwaltung, Steuerung und Verteilung dieser Daten mit dem Ziel, smarte Geräte zu koordinieren. Hier kommt HomeAssistant ins Spiel. Dieser kann als kostenfreie zentrale Steuerung für zB Beleuchtung, Türen und Tore, Monitore, Sprachausgaben, Fahrzeugpositionen, -besatzungen und -status, Gerätepositionen, Ladestand von Akkus, individuelle Monitore usw. eingesetzt werden. Vorausgesetzt es gibt eine Anbindung zur Alarmierungssoftware - und hier soll diese Integration helfen.
@@ -76,13 +82,16 @@ Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können
 ---
 
 ## Installation
-tbd
+Die Installation ist aktuell nur manuell möglich. Eine HACS-Integration ist zukünftig geplant.
+
+Zur manuellen Installation den [letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen und in den HomeAssistant-Ordner `config/custom_components/diveracontrol` extrahieren.
+
 
 ## Einrichtung
 Die Einrichtung erfolgt durch Eingabe des Nutzernamens und des Passwortes. Nichts davon wird gespeichert, stattdessen wird mit der Initialisierung der Integration der API-Schlüssel des Nutzers abgefragt und in HomeAssistant abgelegt.
 Für die Anmeldung können die persönlichen Zugangsdaten genutzt werden. In diesem Fall werden, falls der Nutzer mehreren Einheiten zugewiesen ist, die einzelnen Einheiten als Hubs zur Integration angelegt.
-Es bietet sich jedoch an, für eine zentrale Rechteverwaltung einen Schnittstellennutzer der Einheit zu verwenden. Hierfür bietet Divera die Möglichkeit der Anlage unter **Verwaltung** -> **Schnittstellen** -> **System-Benutzer**. Schnittstellennutzer können nicht angemeldet werden, stattdessen wird die Integration nach dem API-Schlüssel des Nutzers fragen.
-Eine weitere Alternative besteht darin, den zentralen API-Schlüssel der EInheit zu verwenden. Er ist unter **Verwaltung** -> **Schnittstellen** zu finden. Allerdings lassen sich hierzu die Berechtigungen nicht verändern.
+Es bietet sich jedoch an, für eine zentrale Rechteverwaltung einen Systembenutzer der Einheit zu verwenden. Hierfür bietet Divera die Möglichkeit der Anlage unter **Verwaltung** -> **Schnittstellen** -> **System-Benutzer**. Systembenutzer können nicht angemeldet werden, stattdessen wird die Integration nach dem API-Schlüssel des Nutzers fragen.
+Eine weitere Alternative besteht darin, den zentralen Schnittstellenbenutzer der Einheit zu verwenden. Der API-Schlüssel ist unter **Verwaltung** -> **Schnittstellen** zu finden. Allerdings lassen sich die Berechtigungen des Schnittstellennutzers nicht anpassen.
 
 
 ## Benutzung
