@@ -1,4 +1,6 @@
 test*
+diveracontrol.code-workspace
+.gitignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
