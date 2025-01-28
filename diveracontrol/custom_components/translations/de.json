@@ -1,0 +1,39 @@
+{
+  "title": "myDivera",
+  "config": {
+      "step": {
+          "user": {
+              "title": "Anmeldung bei Divera",
+              "description": "Bitte gib einen Nutzernamen und Passwort ein. Beides wird nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Abfrageintervall ein. Von Zeiten niedriger als 30s wird abgeraten.",
+              "data": {
+                  "username": "Benutzername",
+                  "password": "Passwort",
+                  "update_interval_alarms": "Abfrageintervall (Sekunden)"
+              }
+          },
+          "api_key": {
+            "title": "Eingabe des API-Schlüssel",
+            "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
+            "data": {
+              "api_key": "API-Schlüssel",
+              "update_interval_alarms": "Abfrageintervall (Sekunden)"
+            }
+          }
+      },
+      "error": {
+        "cannot_auth": "Ungültiger Benutzername oder Passwort.",
+        "cannot_connect": "Keine Verbindung zu Divera möglich.",
+        "no_ucr": "Keine verbundenen Einheiten gefunden erhalten",
+        "unknown": "Unbekannter Fehler"
+      },
+      "abort":{
+        "hubs_created": "Die Konfiguration wurde abgeschlossen. Folgende Hubs wurden erstellt: {names}",
+        "hubs_existing": "Die Konfiguration wurde abgeschlossen. Folgende Hubs existieren bereits und wurden nicht erstellt: {names}",
+        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt."
+      }
+  },
+  "entity": {
+    "sensor": {
+    }
+  }
+}
