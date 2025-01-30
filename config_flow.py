@@ -12,7 +12,16 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
 from .api import DiveraCredentials as dc
-from .const import D_UCR, DOMAIN, MINOR_VERSION, UPDATE_INTERVAL_OPS, VERSION
+from .const import (
+    D_UCR,
+    DOMAIN,
+    MINOR_VERSION,
+    UPDATE_INTERVAL_DATA,
+    UPDATE_INTERVAL_ALARM,
+    VERSION,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,12 +89,14 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             new_api_key = user_input["api_key"]
-            new_interval = user_input["update_interval_alarms"]
+            new_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
+            new_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
 
             new_data = {
                 **existing_entry.data,
                 "api_key": new_api_key,
-                "update_interval_alarms": new_interval,
+                D_UPDATE_INTERVAL_DATA: new_interval_data,
+                D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
             }
 
             return self.async_update_reload_and_abort(
@@ -93,10 +104,13 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                 data_updates=new_data,
             )
 
-        current_interval = existing_entry.data.get("update_interval_alarms")
+        current_interval_data = existing_entry.data.get(D_UPDATE_INTERVAL_DATA)
+        current_interval_alarm = existing_entry.data.get(D_UPDATE_INTERVAL_ALARM)
         api_key = existing_entry.data.get("api_key")
 
-        return self._show_reconfigure_form(current_interval, api_key)
+        return self._show_reconfigure_form(
+            current_interval_data, current_interval_alarm, api_key
+        )
 
     def _show_user_form(self):
         """Display the user input form."""
@@ -105,7 +119,10 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
                 vol.Required(
-                    "update_interval_alarms", default=UPDATE_INTERVAL_OPS
+                    D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
+                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                vol.Required(
+                    D_UPDATE_INTERVAL_ALARM, default=UPDATE_INTERVAL_ALARM
                 ): vol.All(vol.Coerce(int), vol.Range(min=10)),
             }
         )
@@ -122,7 +139,10 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_API_KEY): str,
                 vol.Required(
-                    "update_interval_alarms", default=UPDATE_INTERVAL_OPS
+                    D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
+                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                vol.Required(
+                    D_UPDATE_INTERVAL_ALARM, default=UPDATE_INTERVAL_ALARM
                 ): vol.All(vol.Coerce(int), vol.Range(min=10)),
             }
         )
@@ -133,15 +153,18 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _show_reconfigure_form(self, current_interval, api_key):
+    def _show_reconfigure_form(
+        self, current_interval_data, current_interval_alarm, api_key
+    ):
         """Display the reconfigure input form."""
         data_schema = vol.Schema(
             {
-                vol.Optional(
-                    CONF_API_KEY, default=api_key
-                ): cv.string,  # API-Key bleibt Optional, kein Klartext
+                vol.Optional(CONF_API_KEY, default=api_key): cv.string,
                 vol.Required(
-                    "update_interval_alarms", default=current_interval
+                    D_UPDATE_INTERVAL_DATA, default=current_interval_data
+                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                vol.Required(
+                    D_UPDATE_INTERVAL_ALARM, default=current_interval_alarm
                 ): vol.All(vol.Coerce(int), vol.Range(min=10)),
             }
         )
@@ -150,7 +173,6 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure",
             data_schema=data_schema,
             errors=self.errors,
-            description_placeholders={CONF_API_KEY: "********"},
         )
 
     async def _process_hubs(self, hubs, api_key, user_input):
@@ -186,7 +208,8 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             new_hub = {
                 D_UCR: ucr,
                 "api_key": api_key,
-                "update_interval_alarms": user_input["update_interval_alarms"],
+                D_UPDATE_INTERVAL_DATA: user_input[D_UPDATE_INTERVAL_DATA],
+                D_UPDATE_INTERVAL_ALARM: user_input[D_UPDATE_INTERVAL_ALARM],
                 "name": name,
             }
 

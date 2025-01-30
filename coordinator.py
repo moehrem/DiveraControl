@@ -31,6 +31,8 @@ from .const import (
     D_STATUS_SORT,
     D_CLUSTER_ADDRESS,
     D_VEHICLE,
+    D_UPDATE_INTERVAL_DATA,
+    D_UPDATE_INTERVAL_ALARM,
 )
 from .data_updater import update_operational_data
 
@@ -44,7 +46,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"DiveraCoordinator_{hub_id}",
-            update_interval=timedelta(seconds=hub["update_interval_alarms"]),
+            update_interval=timedelta(seconds=hub[D_UPDATE_INTERVAL_DATA]),
+            # update_interval_alarm=timedelta(seconds=hub[D_UPDATE_INTERVAL_ALARM]),
         )
         self.api = api
         self.hub_id = hub_id
@@ -77,10 +80,11 @@ class DiveraCoordinator(DataUpdateCoordinator):
         }
 
         now = asyncio.get_running_loop().time()
-        self._last_masterdata_update = now
+        self._last_data_update = now
         self._last_alarm_update = now
 
-        self.interval_ops = timedelta(seconds=hub["update_interval_alarms"])
+        self.interval_data = timedelta(seconds=hub[D_UPDATE_INTERVAL_DATA])
+        self.interval_alarm = timedelta(seconds=hub[D_UPDATE_INTERVAL_ALARM])
 
         self._listeners = {}
 
@@ -96,6 +100,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 "Successfully initialized data for HUB %s (%s) ", unit_name, self.hub_id
             )
 
+            now = asyncio.get_running_loop().time()
+            self._last_data_update = now
+
         except Exception as e:
             _LOGGER.error(
                 "Error during initialization for HUB %s: %s", self.hub_id, str(e)
@@ -106,50 +113,52 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """Fetch data from Divera API and update cache on a regular basis."""
         now = asyncio.get_running_loop().time()
 
-        # Helper function to handle loop time tolerances
-        def should_update(loop_time, interval, tolerance=0.5):
-            return abs(loop_time - interval) <= tolerance or loop_time > interval
+        # Wähle das richtige Intervall basierend auf der Alarmanzahl
+        new_interval = (
+            self.interval_alarm
+            if self.data[D_ACTIVE_ALARM_COUNT] > 0
+            else self.interval_data
+        )
 
-        # Update operational data
-        try:
-            loop_time_ops = now - self._last_alarm_update
-            _LOGGER.debug("Ops data looptime = %s", loop_time_ops)
-            if should_update(loop_time_ops, self.interval_ops.total_seconds()):
-                self._last_alarm_update = now
+        # if needed, update coordinator interval
+        if self.update_interval != new_interval:
+            self.update_interval = new_interval
+            _LOGGER.debug(
+                "Update interval changed to %s seconds", new_interval.total_seconds()
+            )
+
+        # Helper function für eine Toleranz bei der Update-Ausführung
+        def should_update(last_update, interval, tolerance=0.5):
+            loop_time = now - last_update
+            return (
+                abs(loop_time - interval.total_seconds()) <= tolerance
+                or loop_time > interval.total_seconds()
+            )
+
+        # Wähle den passenden Zeitstempel
+        last_update = (
+            self._last_alarm_update
+            if self.data[D_ACTIVE_ALARM_COUNT] > 0
+            else self._last_data_update
+        )
+
+        # Prüfe, ob ein Update nötig ist
+        if should_update(last_update, new_interval):
+            try:
                 await update_operational_data(self.api, self.data)
+                if self.data[D_ACTIVE_ALARM_COUNT] > 0:
+                    self._last_alarm_update = now
+                else:
+                    self._last_data_update = now
                 _LOGGER.debug("Finished updating operational data")
 
-        except Exception as err:
-            _LOGGER.error(
-                "Error fetching operational data for HUB %s: %s", self.hub_id, err
-            )
-            raise UpdateFailed(f"Error fetching data: {err}") from err
+            except Exception as err:
+                _LOGGER.error(
+                    "Error fetching operational data for HUB %s: %s", self.hub_id, err
+                )
+                raise UpdateFailed(f"Error fetching data: {err}") from err
 
-        return {
-            D_HUB_ID: self.data[D_HUB_ID],
-            D_ACTIVE_ALARM_COUNT: self.data[D_ACTIVE_ALARM_COUNT],
-            D_UCR: self.data[D_UCR],
-            D_UCR_DEFAULT: self.data[D_UCR_DEFAULT],
-            D_UCR_ACTIVE: self.data[D_UCR_ACTIVE],
-            D_TS: self.data[D_TS],
-            D_USER: self.data[D_USER],
-            D_STATUS: self.data[D_STATUS],
-            D_CLUSTER: self.data[D_CLUSTER],
-            D_MONITOR: self.data[D_MONITOR],
-            D_ALARM: self.data[D_ALARM],
-            D_NEWS: self.data[D_NEWS],
-            D_EVENTS: self.data[D_EVENTS],
-            D_DM: self.data[D_DM],
-            D_MESSAGE_CHANNEL: self.data[D_MESSAGE_CHANNEL],
-            D_MESSAGE: self.data[D_MESSAGE],
-            D_LOCALMONITOR: self.data[D_LOCALMONITOR],
-            D_STATUSPLAN: self.data[D_STATUSPLAN],
-            D_ACCESS: self.data[D_ACCESS],
-            D_STATUS_CONF: self.data[D_STATUS_CONF],
-            D_STATUS_SORT: self.data[D_STATUS_SORT],
-            D_CLUSTER_ADDRESS: self.data[D_CLUSTER_ADDRESS],
-            D_VEHICLE: self.data[D_VEHICLE],
-        }
+        return self.data
 
     def async_add_listener(self, update_callback):
         """Add a listener and store the remove function."""

@@ -90,6 +90,8 @@ Eine weitere Alternative besteht darin, den zentralen Schnittstellenbenutzer der
 
 Im Falle einer gescheiterten Anmeldung mit Nutzername und Passwort fragt die Integration direkt nach dem API-Schlüssel.
 
+In jedem Fall können außerdem zwei Intervalle eingegeben werden: Ein Interval außerhalb von Einsätzen und ein Interval bei laufenden Einsätzen. Die Integration wertet die Situation aus (Alarm offen oder nicht) und aktualisiert die Daten im entsprechenden Interval.
+
 
 ## Benutzung
 Es gibt zwei Grundfunktionen: Das Abfrgen von und das Übergeben von Daten an Divera.
@@ -139,4 +141,4 @@ Es werden verschiedene Sensoren bereitgestellt, auch solche, die Daten von Diver
 tbd
 
 ### Änderung der Konfiguration
-Bestehende Hubs können über die Integrationsverwaltung im HomeAssistant angepasst werden. Änderbar sind der API-Schlüssel und das Abfrageinterval.
+Bestehende Hubs können über die Integrationsverwaltung im HomeAssistant angepasst werden. Änderbar sind der API-Schlüssel, das Abfrageinterval für Daten und das Abfrageinterval im Alarmfall.

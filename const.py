@@ -5,7 +5,9 @@ DOMAIN = "diveracontrol"
 VERSION = "0"
 MINOR_VERSION = "5"
 MANUFACTURER = "Divera GmbH"
-UPDATE_INTERVAL_OPS = 45
+# UPDATE_INTERVAL_OPS = 45
+UPDATE_INTERVAL_DATA = 60
+UPDATE_INTERVAL_ALARM = 30
 # UPDATE_INTERVAL_MASTERDATA = 86400
 
 # api
@@ -30,6 +32,9 @@ API_USING_VEHICLE_CREW = "using-vehicle-crew"
 API_OPERATIONS = "operations"
 
 # data
+# D_UPDATE_INTERVAL_OPS = "update_interval_alarms"
+D_UPDATE_INTERVAL_DATA = "update_interval_data"
+D_UPDATE_INTERVAL_ALARM = "update_interval_alarm"
 D_DATA = "data"
 D_HUB_ID = "hub_id"
 D_UCR = "ucr"
