@@ -1,4 +1,4 @@
-![]https://www.divera247.com/downloads/grafik/divera247_logo_800.png
+![Divera 27/7]https://www.divera247.com/downloads/grafik/divera247_logo_800.png
 # DiveraControl
 
 **DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne testen!**
