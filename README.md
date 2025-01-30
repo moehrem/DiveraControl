@@ -1,8 +1,8 @@
+![]https://www.divera247.com/downloads/grafik/divera247_logo_800.png
 # DiveraControl
 
----
-
-**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Falls Fehler gefunden werden oder Funktionen gewünscht sind, erstellt bitte einen Issue. Vielen Dank!**
+**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne testen!**
+**Wer Fehler findet oder Funktionen Vermisst, erstellt bitte einen [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank!**
 
 ---
 
