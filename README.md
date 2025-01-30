@@ -1,4 +1,8 @@
-[![Divera 24/7](https://www.divera247.com/downloads/grafik/divera247_logo_800.png)](https://www.divera247.com)
+<p align="center">
+  <a href="https://www.divera247.com">
+    <img src="https://www.divera247.com/downloads/grafik/divera247_logo_800.png" alt="Divera 24/7">
+  </a>
+</p>
 
 # DiveraControl
 
