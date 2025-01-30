@@ -120,14 +120,15 @@ Die Abfragen werden entsprechend dem eingestellten Intervall wiederholt, die Sen
 
 ### Übergabe
 Für die Übergabe von Daten werden Services bereitgestellt. Damit werden die entsprechenden Endpunkte in Divera angesprochen. Jeder Service kann in den HomeAssistant-Entwicklerwerkzeugen getestet werden. Dort findet sich auch eine Doku zu den notwendigen Daten.
-- Dienste
-    - Setzen des Nutzerstatus, einfach
-    - Setzen des Nutzerstatus, erweitert
-    - Setzen von Fahrzeugdaten
-    - Erstellung Alarm
-    - Änderung Alarm
-    - Schließen Alarm
-    - Senden von Nachrichten
+- Setzen des Nutzerstatus, einfach
+    - Status je Einheit, jedoch ohne Details
+- Setzen des Nutzerstatus, erweitert
+    - Status **nur** für Haupteinheit, jedoch mit vielen Details
+- Setzen von Fahrzeugdaten
+- Erstellung Alarm
+- Änderung Alarm
+- Schließen Alarm
+- Senden von Nachrichten
 
 ### Berechtigung
-Jedem Nutzer ist die Abfrage von Daten bei Divera erlaubt - allerdings wird im Falle eines unberechtigten Zugriffs von der API ein "403" zurückkommen. Um das Log nicht unnötig zu fluten wurden diese Rückmeldungen als Debugmeldungen
+tbd

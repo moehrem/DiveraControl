@@ -1,6 +1,6 @@
 post_user_status_advanced:
   name: Nutzerstatus setzen, erweitert
-  description: Aktualisiert den Nutzerstatus in Divera 24/7. Kann keinen Status für denselben Nutzer unterschiedlicher Einheiten sezten!
+  description: Aktualisiert den Nutzerstatus in Divera 24/7. Setzt den Status nur für die Haupteinheit des Nutzers!
   fields:
     hub_id:
       name: HUB-ID
