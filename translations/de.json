@@ -1,9 +1,9 @@
 {
-  "title": "myDivera",
+  "title": "DiveraControl",
   "config": {
       "step": {
           "user": {
-              "title": "Anmeldung bei Divera",
+              "title": "Anmeldung bei Divera 24/7",
               "description": "Bitte gib einen Nutzernamen und Passwort ein. Beides wird nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Abfrageintervall ein. Von Zeiten niedriger als 30s wird abgeraten.",
               "data": {
                   "username": "Benutzername",

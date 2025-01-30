@@ -24,6 +24,8 @@ from .const import (
     # D_ALARMS,
     # D_VEHICLE_STATUS,
     D_CLUSTER_ADDRESS,
+    D_COORDINATOR,
+    D_DATA,
     # new structure
     D_STATUS,
     D_STATUS_CONF,
@@ -52,8 +54,11 @@ async def async_setup_entry(
 
     hub = config_entry.data
     hub_id = hub[D_UCR]
-    coordinator = hass.data[DOMAIN][hub_id]["coordinator"]
+    coordinator = hass.data[DOMAIN][hub_id][D_COORDINATOR]
     current_sensors = hass.data[DOMAIN][hub_id].setdefault("sensors", {})
+    usergroup_id = (
+        coordinator.data.get(D_UCR, {}).get(hub_id, {}).get("usergroup_id", None)
+    )
 
     async def sync_sensors():
         """Synchronize all sensors with the current data from the API."""
@@ -76,8 +81,14 @@ async def async_setup_entry(
         static_sensor_map = {
             D_ACTIVE_ALARM_COUNT: DiveraAlarmCountSensor(coordinator, hub_id),
             D_CLUSTER_ADDRESS: DiveraFirestationSensor(coordinator, hub_id),
-            D_STATUS: DiveraStatusSensor(coordinator, hub_id),
         }
+
+        # adding status sensor only for personal user, not monitor- or system-user
+        if usergroup_id in [5, 19]:
+            _LOGGER.debug("No personal account, will not create status sensor")
+        else:
+            static_sensor_map[D_STATUS] = DiveraStatusSensor(coordinator, hub_id)
+
         for sensor_name, sensor_instance in static_sensor_map.items():
             if sensor_name not in current_sensors:
                 _LOGGER.debug("Adding static sensor: %s", sensor_name)
@@ -312,7 +323,12 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Zusätzliche Attribute des Sensors."""
-        return self.coordinator.data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        extra_state_attributes = {}
+        extra_state_attributes["Vehicle-ID"] = self._vehicle_id
+        extra_state_attributes.update(
+            self.coordinator.data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        )
+        return extra_state_attributes
 
     @property
     def icon(self) -> str:

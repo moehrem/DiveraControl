@@ -2,7 +2,7 @@
 
 ---
 
-**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Ausserdem fehlen noch ein paar geplante Funktionen. Falls Fehler gefunden werden oder Funktionen gewünscht sind, erstellt bitte einen Issue. Vielen Dank!**
+**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Falls Fehler gefunden werden oder Funktionen gewünscht sind, erstellt bitte einen Issue. Vielen Dank!**
 
 ---
 
@@ -10,7 +10,9 @@
 
 Feuerwehrgebäude, Fahrzeuge und Gerätschaften werden zunehmend smarter. Jedoch gibt es kaum einen (oder zumindest für kleine Feuerwehren kaum einen erschwinglichen) integrativen Anbieter für eine zentrale Verwaltung, Steuerung und Verteilung dieser Daten mit dem Ziel, smarte Geräte zu koordinieren. Hier kommt HomeAssistant ins Spiel. Dieser kann als kostenfreie zentrale Steuerung für zB Beleuchtung, Türen und Tore, Monitore, Sprachausgaben, Fahrzeugpositionen, -besatzungen und -status, Gerätepositionen, Ladestand von Akkus, individuelle Monitore usw. eingesetzt werden. Vorausgesetzt es gibt eine Anbindung zur Alarmierungssoftware - und hier soll diese Integration helfen.
 
-Um die Integration voll ausschöpfen zu können, sind umfangreiche Berechtigungen in der angebundenen Einheit nötig. Zielgruppe der Integration sind Administratoren bzw Schnittstellennutzer einer Einheit. Die Integration funktioniert auch mit eingeschränkten Rechten, bietet dann aber nicht denselben Umfang.
+Um die Integration voll ausschöpfen zu können, sind umfangreiche Berechtigungen in der anzubindenden Einheit nötig. Zielgruppe der Integration sind Administratoren bzw Schnittstellennutzer einer Einheit. Die Integration funktioniert auch mit eingeschränkten Rechten, bietet dann aber nicht denselben Umfang.
+Da ich selbst Feuerwehrmann bin, habe ich für die Anwendung klar die Feuerwehr im Fokus. Aber da Divera 24/7 vielfältig genutzt wird, die Schnittstelle jedoch für alle gleich ist, kann diese Integration sicher auch für Zwecke außerhalb der Feuerwehr eingesetzt werden.
+
 Für den persönlichen Einsatz bietet sich die schon länger existierende Integration [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) an.
 
 ---
@@ -37,7 +39,7 @@ Die Abfragen erfolgen in einem regelmäßigen Turnus, der bei der Einrichtung de
 - Nutzerstatus
 - Einheitendetails
 - Verfügbarkeit
-- Fahrzeugdaten
+- Fahrzeugdaten inkl der individuellen Fahrzeugeigenschaften
 - Berechtigungen
 
 ### Datenübergabe
@@ -46,7 +48,7 @@ Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in 
 - Alarmerstellung
 - Alarmänderung
 - Alarmabschluss
-- Fahrzeugdaten (zB. Status, Position)
+- Fahrzeugdaten inkl der individuellen Fahrzeugeigenschaften
 - Einsatzrückmeldung
 - Nachrichten (Messenger)
 
@@ -70,19 +72,17 @@ Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können
 - Anlegen, Ändern, Löschen von Terminen
 - Hinzufügen von Anhängen in irgendeiner Form
 - Hinzufügen von Besatzung zu Fahrzeugen, weder außerhalb noch innerhalb von Einsätzen
-- Lesen und Schreiben der Fahrzeugeigenschaften (betrifft die fahrzeugspezifischen Felder, die im Divera-Backend angelegt sind, NICHT den Status oder die Position des Fahrzeugs!)
 - Funktionen für Leitstellen
 - Funktionen der PRO-Version (zB einheitenübergreifende Alarmierung)
 
 ## Was sollte DiveraControl können?
 - Umgang mit mehreren Nutzern derselben Einheit
 - Hinzufügen von Besatzung zu Fahrzeugen
-- Lesen und Schreiben von individuellen Fahrzeugzusatzdaten
 
 ---
 
 ## Installation
-Die Installation ist aktuell nur manuell möglich. Eine HACS-Integration ist zukünftig geplant.
+Die Installation ist aktuell nur manuell möglich. Eine HACS-Integration ist in Arbeit.
 
 Zur manuellen Installation den [letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen und in den HomeAssistant-Ordner `config/custom_components/diveracontrol` extrahieren.
 
@@ -101,8 +101,10 @@ tbd
 - Sensoren
     - Einheitendetails
     - Fahrzeuge
+        - Attribute enthalten die individuellen Fahrzeugeigenschaften
     - Alarme
     - Status
+        - wird nur geladen, wenn es sich um einen "echten" Nutzer handel, nicht um einen System- oder Monitornutzer.
     - Offene Alarme
     - Tracker
 - Dienste

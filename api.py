@@ -18,7 +18,6 @@ from aiohttp import ClientError
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .utils import permission_request
 from .const import (
     D_COORDINATOR,
     DOMAIN,
@@ -35,7 +34,7 @@ from .const import (
     # API_PULL_VEHICLE,
     API_USING_VEHICLE_SET_SINGLE,
     # API_USING_VEHICLE_CREW,
-    # API_USING_VEHICLE_PROP,
+    API_USING_VEHICLE_PROP,
     BASE_API_URL,
     BASE_API_V2_URL,
     API_STATUSGEBER,
@@ -153,13 +152,13 @@ class DiveraAPI:
             )
             return {}
 
-    async def get_master_data(self) -> dict:
-        """GET all data based on current users authorizations from the Divera API."""
-        _LOGGER.debug("Fetching master data")
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
-        method = "GET"
-        perm_key = None
-        return await self.api_request(url, perm_key, method)
+    # async def get_master_data(self) -> dict:
+    #     """GET all data based on current users authorizations from the Divera API."""
+    #     _LOGGER.debug("Fetching master data")
+    #     url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
+    #     method = "GET"
+    #     perm_key = None
+    #     return await self.api_request(url, perm_key, method)
 
     async def get_ucr_data(self) -> dict:
         """GET all data for user cluster relation from the Divera API."""
@@ -226,9 +225,29 @@ class DiveraAPI:
         perm_key = PERM_MESSAGES
         return await self.api_request(url, method, perm_key, payload=payload)
 
+    async def get_vehicle_property(self, vehicle_id) -> dict:
+        """GET individual vehicle poroperties for vehicle from Divera API."""
+        _LOGGER.debug("Getting individual vehicle properties for HUB %s", self.ucr)
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
+        )
+        method = "GET"
+        perm_key = PERM_STATUS_VEHICLE
+        return await self.api_request(url, method, perm_key)
+
+    async def post_using_vehicle_property(self, payload, vehicle_id) -> dict:
+        """POST individual vehicle poroperties for vehicle from Divera API."""
+        _LOGGER.debug("Posting individual vehicle properties for HUB %s", self.ucr)
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
+        )
+        method = "POST"
+        perm_key = PERM_STATUS_VEHICLE
+        return await self.api_request(url, method, perm_key, payload=payload)
+
 
 class DiveraCredentials:
-    """Validates Divera credentials: username, apssword, api-key."""
+    """Validates Divera credentials: username, password, api-key."""
 
     @staticmethod
     async def validate_login(
