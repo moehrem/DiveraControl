@@ -56,16 +56,6 @@ Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in 
 - Einsatzrückmeldung
 - Nachrichten (Messenger)
 
-### Sensoren
-Es werden verschiedene Sensoren bereitgestellt, auch solche, die Daten von Divera bereits interpretieren. Jeder Sensor enthält die entsprechenden Daten als Attribute. Dazu gehören:
-- Alarme
-- Fahrzeuge
-- Einheitendetails
-- Anzahl offener Alarme
-- persönlicher Status
-- Tracker für Einsätze
-- Tracker für Fahrzeuge
-
 ---
 
 ## Was kann DiveraControl nicht?
@@ -135,5 +125,18 @@ Für die Übergabe von Daten werden Services bereitgestellt. Damit werden die en
 - Schließen Alarm
 - Senden von Nachrichten
 
+### Sensoren
+Es werden verschiedene Sensoren bereitgestellt, auch solche, die Daten von Divera bereits interpretieren. Jeder Sensor enthält die entsprechenden Daten als Attribute. Dazu gehören:
+- Alarme
+- Fahrzeuge
+- Einheitendetails
+- Anzahl offener Alarme
+- persönlicher Status
+- Tracker für Einsätze
+- Tracker für Fahrzeuge
+
 ### Berechtigung
 tbd
+
+### Änderung der Konfiguration
+Bestehende Hubs können über die Integrationsverwaltung im HomeAssistant angepasst werden. Änderbar sind der API-Schlüssel und das Abfrageinterval.

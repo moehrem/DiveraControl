@@ -18,6 +18,14 @@
               "api_key": "API-Schlüssel",
               "update_interval_alarms": "Abfrageintervall (Sekunden)"
             }
+          },
+          "reconfigure": {
+            "title": "Änderung der Konfiguration für DiveraControl",
+            "description": "Hier können die initialen Einstellungen des Hubs/der Einheit angepasst werden.",
+            "data": {
+              "api_key": "API-Schlüssel",
+              "update_interval_alarms": "Abfrageintervall (Sekunden)"
+            }
           }
       },
       "error": {
@@ -29,11 +37,10 @@
       "abort":{
         "hubs_created": "Die Konfiguration wurde abgeschlossen. Folgende Hubs wurden erstellt: {names}",
         "hubs_existing": "Die Konfiguration wurde abgeschlossen. Folgende Hubs existieren bereits und wurden nicht erstellt: {names}",
-        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt."
+        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt.",
+        "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
+        "hub_not_found": "Hub wurde nicht gefunden.",
+        "reconfigure_successful": "Neukonfiguration erfolgreich."
       }
-  },
-  "entity": {
-    "sensor": {
-    }
   }
 }

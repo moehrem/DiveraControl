@@ -5,9 +5,11 @@ from typing import Any
 
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_API_KEY, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from .api import DiveraCredentials as dc
 from .const import D_UCR, DOMAIN, MINOR_VERSION, UPDATE_INTERVAL_OPS, VERSION
@@ -63,35 +65,92 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self._process_hubs(hubs, api_key, user_input)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle reconfiguration of an existing hub."""
+
+        entry_id = self.context.get("entry_id")
+        if not entry_id:
+            return self.async_abort(reason="missing_entry_id")
+
+        existing_entry = self.hass.config_entries.async_get_entry(entry_id)
+        if not existing_entry:
+            return self.async_abort(reason="hub_not_found")
+
+        if user_input is not None:
+            new_api_key = user_input["api_key"]
+            new_interval = user_input["update_interval_alarms"]
+
+            new_data = {
+                **existing_entry.data,
+                "api_key": new_api_key,
+                "update_interval_alarms": new_interval,
+            }
+
+            return self.async_update_reload_and_abort(
+                existing_entry,
+                data_updates=new_data,
+            )
+
+        current_interval = existing_entry.data.get("update_interval_alarms")
+        api_key = existing_entry.data.get("api_key")
+
+        return self._show_reconfigure_form(current_interval, api_key)
+
     def _show_user_form(self):
         """Display the user input form."""
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_PASSWORD): str,
+                vol.Required(
+                    "update_interval_alarms", default=UPDATE_INTERVAL_OPS
+                ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+            }
+        )
+
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_USERNAME): str,
-                    vol.Required(CONF_PASSWORD): str,
-                    vol.Required(
-                        "update_interval_alarms", default=UPDATE_INTERVAL_OPS
-                    ): int,
-                }
-            ),
+            data_schema=data_schema,
             errors=self.errors,
         )
 
     def _show_api_key_form(self):
         """Display the API key input form."""
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_API_KEY): str,
+                vol.Required(
+                    "update_interval_alarms", default=UPDATE_INTERVAL_OPS
+                ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+            }
+        )
+
         return self.async_show_form(
             step_id="api_key",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_API_KEY): str,
-                    vol.Required(
-                        "update_interval_alarms", default=UPDATE_INTERVAL_OPS
-                    ): int,
-                }
-            ),
+            data_schema=data_schema,
             errors=self.errors,
+        )
+
+    def _show_reconfigure_form(self, current_interval, api_key):
+        """Display the reconfigure input form."""
+        data_schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_API_KEY, default=api_key
+                ): cv.string,  # API-Key bleibt Optional, kein Klartext
+                vol.Required(
+                    "update_interval_alarms", default=current_interval
+                ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=data_schema,
+            errors=self.errors,
+            description_placeholders={CONF_API_KEY: "********"},
         )
 
     async def _process_hubs(self, hubs, api_key, user_input):
