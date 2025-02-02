@@ -38,8 +38,10 @@
         "unknown": "Unbekannter Fehler"
       },
       "abort":{
-        "hubs_created": "Die Konfiguration wurde abgeschlossen. Folgende Hubs wurden erstellt: {names}",
-        "hubs_existing": "Die Konfiguration wurde abgeschlossen. Folgende Hubs existieren bereits und wurden nicht erstellt: {names}",
+        "cluster_created": "Die Konfiguration wurde abgeschlossen. Folgende Einheiten wurden erstellt: {names}",
+        "cluster_existing": "Die Konfiguration wurde abgeschlossen. Folgende Einheiten existieren bereits und wurden nicht erstellt: {names}",
+        "device_created": "Die Konfiguration wurde abgeschlossen. Folgende Nutzer wurden erstellt: {names}",
+        "device_existing": "Die Konfiguration wurde abgeschlossen. Folgende Nutzer existieren bereits und wurden nicht erstellt: {names}",
         "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt.",
         "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
         "hub_not_found": "Hub wurde nicht gefunden.",
