@@ -1,7 +1,7 @@
 {
   "domain": "diveracontrol",
   "name": "DiveraControl",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "codeowners": ["@moehrem"],
   "dependencies": [],
   "documentation": "https://github.com/moehrem/DiveraControl",
