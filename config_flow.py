@@ -23,11 +23,11 @@ from .const import (
     D_UCR_ID,
     D_CLUSTER_ID,
     DOMAIN,
-    DC_MINOR_VERSION,
+    MINOR_VERSION,
     UPDATE_INTERVAL_DATA,
     UPDATE_INTERVAL_ALARM,
-    DC_VERSION,
-    DC_PATCH_VERSION,
+    VERSION,
+    PATCH_VERSION,
     D_API_KEY,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
@@ -40,9 +40,9 @@ LOGGER = logging.getLogger(__name__)
 class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for myDivera integration."""
 
-    VERSION = DC_VERSION
-    MINOR_VERSION = DC_MINOR_VERSION
-    PATCH_VERSION = DC_PATCH_VERSION
+    VERSION = VERSION
+    MINOR_VERSION = MINOR_VERSION
+    PATCH_VERSION = PATCH_VERSION
 
     def __init__(self) -> None:
         """Initialize the config flow."""
