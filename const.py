@@ -3,7 +3,7 @@
 # general
 DOMAIN = "diveracontrol"
 VERSION = "0"
-MINOR_VERSION = "6"
+MINOR_VERSION = "7"
 PATCH_VERSION = "0"
 MANUFACTURER = "Divera GmbH"
 # UPDATE_INTERVAL_OPS = 45

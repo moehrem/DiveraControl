@@ -41,7 +41,7 @@ from .const import (
 )
 from .data_updater import update_operational_data
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class DiveraCoordinator(DataUpdateCoordinator):
@@ -49,7 +49,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator."""
         super().__init__(
             hass,
-            _LOGGER,
+            LOGGER,
             name=f"DiveraCoordinator_{cluster_id}",
             update_interval=timedelta(seconds=cluster[D_UPDATE_INTERVAL_DATA]),
             # update_interval_alarm=timedelta(seconds=hub[D_UPDATE_INTERVAL_ALARM]),
@@ -136,8 +136,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
                 ucr_data = await update_operational_data(self.api, ucr_data)
 
-                user_name = f"{ucr_data.get(D_USER, {}).get("firstname", "")} {ucr_data.get(D_USER, {}).get("lastname", "")}"
-                _LOGGER.info(
+                user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
+                LOGGER.info(
                     "Successfully initialized data for user %s (%s) ",
                     user_name,
                     ucr_id,
@@ -147,7 +147,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 self._last_data_update = now
 
             except Exception as e:
-                _LOGGER.error(
+                LOGGER.error(
                     "Error during initialization for HUB %s: %s",
                     self.cluster_id,
                     str(e),
@@ -155,7 +155,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
             self.data[ucr_id] = ucr_data
 
-        _LOGGER.debug("Finished initializing all data")
+        LOGGER.debug("Finished initializing all data")
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Divera API and update cache on a regular basis."""
@@ -181,7 +181,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             # Falls das Intervall geändert werden muss
             if self.update_interval != new_interval:
                 self.update_interval = new_interval
-                _LOGGER.debug(
+                LOGGER.debug(
                     "Update interval changed to %s seconds for UCR %s",
                     new_interval.total_seconds(),
                     ucr_id,
@@ -215,12 +215,12 @@ class DiveraCoordinator(DataUpdateCoordinator):
                     else:
                         self._last_data_update = now
 
-                _LOGGER.debug(
+                LOGGER.debug(
                     "Finished updating operational data for %d UCRs", len(updates)
                 )
 
             except Exception as err:
-                _LOGGER.error(
+                LOGGER.error(
                     "Error fetching operational data for HUB %s: %s",
                     self.cluster_id,
                     err,
@@ -237,14 +237,22 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
     async def remove_listeners(self) -> None:
         """Remove all update listeners for this coordinator."""
-        for remove_listener in list(self._listeners.keys()):
-            remove_listener()  # Remove the listener
-            self._listeners.pop(remove_listener, None)  # Remove it from the dictionary
-        _LOGGER.info("Removed update listeners for HUB: %s", self.cluster_id)
+        to_remove = list(self._listeners.keys())
+
+        for listener in to_remove:
+            if callable(listener):
+                try:
+                    listener()
+                except Exception as e:
+                    LOGGER.debug("Error while removing listener: %s", e)
+
+            self._listeners.pop(listener, None)
+
+        LOGGER.debug("Removed update listeners for HUB: %s", self.cluster_id)
 
     async def _config_entry_updated(self, entry_id):
         """Reagiere auf Änderungen im ConfigEntry und lade Daten neu."""
-        _LOGGER.info(
+        LOGGER.info(
             "ConfigEntry für Einheit %s wurde aktualisiert, lade neue Daten...",
             self.cluster_id,
         )

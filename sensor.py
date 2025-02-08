@@ -44,6 +44,7 @@ from .const import (
     MANUFACTURER,
     VERSION,
     MINOR_VERSION,
+    PATCH_VERSION,
 )
 from .utils import sanitize_entity_id
 
@@ -58,7 +59,6 @@ async def async_setup_entry(
     cluster = config_entry.data
     cluster_id = cluster[D_CLUSTER_ID]
     coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
-    # current_sensors = hass.data[DOMAIN][cluster_id].setdefault("sensors", {})
     usergroup_id = (
         coordinator.data.get(D_UCR, {}).get(cluster_id, {}).get("usergroup_id", None)
     )
@@ -69,44 +69,31 @@ async def async_setup_entry(
         new_sensors = []
 
         for ucr_id, ucr_data in coordinator.data.items():
-            ucr_alarm_data = ucr_data.get(D_ALARM, {})
-            ucr_vehicle_data = ucr_data.get(D_VEHICLE, {})
-            ucr_static_sensors_data = {
-                D_ACTIVE_ALARM_COUNT: ucr_data.get(D_ACTIVE_ALARM_COUNT, ""),
-                D_CLUSTER_ADDRESS: ucr_data.get(D_CLUSTER_ADDRESS, {}),  # OK
-                D_STATUS: ucr_data.get(D_STATUS, {}),  # OK
+            new_alarm_data = ucr_data.get(D_ALARM, {})
+            new_vehicle_data = ucr_data.get(D_VEHICLE, {})
+            new_static_sensors_data = {
+                D_ACTIVE_ALARM_COUNT,
+                D_CLUSTER_ADDRESS,
+                D_STATUS,
             }
 
-            entity_registry = er.async_get(hass)
+            if isinstance(new_alarm_data, dict):
+                new_alarm_data = set(new_alarm_data.keys())
+            else:
+                new_alarm_data = set()
 
-            # Hole alle registrierten Sensoren für die `ucr_id`
-            current_sensors = {
-                entity.entity_id: entity
-                for entity in entity_registry.entities.values()
-                if entity.platform == DOMAIN
-                and entity.domain == "sensor"
-                and entity.unique_id.startswith(f"{ucr_id}_")
-            }
-            active_alarms = {
-                sensor_id
-                for sensor_id in current_sensors
-                if f"sensor.{ucr_id}_alarm_" in sensor_id
-            }
+            if isinstance(new_vehicle_data, dict):
+                new_vehicle_data = set(new_vehicle_data.keys())
+            else:
+                new_vehicle_data = set()
 
-            active_vehicles = {
-                vehicle_id
-                for vehicle_id in current_sensors
-                if f"sensor.{ucr_id}_vehicle_" in vehicle_id
-            }
+            test_current_sensors = (
+                hass.data[DOMAIN][cluster_id]
+                .setdefault(ucr_id, {})
+                .setdefault("sensors", {})
+            )
 
-            active_static_sensors = {
-                static_sensor_id
-                for static_sensor_id in current_sensors
-                if static_sensor_id not in active_alarms
-                and static_sensor_id not in active_vehicles
-            }
-
-            # Add or update status sensors
+            # Statische Sensoren hinzufügen
             static_sensor_map = {
                 D_ACTIVE_ALARM_COUNT: DiveraAlarmCountSensor(
                     coordinator, ucr_data, ucr_id
@@ -116,96 +103,47 @@ async def async_setup_entry(
                 ),
             }
 
-            # adding status sensor only for personal user, not monitor- or system-user
-            if usergroup_id in [5, 19]:
-                _LOGGER.debug("No personal account, will not create status sensor")
-            else:
+            if usergroup_id not in [5, 19]:
                 static_sensor_map[D_STATUS] = DiveraStatusSensor(
                     coordinator, ucr_data, ucr_id
                 )
 
-            active_static_sensor_ids = {
-                sensor_id.split("_", 1)[1] for sensor_id in active_static_sensors
-            }
-
             for sensor_name, sensor_instance in static_sensor_map.items():
-                if sensor_name not in active_static_sensor_ids:
-                    _LOGGER.debug("Adding static sensor: %s", sensor_name)
+                if sensor_name not in test_current_sensors:
                     new_sensors.append(sensor_instance)
-                    # current_sensors[sensor_name] = sensor_instance
+                    test_current_sensors[sensor_name] = sensor_instance
 
-            # Add new alarm sensors
-            active_alarm_ids = {sensor_id.split("_")[-1] for sensor_id in active_alarms}
-            new_alarms = {
-                alarm_id
-                for alarm_id in ucr_alarm_data
-                if alarm_id not in active_alarm_ids
-            }
-
+            # Alarm-Sensoren hinzufügen
+            new_alarms = new_alarm_data - test_current_sensors.keys()
             for alarm_id in new_alarms:
                 sensor = DiveraAlarmSensor(coordinator, ucr_data, alarm_id, ucr_id)
-                _LOGGER.debug("Adding alarm sensor: %s", alarm_id)
                 new_sensors.append(sensor)
-                # current_sensors[alarm_id] = sensor
+                test_current_sensors[alarm_id] = sensor
 
-            # Add new vehicle sensors
-            active_vehicle_ids = {
-                vehicle_id.split("_")[-1] for vehicle_id in active_vehicles
-            }
-            new_vehicles = {
-                vehicle_id
-                for vehicle_id in ucr_vehicle_data
-                if vehicle_id not in active_vehicle_ids
-            }
+            # Fahrzeug-Sensoren hinzufügen
+            new_vehicles = new_vehicle_data - test_current_sensors.keys()
             for vehicle_id in new_vehicles:
                 sensor = DiveraVehicleSensor(coordinator, ucr_data, vehicle_id, ucr_id)
-                _LOGGER.debug("Adding vehicle sensor: %s", vehicle_id)
                 new_sensors.append(sensor)
-                # current_sensors[vehicle_id] = sensor
+                test_current_sensors[vehicle_id] = sensor
 
             # remove outdated sensors
-            active_sensor_ids = (
-                active_alarm_ids | active_vehicle_ids | active_static_sensor_ids
-            )
-
-            old_sensors = {
-                sensor_id
-                for sensor_id in active_sensor_ids
-                if sensor_id not in ucr_alarm_data
-                and sensor_id not in ucr_vehicle_data
-                and sensor_id not in ucr_static_sensors_data
-            }
-
-            removed_sensors = {
-                sensor_id
-                for sensor_id in current_sensors
-                if any(entity_id in sensor_id for entity_id in old_sensors)
-            }
-
-            _LOGGER.debug("Current sensors: %s", list(current_sensors.keys()))
-            _LOGGER.debug("Active alarms: %s", active_alarms)
-            _LOGGER.debug("Active vehicles: %s", active_vehicles)
-            _LOGGER.debug("Active static sensors: %s", active_static_sensors)
-            _LOGGER.debug("All active sensor IDs: %s", current_sensors)
-            _LOGGER.debug("Sensors that should be removed: %s", removed_sensors)
-
-            for sensor_id in removed_sensors:
-                if entity_registry.async_is_registered(sensor_id):
-                    entity_registry.async_remove(sensor_id)
+            active_ids = new_alarm_data | new_vehicle_data | new_static_sensors_data
+            removable_sensors = set(test_current_sensors.keys() - active_ids)
+            for sensor_id in removable_sensors:
+                sensor = test_current_sensors.pop(sensor_id, None)
+                if sensor:
+                    await sensor.remove_from_hass()
                     _LOGGER.debug("Removed sensor: %s", sensor_id)
-                else:
-                    _LOGGER.warning(
-                        "Sensor not found in entity registry: %s", sensor_id
-                    )
 
-        # Add new sensors to Home Assistant
+        # Neue Sensoren registrieren
         if new_sensors:
-            async_add_entities(new_sensors)
+            async_add_entities(new_sensors, update_before_add=True)
 
-    # Initial synchronization
+    # Initiale Synchronisierung
     await sync_sensors()
 
-    # Add listener for updates
+    # Listener für Updates hinzufügen
     coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
 
 
@@ -241,9 +179,9 @@ class BaseDiveraSensor(Entity):
             "name": f"{self.firstname} {self.lastname}",
             "manufacturer": MANUFACTURER,
             "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}",
+            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
             "entry_type": "service",
-            "via_device": (DOMAIN, self.cluster_id),
+            # "via_device": (DOMAIN, self.cluster_id),
         }
 
     @property
@@ -256,9 +194,9 @@ class BaseDiveraSensor(Entity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-    async def async_update(self) -> None:
-        """Fordere ein Update vom Koordinator an."""
-        await self.coordinator.async_request_refresh()
+    # async def async_update(self) -> None:
+    #     """Fordere ein Update vom Koordinator an."""
+    #     await self.coordinator.async_request_refresh()
 
     async def remove_from_hass(self) -> None:
         """Vollständige Entfernung der Entität aus Home Assistant."""
@@ -317,20 +255,6 @@ class DiveraAlarmSensor(BaseDiveraSensor):
         super().__init__(coordinator, ucr_data, cluster_id)
         self.alarm_id = alarm_id
         self.alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
-
-    @property
-    def device_info(self):
-        """Add sensor to device."""
-        self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-        self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
-        return {
-            "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-            "name": f"Einheit {self.ucr_id}",
-            "manufacturer": MANUFACTURER,
-            "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}",
-            "via_device": (DOMAIN, self.cluster_id),
-        }
 
     @property
     def entity_id(self) -> str:
@@ -589,7 +513,7 @@ class DiveraStatusSensor(BaseDiveraSensor):
         """Rückgabe weiterer Statusdetails."""
         status_options = []
         for status_id, status_details in self.ucr_data.get(D_STATUS_CONF, {}).items():
-            status_name = f"{status_details.get("name", "Unknown")} ({status_id})"
+            status_name = f"{status_details.get('name', 'Unknown')} ({status_id})"
             if status_name and status_name not in status_options:
                 status_options.append(status_name)
 
