@@ -35,9 +35,10 @@ Diese Integration steht in **keiner Verbindung** zu Divera 24/7 und wird von Div
 
 ## Was kann DiveraControl?
 
-- Verwaltung mehrerer **unterschiedlicher** Nutzer/Einheiten
+- Verwaltung mehrerer Nutzer derselben Einheit
 - Anbindung mehrerer Einheiten desselben Nutzers
-- Unterstützt parallele Alarme
+- Empfangen und Bearbeiten von Alarmen
+- Lesen und Schreiben der Fahrzeugdaten
 
 ### Datenabfrage
 - Alarmdaten
@@ -60,9 +61,8 @@ Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in 
 
 ---
 
-## Was kann DiveraControl nicht?
+## Was kann DiveraControl (noch) nicht?
 Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können über diese Integration angesprochen werden. Nicht enthaltene Funktionen sind:
-- Verwaltung mehrerer Nutzer **derselben** Einheit
 - Löschen und Archivieren von Alarmen, Mitteilungen, Nachrichten, Terminen
 - Anlegen, Ändern, Löschen von Terminen
 - Hinzufügen von Anhängen
@@ -71,7 +71,6 @@ Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können
 - Funktionen der PRO-Version (zB einheitenübergreifende Alarmierung)
 
 ## Was sollte DiveraControl können?
-- Umgang mit mehreren Nutzern derselben Einheit
 - Hinzufügen von Besatzung zu Fahrzeugen
 
 ---
@@ -96,7 +95,7 @@ In jedem Fall können außerdem zwei Intervalle eingegeben werden: Ein Interval 
 
 
 ## Benutzung
-Es gibt zwei Grundfunktionen: Das Abfrgen von und das Übergeben von Daten an Divera.
+Es gibt zwei Grundfunktionen: Das Abfrgen und das Übergeben von Daten an Divera.
 
 ### Abfragen
 Die Abfragen werden entsprechend dem eingestellten Intervall wiederholt, die Sensordaten automatisch aktualisiert. Zu den Sensoren gehören:
@@ -124,6 +123,7 @@ Für die Übergabe von Daten werden Services bereitgestellt. Damit werden die en
 - Setzen des Nutzerstatus, erweitert
     - Status **nur** für Haupteinheit, jedoch mit vielen Details
 - Setzen von Fahrzeugdaten
+    - Status, Position, Kommentar, individuelle Merkmale
 - Erstellung Alarm
 - Änderung Alarm
 - Schließen Alarm
@@ -139,8 +139,7 @@ Es werden verschiedene Sensoren bereitgestellt, auch solche, die Daten von Diver
 - Tracker für Einsätze
 - Tracker für Fahrzeuge
 
-### Berechtigung
-tbd
+Sensoren, zu denen von Divera keine Daten mehr empfangen werden, werden aus Home Assistant gelöscht.
 
 ### Änderung der Konfiguration
 Bestehende Hubs können über die Integrationsverwaltung im HomeAssistant angepasst werden. Änderbar sind der API-Schlüssel, das Abfrageinterval für Daten und das Abfrageinterval im Alarmfall.

@@ -8,138 +8,139 @@
 
 # DiveraControl
 
-**DiveraControl is still in development and may contain errors. Some planned features are still missing, and no optimization has taken place yet. If you're curious, feel free to test it!**
+**DiveraControl is still under development and may contain bugs. Some planned features are still missing, and optimization has not yet been performed. However, if you're curious, feel free to test it!**
 
-**If you find any bugs or miss any features, please create an [Issue](https://github.com/moehrem/DiveraControl/issues). Thank you!**
+**If you find any bugs or are missing a feature, please create an [Issue](https://github.com/moehrem/DiveraControl/issues). Thank you!**
 
 ---
 
-**DiveraControl** is an integration of Divera 24/7 into HomeAssistant. The goal of this integration is to enable extensive data exchange with Divera 24/7.
+**DiveraControl** is an integration of Divera 24/7 into Home Assistant. The goal of this integration is to enable extensive data exchange with Divera 24/7.
 
-Fire stations, vehicles, and equipment are becoming increasingly smarter. However, there is hardly any (or at least not an affordable) integrative provider for small fire departments that offers a centralized system for managing, controlling, and distributing this data to coordinate smart devices. This is where HomeAssistant comes into play. It can serve as a cost-effective central control for lighting, doors and gates, monitors, voice output, vehicle positions, crew status, device locations, battery levels, custom monitors, etc. However, this requires an interface to alarm software, which this integration aims to provide.
+Fire stations, vehicles, and equipment are becoming increasingly smarter. However, there is hardly any integrative provider (at least an affordable one for small fire departments) for central management, control, and distribution of this data with the aim of coordinating smart devices. This is where Home Assistant comes in. It can serve as a cost-effective central control for lighting, doors and gates, monitors, voice output, vehicle positions, crews, vehicle statuses, equipment locations, battery levels, custom monitors, etc. However, it requires a connection to the alerting software – and this is where this integration helps.
 
-To fully utilize this integration, extensive permissions are required in the connected unit. The target audience of this integration consists of administrators or interface users of a unit.
+To fully utilize this integration, extensive permissions are required in the connected unit. The target group of this integration is administrators or interface users of a unit.
 
-Since I am a firefighter myself, my primary focus is on fire departments. However, since Divera 24/7 is used in various ways and the interface remains the same for all, this integration could be useful for purposes beyond firefighting as well.
+As a firefighter myself, my focus for this application is the fire department. However, since Divera 24/7 is widely used and the interface is the same for all, this integration can certainly be used for purposes outside of firefighting as well.
 
-The integration also works with limited permissions but offers reduced functionality. For personal use, the long-existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) may be more suitable.
+The integration also works with limited permissions but will not provide the same range of features. For personal use, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) might be a better fit.
 
 ---
 
 ## Disclaimer
 
-In the public safety sector (BOS), data protection is of utmost importance. The use of HomeAssistant and this integration in real-world situations is entirely **at your own risk**. Ensuring compliance with data protection regulations, particularly concerning "data sharing with third parties," "data processing," and "data security," is the sole responsibility of the user.
-This integration is **not affiliated with Divera 24/7** and is **not supported by Divera 24/7**.
+In the BOS (public safety) sector, data protection is of particular importance. Any use of Home Assistant and this integration in real-world scenarios is at **your own risk**. Compliance with data protection regulations, especially but not limited to "data sharing with third parties," "data processing," and "data security," is entirely the user's responsibility.
+
+This integration is **not affiliated** with Divera 24/7 and is **not supported** by Divera 24/7.
 
 ---
 
 ## What can DiveraControl do?
 
-- Manage multiple **different** users/units
-- Connect multiple units of the same user
-- Support parallel alarms
+- Manage multiple users within the same unit
+- Connect multiple units for the same user
+- Receive and process alarms
+- Read and update vehicle data
 
 ### Data Retrieval
 - Alarm data
 - User status
 - Unit details
 - Availability
-- Vehicle data, including individual vehicle properties
+- Vehicle data including custom properties
 - Permissions
-- Message channels
+- Messaging channels
 
 ### Data Submission
-With **DiveraControl**, data can be sent to Divera. Corresponding services have been implemented in HomeAssistant. The following endpoints are available:
-- User status (advanced and simple)
+With **DiveraControl**, data can be sent to Divera. Corresponding services have been implemented in Home Assistant. The following endpoints are available:
+- User status (simple and advanced)
 - Alarm creation
 - Alarm modification
 - Alarm closure
-- Vehicle data, including individual vehicle properties
-- Operational feedback
+- Vehicle data including custom properties
+- Incident feedback
 - Messages (Messenger)
 
 ---
 
-## What can't DiveraControl do?
-Divera provides many endpoints, but not all of them can be accessed via this integration. The following functions are not included:
-- Managing multiple users **of the same unit**
-- Deleting and archiving alarms, notifications, messages, and events
-- Creating, modifying, or deleting events
+## What can't DiveraControl do (yet)?
+Divera provides many endpoints. Not all of them can be accessed through this integration. Missing features include:
+- Deleting and archiving alarms, messages, notifications, appointments
+- Creating, modifying, deleting appointments
 - Adding attachments
-- Adding crew members to vehicles, whether inside or outside of operations
-- Features for dispatch centers
-- Features of the PRO version (e.g., cross-unit alerting)
+- Adding crew members to vehicles, neither inside nor outside of incidents
+- Control center functions
+- PRO version features (e.g., cross-unit alerting)
 
 ## What should DiveraControl be able to do?
-- Manage multiple users of the same unit
-- Add crew members to vehicles
+- Adding crew members to vehicles
 
 ---
 
 ## Installation
 Currently, installation is only possible manually. A HACS integration is in progress.
 
-To install manually, download the [latest release](https://github.com/moehrem/DiveraControl/releases/latest) and extract it into the HomeAssistant directory `config/custom_components/diveracontrol`.
+For manual installation, download the [latest release](https://github.com/moehrem/DiveraControl/releases/latest) and extract it into the Home Assistant folder `config/custom_components/diveracontrol`.
 
-## Configuration
-The setup is done by entering the username and password. None of this is stored; instead, the integration retrieves the user's API key and stores it in HomeAssistant.
-You can log in using personal credentials. If the user is assigned to multiple units, each unit will be added as a separate hub within the integration.
 
-For better permission management, it is recommended to use a system user for the unit. Divera allows the creation of system users under **Management** -> **Interfaces** -> **System Users**. System users cannot log in directly; instead, the integration will prompt for their API key.
+## Setup
+The setup is done by entering a username and password. None of this information is stored; instead, the API key of the user is retrieved during the initialization of the integration and stored in Home Assistant.
 
-Another alternative is to use the unit's central interface user. The API key for this user can be found under **Management** -> **Interfaces**. However, the permissions of the interface user cannot be adjusted.
+For login, personal credentials can be used. In this case, if the user is assigned to multiple units, each unit will be added as a hub in the integration.
 
-If login with username and password fails, the integration will directly ask for the API key.
+However, it is advisable to use a system user of the unit for centralized rights management. Divera allows this under **Administration** -> **Interfaces** -> **System Users**. System users cannot log in directly, instead, the integration will ask for the user’s API key.
 
-Additionally, two intervals can be set: one for normal operations and one for active alarms. The integration will check whether an alarm is active and update data accordingly.
+Another alternative is to use the central interface user of the unit. The API key can be found under **Administration** -> **Interfaces**. However, the permissions of the interface user cannot be adjusted.
+
+If login with a username and password fails, the integration will directly ask for the API key.
+
+Additionally, two intervals can be configured: one for non-emergency mode and one for active emergency situations. The integration evaluates the situation (whether an alarm is active or not) and updates the data accordingly.
+
 
 ## Usage
-There are two main functions: retrieving data from Divera and submitting data to Divera.
+There are two main functions: retrieving and submitting data to Divera.
 
-### Data Retrieval
-Data retrieval happens at the specified interval, and sensor data is automatically updated. Available sensors include:
+### Retrieval
+Retrieval happens according to the configured interval, and sensor data is automatically updated. The sensors include:
 - Unit details
     - Name, short name, address, coordinates, etc.
 - Vehicles
     - Status, coordinates, crew, position, etc.
-    - Individual vehicle properties (if configured in Divera)
+    - Custom vehicle properties (if set in Divera)
 - Alarms
-    - Keywords, text, time, responses, reports, etc.
+    - Keyword, text, time, feedback, report, etc.
 - Status
-    - Only available for "real" users (i.e., not monitor, system, or vehicle users)
+    - Available only for "real" users (not monitor, system, or vehicle users)
     - Personal user status
     - Possible status IDs
-- Open alarms
+- Active Alarms
     - Number of open (not closed) alarms
 - Trackers
-    - For alarms (if coordinates were provided)
+    - For alarms, if coordinates have been provided
     - For vehicles
 
-### Data Submission
-Data can be submitted to Divera through various services, accessible via HomeAssistant’s Developer Tools. Documentation for each service is provided there.
+### Submission
+Data submission is done through Home Assistant services. These interact with Divera's respective endpoints. Each service can be tested in the Home Assistant developer tools, where documentation for the required data is also available.
 - Set user status (simple)
-    - Status per unit but without additional details
+    - Status per unit, but without details
 - Set user status (advanced)
-    - Status **only** for the main unit, but with detailed information
-- Set vehicle data
+    - Status **only** for the main unit, but with additional details
+- Update vehicle data
 - Create alarm
 - Modify alarm
 - Close alarm
 - Send messages
 
 ### Sensors
-Various sensors are available, including those that interpret Divera data. Each sensor contains relevant attributes. These include:
+Various sensors are provided, including those that interpret Divera's data. Each sensor contains corresponding data as attributes, including:
 - Alarms
 - Vehicles
 - Unit details
-- Number of open alarms
+- Number of active alarms
 - Personal status
-- Trackers for operations
-- Trackers for vehicles
+- Incident trackers
+- Vehicle trackers
 
-### Permissions
-TBD
+Sensors that no longer receive data from Divera will be removed from Home Assistant.
 
 ### Configuration Changes
-Existing hubs can be adjusted via the integration settings in HomeAssistant. Modifiable settings include the API key, data update interval, and update interval during alarms.
-
+Existing hubs can be modified via Home Assistant's integration management. The API key, data retrieval interval, and emergency mode retrieval interval can be adjusted.
