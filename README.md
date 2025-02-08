@@ -4,6 +4,8 @@
   </a>
 </p>
 
+- [🇬🇧 English](README.en.md)
+
 # DiveraControl
 
 **DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne testen!**
