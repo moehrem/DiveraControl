@@ -2,6 +2,5 @@
     "name": "DiveraControl",
     "content_in_root": false,
     "domain": "diveracontrol",
-    "filename": "custom_components/diveracontrol/manifest.json",
-    "category": "integration"
+    "filename": "custom_components/diveracontrol/manifest.json"
   }
