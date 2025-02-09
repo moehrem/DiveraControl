@@ -1,45 +1,51 @@
 {
-  "title": "myDivera",
+  "title": "DiveraControl",
   "config": {
-    "step": {
-      "user": {
-        "title": "myDivera",
-        "description": "Please enter a username and password. Both will only be used for the initial data request and will not be stored.\nAlso, set the query interval. Intervals shorter than 30 seconds are not recommended.",
-        "data": {
-          "username": "Username",
-          "password": "Password",
-          "update_interval_alarms": "Query Interval (Seconds)"
-        }
+      "step": {
+          "user": {
+              "title": "Login to Divera 24/7",
+              "description": "Please enter a username and password. Both are only used for the initial data query and will not be saved.\nAlso, set the query interval. Intervals lower than 30s are not recommended.",
+              "data": {
+                  "username": "Username",
+                  "password": "Password",
+                  "update_interval_data": "Data query interval (seconds)",
+                  "update_interval_alarm": "Alarm query interval (seconds)"
+              }
+          },
+          "api_key": {
+            "title": "Enter API Key",
+            "description": "If login fails or a system user needs to be logged in, you can alternatively enter the user's API key here.",
+            "data": {
+              "api_key": "API Key",
+              "update_interval_data": "Data query interval (seconds)",
+              "update_interval_alarm": "Alarm query interval (seconds)"
+            }
+          },
+          "reconfigure": {
+            "title": "Modify DiveraControl Configuration",
+            "description": "Here you can adjust the initial settings of the hub/unit.",
+            "data": {
+              "api_key": "API Key",
+              "update_interval_data": "Data query interval (seconds)",
+              "update_interval_alarm": "Alarm query interval (seconds)"
+            }
+          }
+      },
+      "error": {
+        "cannot_auth": "Invalid username or password.",
+        "cannot_connect": "Unable to connect to Divera.",
+        "no_ucr": "No connected units found",
+        "unknown": "Unknown error"
+      },
+      "abort":{
+        "cluster_created": "Configuration completed. The following units have been created: {names}",
+        "cluster_existing": "Configuration completed. The following units already exist and were not created: {names}",
+        "device_created": "Configuration completed. The following users have been created: {names}",
+        "device_existing": "Configuration completed. The following users already exist and were not created: {names}",
+        "no_new_hubs_found": "No new units were found, so no new hubs were created.",
+        "missing_entry_id": "Hub ID could not be determined.",
+        "hub_not_found": "Hub not found.",
+        "reconfigure_successful": "Reconfiguration successful."
       }
-    },
-    "error": {
-      "cannot_auth": "Invalid username or password.",
-      "cannot_connect": "Unable to connect to Divera.",
-      "no_ucr": "No connected units found.",
-      "unknown": "Unknown error"
-    },
-    "abort": {
-      "hubs_created": "The configuration has been completed. The following hubs have been created: {names}."
-    }
-  },
-  "hub_config": {
-    "add": "Please enter the configuration data for the new HUB.",
-    "edit": "Edit the configuration of the existing HUB.",
-    "remove": "Do you really want to remove this HUB?"
-  },
-  "logs": {
-    "setup_hub": "Creating hub: {hub_name} {hub_id}",
-    "permission_denied": "Access to data of {perm_key} for unit '{unit_name}' not allowed",
-    "api_request_success": "Response status 200 received",
-    "api_request_error": "Error in {method} for unit '{hub_id}': HTTP {status} {reason} from URL (API key hidden) {log_url}",
-    "api_client_error": "Network error during request for unit '{hub_id}' from URL (API key hidden) {url}; Error: {error}",
-    "config_flow_hub_exists": "Unit '{name}' is already configured, skipping.",
-    "config_flow_init_flow": "Starting configuration for unit '{name}'",
-    "config_flow_hub_created": "Configuration created for: {hubs}",
-    "config_flow_hub_removed": "Unit '{hub_id}' has been removed",
-    "config_flow_no_ucrs": "No valid UCRs (user cluster relations) received",
-    "config_flow_invalid_auth": "Invalid username or password entered",
-    "config_flow_unknown_auth": "Error in access validation: {e}",
-    "config_flow_create_hub": "Creating hub for unit '{name}'"
   }
 }
