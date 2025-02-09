@@ -2,7 +2,6 @@
   <a href="https://www.divera247.com">
     <img src="https://www.divera247.com/downloads/grafik/divera247_logo_800.png" alt="Divera 24/7">
   </a>
-  <img src="https://img.freepik.com/premium-photo/development-concept_1426-15145.jpg?semt=ais_hybrid">
 </p>
 
 - [🇩🇪 Deutsch](README.md)
