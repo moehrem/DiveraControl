@@ -12,10 +12,8 @@ from .const import (
     D_ALARM,
     D_COORDINATOR,
     D_CLUSTER_ADDRESS,
-    D_CLUSTER_ID,
     D_VEHICLE,
     D_UCR,
-    D_USER,
     DOMAIN,
     I_CLOSED_ALARM,
     I_OPEN_ALARM,
@@ -23,8 +21,6 @@ from .const import (
     I_VEHICLE,
     MANUFACTURER,
     VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,96 +31,81 @@ async def async_setup_entry(
 ) -> None:
     """Set up Divera device trackers."""
 
-    # return
+    hub = config_entry.data
+    hub_id = hub[D_UCR]
+    coordinator = hass.data[DOMAIN][hub_id][D_COORDINATOR]
+    current_trackers = hass.data[DOMAIN][hub_id].setdefault("trackers", {})
 
-    cluster = config_entry.data
-    cluster_id = cluster[D_CLUSTER_ID]
-    coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
-
-    async def sync_sensors():
-        """Synchronize all trackers with the current data from coordinator."""
-
+    async def sync_trackers():
         new_trackers = []
+        active_alarms = coordinator.data.get(D_ALARM, {})
+        active_vehicles = coordinator.data.get(D_VEHICLE, {})
 
-        for ucr_id, ucr_data in coordinator.data.items():
-            new_alarm_data = ucr_data.get(D_ALARM, {})
-            new_vehicle_data = ucr_data.get(D_VEHICLE, {})
+        if isinstance(active_alarms, dict):
+            active_alarms = set(active_alarms.keys())
+        else:
+            active_alarms = set()
 
-            if isinstance(new_alarm_data, dict):
-                new_alarm_data = set(new_alarm_data.keys())
-            else:
-                new_alarm_data = set()
+        if isinstance(active_vehicles, dict):
+            active_vehicles = set(active_vehicles.keys())
+        else:
+            active_vehicles = set()
 
-            if isinstance(new_vehicle_data, dict):
-                new_vehicle_data = set(new_vehicle_data.keys())
-            else:
-                new_vehicle_data = set()
+        active_ids = active_alarms | active_vehicles
 
-            test_current_trackers = (
-                hass.data[DOMAIN][cluster_id]
-                .setdefault(ucr_id, {})
-                .setdefault("device_tracker", {})
-            )
+        # Add new alarm trackers
+        new_alarm_trackers = active_alarms - current_trackers.keys()
+        for alarm_id in new_alarm_trackers:
+            tracker = DiveraAlarmTracker(coordinator, alarm_id, hub_id)
+            new_trackers.append(tracker)
+            current_trackers[alarm_id] = tracker
 
-            # add alarm trackers
-            new_alarm_tracker = new_alarm_data - test_current_trackers.keys()
-            for alarm_id in new_alarm_tracker:
-                tracker = DiveraAlarmTracker(coordinator, ucr_data, alarm_id, ucr_id)
-                new_trackers.append(tracker)
-                test_current_trackers[alarm_id] = tracker
+        # Add new vehicle trackers
+        new_vehicle_trackers = active_vehicles - current_trackers.keys()
+        for vehicle_id in new_vehicle_trackers:
+            tracker = DiveraVehicleTracker(coordinator, vehicle_id, hub_id)
+            new_trackers.append(tracker)
+            current_trackers[vehicle_id] = tracker
 
-            # add new vehicle trackers
-            new_vehicle_trackers = new_vehicle_data - test_current_trackers.keys()
-            for vehicle_id in new_vehicle_trackers:
-                tracker = DiveraVehicleTracker(
-                    coordinator, ucr_data, vehicle_id, ucr_id
-                )
-                new_trackers.append(tracker)
-                test_current_trackers[vehicle_id] = tracker
-
-            # remove outdated sensors
-            active_ids = new_alarm_data | new_vehicle_data
-            removable_trackers = set(test_current_trackers.keys() - active_ids)
-            for tracker_id in removable_trackers:
-                sensor = test_current_trackers.pop(tracker_id, None)
-                if sensor:
-                    await sensor.remove_from_hass()
-                    _LOGGER.debug("Removed trackers: %s", tracker_id)
+        # Remove outdated trackers
+        removed_trackers = set(current_trackers.keys()) - active_ids
+        for tracker_id in removed_trackers:
+            tracker = current_trackers.pop(tracker_id, None)
+            if tracker:
+                await tracker.remove_from_hass()
+                _LOGGER.debug("Removed tracker: %s", tracker_id)
 
         # Add new trackers to Home Assistant
         if new_trackers:
-            async_add_entities(new_trackers, update_before_add=True)
+            async_add_entities(new_trackers)
 
     # Initial synchronization
-    await sync_sensors()
+    await sync_trackers()
 
     # Add listener for updates
-    coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
+    coordinator.async_add_listener(lambda: asyncio.create_task(sync_trackers()))
 
 
 class BaseDiveraTracker(TrackerEntity):
-    """Basisklasse für Divera-Tracker."""
+    """Base class for Divera device trackers."""
 
-    def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-        """Init class BaseDiveraTracker."""
+    def __init__(self, coordinator, hub_id):
+        """Initialize the device tracker."""
         self.coordinator = coordinator
-        self.cluster_id = coordinator.cluster_id
-        self.ucr_id = ucr_id
-        self.ucr_data = ucr_data
+        # self.entity_id = entity_id
+        self.hub_id = hub_id
 
     @property
     def device_info(self):
-        """Return device information for the tracker."""
-        self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-        self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
+        """Return device information for the sensor."""
+        self._name = "_".join(self.coordinator.data.get(D_CLUSTER_ADDRESS, {}).keys())
         return {
-            "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-            "name": f"{self.firstname} {self.lastname}",
+            "identifiers": {(DOMAIN, self._name)},
+            "name": self._name,
             "manufacturer": MANUFACTURER,
             "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+            "sw_version": VERSION,
             "entry_type": "service",
-            # "via_device": (DOMAIN, self.cluster_id),
         }
 
     @property
@@ -174,8 +155,8 @@ class BaseDiveraTracker(TrackerEntity):
 
         # 3. Entferne die Entität aus internen Datenstrukturen
         try:
-            if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-                trackers = self.hass.data[DOMAIN][self.cluster_id].get("trackers", {})
+            if DOMAIN in self.hass.data and self.hub_id in self.hass.data[DOMAIN]:
+                trackers = self.hass.data[DOMAIN][self.hub_id].get("trackers", {})
                 if self.entity_id in trackers:
                     del trackers[self.entity_id]
                     _LOGGER.debug(
@@ -194,24 +175,14 @@ class BaseDiveraTracker(TrackerEntity):
 class DiveraAlarmTracker(BaseDiveraTracker):
     """A device tracker for alarms."""
 
-    def __init__(self, coordinator, ucr_data, alarm_id, ucr_id):
-        super().__init__(coordinator, ucr_data, ucr_id)
+    def __init__(self, coordinator, alarm_id, hub_id):
+        super().__init__(coordinator, hub_id)
         self.alarm_id = alarm_id
-
-    @property
-    def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
-        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_alarm_{self.alarm_id}')}"
-
-    @entity_id.setter
-    def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
-        self._entity_id = value
 
     @property
     def unique_id(self):
         """Return a unique ID for this tracker."""
-        return f"{self.ucr_id}_tracker_{self.alarm_id}"
+        return f"tracker_alarm_id_{self.alarm_id}"
 
     @property
     def name(self):
@@ -221,19 +192,19 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     @property
     def latitude(self):
         """Latitude of the tracker."""
-        alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        alarm_data = self.coordinator.data.get(D_ALARM, {}).get(self.alarm_id, {})
         return alarm_data.get("lat", 0)
 
     @property
     def longitude(self):
         """Longitude of the tracker."""
-        alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        alarm_data = self.coordinator.data.get(D_ALARM, {}).get(self.alarm_id, {})
         return alarm_data.get("lng", 0)
 
     @property
     def icon(self):
         """Return an icon for the tracker."""
-        alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        alarm_data = self.coordinator.data.get(D_ALARM, {}).get(self.alarm_id, {})
         closed = alarm_data.get("closed", False)
         priority = alarm_data.get("priority", False)
         if closed:
@@ -247,14 +218,28 @@ class DiveraAlarmTracker(BaseDiveraTracker):
 class DiveraVehicleTracker(BaseDiveraTracker):
     """A device tracker for vehicles."""
 
-    def __init__(self, coordinator, ucr_data, vehicle_id: str, ucr_id: str):
-        super().__init__(coordinator, ucr_data, ucr_id)
+    def __init__(self, coordinator, vehicle_id: str, hub_id: str):
+        super().__init__(coordinator, hub_id)
         self._vehicle_id = vehicle_id
 
     @property
-    def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
-        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_vehicle_{self._vehicle_id}')}"
+    def unique_id(self):
+        """Return a unique ID for this tracker."""
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
+        shortname = vehicle_data.get("shortname", "Unknown")
+        veh_name = vehicle_data.get("name", "Unknown")
+        return f"tracker_vehicle_{shortname}_{veh_name}"
+
+    @property
+    def entity_id(self):
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
+        shortname = vehicle_data.get("shortname", "Unknown")
+        veh_name = vehicle_data.get("name", "Unknown")
+        return f"device_tracker.{sanitize_entity_id(f"vehicle_{shortname}_{veh_name}")}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -262,14 +247,11 @@ class DiveraVehicleTracker(BaseDiveraTracker):
         self._entity_id = value
 
     @property
-    def unique_id(self):
-        """Return a unique ID for this tracker."""
-        return f"{self.ucr_id}_tracker_{self._vehicle_id}"
-
-    @property
     def name(self):
         """Return the name of the device tracker."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
         shortname = vehicle_data.get("shortname", "Unknown")
         veh_name = vehicle_data.get("name", "Unknown")
         return f"{shortname} / {veh_name}"
@@ -277,13 +259,17 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def latitude(self):
         """Latitude of the tracker."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
         return vehicle_data.get("lat", 0)
 
     @property
     def longitude(self):
         """Longitude of the tracker."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
         return vehicle_data.get("lng", 0)
 
     @property
@@ -334,7 +320,9 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def extra_state_attributes(self):
         """Return additional attributes, including icon color."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
         status = str(
             vehicle_data.get("fmsstatus_id", "unknown")
         )  # Sicherstellen, dass es ein String ist
@@ -359,7 +347,9 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def icon(self):
         """Return an icon for the tracker."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.coordinator.data.get(D_VEHICLE, {}).get(
+            self._vehicle_id, {}
+        )
         status = vehicle_data.get("fmsstatus_id", "unknown")
 
         if status == "unknown":

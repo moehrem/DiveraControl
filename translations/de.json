@@ -1,14 +1,15 @@
 {
-  "title": "myDivera",
+  "title": "DiveraControl",
   "config": {
       "step": {
           "user": {
-              "title": "Anmeldung bei Divera",
+              "title": "Anmeldung bei Divera 24/7",
               "description": "Bitte gib einen Nutzernamen und Passwort ein. Beides wird nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Abfrageintervall ein. Von Zeiten niedriger als 30s wird abgeraten.",
               "data": {
                   "username": "Benutzername",
                   "password": "Passwort",
-                  "update_interval_alarms": "Abfrageintervall (Sekunden)"
+                  "update_interval_data": "Abfrageintervall Daten (Sekunden)",
+                  "update_interval_alarm": "Abfrageintervall Alarm (Sekunden)"
               }
           },
           "api_key": {
@@ -16,7 +17,17 @@
             "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
             "data": {
               "api_key": "API-Schlüssel",
-              "update_interval_alarms": "Abfrageintervall (Sekunden)"
+              "update_interval_data": "Abfrageintervall Daten (Sekunden)",
+              "update_interval_alarm": "Abfrageintervall (Sekunden)"
+            }
+          },
+          "reconfigure": {
+            "title": "Änderung der Konfiguration für DiveraControl",
+            "description": "Hier können die initialen Einstellungen des Hubs/der Einheit angepasst werden.",
+            "data": {
+              "api_key": "API-Schlüssel",
+              "update_interval_data": "Abfrageintervall Daten (Sekunden)",
+              "update_interval_alarm": "Abfrageintervall (Sekunden)"
             }
           }
       },
@@ -27,13 +38,14 @@
         "unknown": "Unbekannter Fehler"
       },
       "abort":{
-        "hubs_created": "Die Konfiguration wurde abgeschlossen. Folgende Hubs wurden erstellt: {names}",
-        "hubs_existing": "Die Konfiguration wurde abgeschlossen. Folgende Hubs existieren bereits und wurden nicht erstellt: {names}",
-        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt."
+        "cluster_created": "Die Konfiguration wurde abgeschlossen. Folgende Einheiten wurden erstellt: {names}",
+        "cluster_existing": "Die Konfiguration wurde abgeschlossen. Folgende Einheiten existieren bereits und wurden nicht erstellt: {names}",
+        "device_created": "Die Konfiguration wurde abgeschlossen. Folgende Nutzer wurden erstellt: {names}",
+        "device_existing": "Die Konfiguration wurde abgeschlossen. Folgende Nutzer existieren bereits und wurden nicht erstellt: {names}",
+        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt.",
+        "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
+        "hub_not_found": "Hub wurde nicht gefunden.",
+        "reconfigure_successful": "Neukonfiguration erfolgreich."
       }
-  },
-  "entity": {
-    "sensor": {
-    }
   }
 }

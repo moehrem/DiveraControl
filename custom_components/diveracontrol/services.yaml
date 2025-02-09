@@ -1,6 +1,6 @@
 post_user_status_advanced:
   name: Nutzerstatus setzen, erweitert
-  description: Aktualisiert den Nutzerstatus in Divera 24/7. Setzt den Status nur für die Haupteinheit des Nutzers!
+  description: Aktualisiert den Nutzerstatus in Divera 24/7. Kann keinen Status für denselben Nutzer unterschiedlicher Einheiten sezten!
   fields:
     hub_id:
       name: HUB-ID
@@ -425,22 +425,4 @@ post_message:
       example: 'Dies ist eine Testnachricht.'
 
 
-post_using_vehicle_property:
-  name: Fahrzeugeigenschaften aktualisieren
-  description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein!
-  fields:
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
-    vehicle_id:
-      name: Fahrzeug-ID
-      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
-      required: true
-      example: 654321
-    key:
-      name: Eigenschaftsschlüssel
-      description: Schlüssel und Wert der Eigenschaft, deren Wert gesetzt werden soll. Eigenschaft muss in Divera existieren!
-      required: false
-      example: 654
+

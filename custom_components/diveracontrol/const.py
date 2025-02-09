@@ -3,12 +3,9 @@
 # general
 DOMAIN = "diveracontrol"
 VERSION = "0"
-MINOR_VERSION = "7"
-PATCH_VERSION = "0"
+MINOR_VERSION = "5"
 MANUFACTURER = "Divera GmbH"
-# UPDATE_INTERVAL_OPS = 45
-UPDATE_INTERVAL_DATA = 60
-UPDATE_INTERVAL_ALARM = 30
+UPDATE_INTERVAL_OPS = 45
 # UPDATE_INTERVAL_MASTERDATA = 86400
 
 # api
@@ -33,15 +30,9 @@ API_USING_VEHICLE_CREW = "using-vehicle-crew"
 API_OPERATIONS = "operations"
 
 # data
-# D_UPDATE_INTERVAL_OPS = "update_interval_alarms"
-D_UPDATE_INTERVAL_DATA = "update_interval_data"
-D_UPDATE_INTERVAL_ALARM = "update_interval_alarm"
 D_DATA = "data"
-D_API_KEY = "api_key"
 D_HUB_ID = "hub_id"
 D_UCR = "ucr"
-D_UCR_ID = "ucr_id"
-D_CLUSTER_ID = "cluster_id"
 D_COORDINATOR = "coordinator"
 # D_CLUSTER_ID = "cluster_id"
 # D_ALARMS = "alarms"
@@ -55,7 +46,6 @@ D_STATUS_SORT = "status_sorting"
 D_UCR = "ucr"
 D_UCR_DEFAULT = "ucr_default"
 D_UCR_ACTIVE = "ucr_active"
-D_USERNAME = "user_name"
 D_TS = "ts"
 D_USER = "user"
 D_STATUS = "status"

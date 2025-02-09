@@ -218,34 +218,11 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
     try:
         ok_status = await api_instance.post_message(payload)
         if not ok_status:
-            raise HomeAssistantError(
-                "Failed to send message, please check logs."
-            ) from None
+            raise HomeAssistantError("Failed to send message, please check logs.")
     except Exception as e:
         error_msg = f"Failed to send message: {e}"
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg) from None
-
-
-async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
-    """Set individual properties of a specific vehicle."""
-    hub_id = call.data.get("hub_id")
-    vehicle_id = call.data.get("vehicle_id")
-    api_instance = get_api_instance(hass, hub_id)
-
-    payload = {k: v for k, v in call.data.items() if v is not None}
-
-    try:
-        success = await api_instance.post_using_vehicle_property(payload, vehicle_id)
-        if not success:
-            error_msg = f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}, check logs for details."
-            raise HomeAssistantError(error_msg) from None
-    except Exception as e:
-        error_msg = (
-            f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}: {e}"
-        )
-        LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg) from None
+        raise HomeAssistantError(error_msg)
 
 
 async def async_register_services(hass, domain):
@@ -365,22 +342,12 @@ async def async_register_services(hass, domain):
                 vol.Optional("text"): cv.string,
             },
         ),
-        "post_using_vehicle_property": (
-            handle_post_using_vehicle_property,
-            {
-                vol.Required("hub_id"): cv.positive_int,
-                vol.Required("vehicle_id"): cv.positive_int,
-                vol.Extra: vol.Any(
-                    vol.Coerce(str), vol.Coerce(int), vol.Coerce(float), None
-                ),
-            },
-        ),
     }
 
     for service_name, (handler, schema) in service_definitions.items():
         hass.services.async_register(
             domain,
             service_name,
-            functools.partial(handler, hass),
+            functools.partial(handler, hass),  # Übergibt hass explizit
             schema=vol.Schema(schema),
         )
