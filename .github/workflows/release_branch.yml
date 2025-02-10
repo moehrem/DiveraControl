@@ -25,7 +25,3 @@ jobs:
           mv *.py config/custom_components/diveracontrol/ || true
           mv services.yaml config/custom_components/diveracontrol/ || true
           mv README.md config/custom_components/diveracontrol/ || true
-
-      - name: Remove .github Folder from Release
-        run: |
-          rm -rf .github
