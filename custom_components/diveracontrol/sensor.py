@@ -311,7 +311,6 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
         return (
             f"sensor.{sanitize_entity_id(f'{self.ucr_id}_vehicle_{self._vehicle_id}')}"
         )
