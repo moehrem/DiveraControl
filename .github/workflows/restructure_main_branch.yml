@@ -1,0 +1,23 @@
+name: Move Files After Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  move-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Move Files
+        run: |
+          mkdir -p custom_components/diveracontrol
+          mv *.py *.yaml manifest.json custom_components/diveracontrol/
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git commit -m "Automatisch: Dateien verschoben"
+          git push
