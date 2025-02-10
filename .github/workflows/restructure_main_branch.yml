@@ -21,10 +21,10 @@ jobs:
         run: |
           mkdir -p custom_components/diveracontrol
           mv *.py *.yaml manifest.json custom_components/diveracontrol/
+          mv translations custom_components/diveracontrol/
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          # Prüfen, ob es Änderungen gibt
           if git diff --quiet; then
             echo "Keine Änderungen, Workflow wird übersprungen."
             exit 0

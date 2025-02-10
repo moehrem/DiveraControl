@@ -72,6 +72,8 @@ Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können
 
 ## Was sollte DiveraControl können?
 - Hinzufügen von Besatzung zu Fahrzeugen
+- Datenabfrage nur bei offenen Alarmen (Entgegennehmen von Webhooks von Divera)
+- Nice to have: automatisches Einrichten und Löschen von Zonen für Gebäude und Einsatzorte
 
 ---
 

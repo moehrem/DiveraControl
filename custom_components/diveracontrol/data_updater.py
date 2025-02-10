@@ -209,7 +209,7 @@ async def update_operational_data(api, data):
 
         # handle alarm data
         try:
-            alarm_data = alarm.get("items", {})
+            alarm_data = alarm.get("items", {}) if alarm.get("items") else {}
             data[D_ALARM] = alarm_data
 
             if not alarm_data:

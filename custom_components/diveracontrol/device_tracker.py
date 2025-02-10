@@ -201,7 +201,7 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     @property
     def entity_id(self) -> str:
         """Entitäts-ID des Sensors."""
-        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_alarm_{self.alarm_id}')}"
+        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_alarmtracker_{self.alarm_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -211,7 +211,7 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     @property
     def unique_id(self):
         """Return a unique ID for this tracker."""
-        return f"{self.ucr_id}_tracker_{self.alarm_id}"
+        return f"{self.ucr_id}_alarmtracker_{self.alarm_id}"
 
     @property
     def name(self):
@@ -254,7 +254,7 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def entity_id(self) -> str:
         """Entitäts-ID des Sensors."""
-        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_vehicle_{self._vehicle_id}')}"
+        return f"device_tracker.{sanitize_entity_id(f'{self.ucr_id}_vehicletracker_{self._vehicle_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -264,7 +264,7 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def unique_id(self):
         """Return a unique ID for this tracker."""
-        return f"{self.ucr_id}_tracker_{self._vehicle_id}"
+        return f"{self.ucr_id}_vehicletracker_{self._vehicle_id}"
 
     @property
     def name(self):

@@ -269,7 +269,7 @@ class DiveraAlarmSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Eindeutige ID des Sensors."""
-        return f"{self.ucr_id}_{self.alarm_id}"
+        return f"{self.ucr_id}_alarm_{self.alarm_id}"
 
     @property
     def name(self) -> str:
@@ -311,11 +311,9 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        shortname = vehicle_data.get("shortname", "Unknown")
-        veh_name = vehicle_data.get("name", "Unknown")
-        return f"sensor.{sanitize_entity_id(f'{self.ucr_data["ucr_id"]}_vehicle_{self._vehicle_id}')}"
+        return (
+            f"sensor.{sanitize_entity_id(f'{self.ucr_id}_vehicle_{self._vehicle_id}')}"
+        )
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -325,9 +323,6 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Eindeutige ID des Sensors."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        shortname = vehicle_data.get("shortname", "Unknown")
-        veh_name = vehicle_data.get("name", "Unknown")
         return f"{self.ucr_id}_vehicle_{self._vehicle_id}"
 
     @property
