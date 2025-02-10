@@ -8,13 +8,13 @@
 
 # DiveraControl
 
-**DiveraControl ist noch in der Entwicklung und kann daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne testen!**
+**DiveraControl ist noch in der Entwicklung und wird daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne die [Vorabversionen](https://github.com/moehrem/DiveraControl/releases) testen!**
 
-**Wer Fehler findet oder Funktionen Vermisst, erstellt bitte einen [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank!**
+**Wer Fehler findet oder Funktionen vermisst, erstellt bitte einen [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank!**
 
 ---
 
-**DiveraControl** ist eine Integration von Divera 24/7 in den HomeAssistant. Ziel dieser Integration ist es, einen umfangreichen Datenaustausch mit Divera 24/7 zu ermöglichen.
+**DiveraControl** ist eine Integration von Divera 24/7 in den HomeAssistant. Ziel dieser Integration ist es, lokalen Admins oder Besitzern von Divera-Einheiten einen umfangreichen Datenaustausch zwischen HomeAssistant und Divera 24/7 zu ermöglichen.
 
 Feuerwehrgebäude, Fahrzeuge und Gerätschaften werden zunehmend smarter. Jedoch gibt es kaum einen (oder zumindest für kleine Feuerwehren kaum einen erschwinglichen) integrativen Anbieter für eine zentrale Verwaltung, Steuerung und Verteilung dieser Daten mit dem Ziel, smarte Geräte zu koordinieren. Hier kommt HomeAssistant ins Spiel. Dieser kann als kostengünstige zentrale Steuerung für zB Beleuchtung, Türen und Tore, Monitore, Sprachausgaben, Fahrzeugpositionen, -besatzungen und -status, Gerätepositionen, Ladestand von Akkus, individuelle Monitore usw. eingesetzt werden. Vorausgesetzt es gibt eine Anbindung zur Alarmierungssoftware - und hier soll diese Integration helfen.
 
@@ -76,8 +76,15 @@ Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können
 ---
 
 ## Installation
-Die Installation ist aktuell nur manuell möglich. Eine HACS-Integration ist in Arbeit.
 
+### HACS (empfohlen)
+DiveraControl ist noch nicht im HACS-Store verfügbar, kann aber als eigenes Repo einfach dem HASC hinzugefügt werden.
+
+1. [HACS installieren](https://www.hacs.xyz/docs/use/)
+2. [![Öffne HomeAssistant und für die Integration als eigenes Repo hinzu.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
+3. Integration per Button "Herunterladen" unten rechts installieren
+
+### manuelle Installation
 Zur manuellen Installation den [letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen und in den HomeAssistant-Ordner `config/custom_components/diveracontrol` extrahieren.
 
 

@@ -18,10 +18,12 @@ from aiohttp import ClientError
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .utils import permission_request
 from .const import (
     D_COORDINATOR,
     DOMAIN,
+    D_DATA,
+    D_UCR,
+    D_USER,
     API_ACCESS_KEY,
     # API_ACCESS_KEY,
     API_ALARM,
@@ -35,7 +37,7 @@ from .const import (
     # API_PULL_VEHICLE,
     API_USING_VEHICLE_SET_SINGLE,
     # API_USING_VEHICLE_CREW,
-    # API_USING_VEHICLE_PROP,
+    API_USING_VEHICLE_PROP,
     BASE_API_URL,
     BASE_API_V2_URL,
     API_STATUSGEBER,
@@ -70,14 +72,19 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraAPI:
     """Class to interact with the Divera 24/7 API."""
 
-    def __init__(self, hass: HomeAssistant, api_key: str, ucr: str) -> None:
+    def __init__(self, hass: HomeAssistant, api_key: str, cluster_id: str) -> None:
         """Initialize the API client."""
-        self.api_key = api_key
-        self.ucr = ucr
+        # self.api_key = api_key
+        self.api_key = None
+        self.cluster_id = cluster_id
         # self.data = hass.data[DOMAIN][str(ucr)][D_COORDINATOR].data
         self.hass = hass
 
         self.session = async_get_clientsession(hass)
+
+    def set_api_key(self, api_key: str):
+        """Setzt den API-Key dynamisch."""
+        self.api_key = api_key
 
     async def api_request(
         self,
@@ -105,7 +112,7 @@ class DiveraAPI:
 
         # permission check
         # if perm_key is not None:
-        #     if not permission_request(self.hass, self.ucr, perm_key):
+        #     if not permission_request(self.hass, self.cluster_id, perm_key):
         #         return None
 
         # init headers, if None
@@ -138,9 +145,9 @@ class DiveraAPI:
                         return response
 
                 _LOGGER.error(
-                    "Error in %s request for hub id '%s'. Status: '%s', reason: '%s', url: '%s'",
+                    "Error in %s request for cluster id '%s'. Status: '%s', reason: '%s', url: '%s'",
                     method,
-                    self.ucr,
+                    self.cluster_id,
                     response.status,
                     response.reason,
                     log_url,
@@ -149,30 +156,33 @@ class DiveraAPI:
                 return {}
         except ClientError as e:
             _LOGGER.error(
-                "client error: %s for hub id %s from url %s", e, self.ucr, log_url
+                "client error: %s for cluster id %s from url %s",
+                e,
+                self.cluster_id,
+                log_url,
             )
             return {}
 
-    async def get_master_data(self) -> dict:
-        """GET all data based on current users authorizations from the Divera API."""
-        _LOGGER.debug("Fetching master data")
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
-        method = "GET"
-        perm_key = None
-        return await self.api_request(url, perm_key, method)
+    # async def get_master_data(self) -> dict:
+    #     """GET all data based on current users authorizations from the Divera API."""
+    #     _LOGGER.debug("Fetching master data")
+    #     url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
+    #     method = "GET"
+    #     perm_key = None
+    #     return await self.api_request(url, perm_key, method)
 
-    async def get_ucr_data(self) -> dict:
+    async def get_ucr_data(self, ucr) -> dict:
         """GET all data for user cluster relation from the Divera API."""
-        _LOGGER.debug("Fetching all data for HUB %s", self.ucr)
+        _LOGGER.debug("Fetching all data for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        params = {"ucr": self.ucr}
+        params = {"ucr": ucr}
         perm_key = None
         return await self.api_request(url, method, perm_key, parameters=params)
 
     async def post_user_status_advanced(self, payload) -> dict:
         """POST userstatus to Divera API."""
-        _LOGGER.debug("Posting user status for HUB %s", self.ucr)
+        _LOGGER.debug("Posting user status for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_STATUSGEBER}"
         method = "POST"
         perm_key = PERM_STATUS
@@ -180,7 +190,7 @@ class DiveraAPI:
 
     async def post_user_status_simple(self, params) -> dict:
         """POST userstatus to Divera API."""
-        _LOGGER.debug("Posting user status for HUB %s", self.ucr)
+        _LOGGER.debug("Posting user status for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{API_STATUSGEBER_SIMPLE}"
         method = "POST"
         perm_key = PERM_STATUS
@@ -188,7 +198,7 @@ class DiveraAPI:
 
     async def post_vehicle_status(self, vehicle_id, payload) -> dict:
         """POST vehicle status and data to Divera API."""
-        _LOGGER.debug("Posting vehicle status and data for HUB %s", self.ucr)
+        _LOGGER.debug("Posting vehicle status and data for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
         method = "POST"
         perm_key = PERM_STATUS_VEHICLE
@@ -196,7 +206,7 @@ class DiveraAPI:
 
     async def post_alarms(self, payload) -> dict:
         """POST new alarm to Divera API."""
-        _LOGGER.debug("Posting alarms for HUB %s", self.ucr)
+        _LOGGER.debug("Posting alarms for unit %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
         method = "POST"
         perm_key = PERM_ALARM
@@ -204,7 +214,9 @@ class DiveraAPI:
 
     async def put_alarms(self, payload, alarm_id) -> dict:
         """PUT changes for existing alarm to Divera API."""
-        _LOGGER.debug("Putting changes to alarm %s for HUB %s", alarm_id, self.ucr)
+        _LOGGER.debug(
+            "Putting changes to alarm %s for cluster %s", alarm_id, self.cluster_id
+        )
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
         method = "PUT"
         perm_key = PERM_ALARM
@@ -212,7 +224,9 @@ class DiveraAPI:
 
     async def post_close_alarm(self, payload, alarm_id) -> dict:
         """POSt to close an existing alarm to Divera API."""
-        _LOGGER.debug("Posting to close alarm %s for HUB %s", alarm_id, self.ucr)
+        _LOGGER.debug(
+            "Posting to close alarm %s for cluster %s", alarm_id, self.cluster_id
+        )
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
         method = "POST"
         perm_key = PERM_ALARM
@@ -220,15 +234,39 @@ class DiveraAPI:
 
     async def post_message(self, payload) -> dict:
         """POSt to close an existing alarm to Divera API."""
-        _LOGGER.debug("Posting message for HUB %s", self.ucr)
+        _LOGGER.debug("Posting message for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
         method = "POST"
         perm_key = PERM_MESSAGES
         return await self.api_request(url, method, perm_key, payload=payload)
 
+    async def get_vehicle_property(self, vehicle_id) -> dict:
+        """GET individual vehicle poroperties for vehicle from Divera API."""
+        _LOGGER.debug(
+            "Getting individual vehicle properties for vehicle id %s", vehicle_id
+        )
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
+        )
+        method = "GET"
+        perm_key = PERM_STATUS_VEHICLE
+        return await self.api_request(url, method, perm_key)
+
+    async def post_using_vehicle_property(self, payload, vehicle_id) -> dict:
+        """POST individual vehicle poroperties for vehicle from Divera API."""
+        _LOGGER.debug(
+            "Posting individual vehicle properties for cluster %s", self.cluster_id
+        )
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
+        )
+        method = "POST"
+        perm_key = PERM_STATUS_VEHICLE
+        return await self.api_request(url, method, perm_key, payload=payload)
+
 
 class DiveraCredentials:
-    """Validates Divera credentials: username, apssword, api-key."""
+    """Validates Divera credentials: username, password, api-key."""
 
     @staticmethod
     async def validate_login(
@@ -236,21 +274,10 @@ class DiveraCredentials:
         session: dict,
         user_input: dict[str, str],
     ) -> tuple[dict[str, str], dict[str, str], str]:
-        """Validate API access and fetch all instance names.
+        """Validate API access and fetch all instance names."""
 
-        Args:
-            errors (dict): Dictionary with error messages.
-            session (dict): Valid websession of Hass.
-            user_input (dict): User input, most likely from config_flow.
-
-        Returns:
-            errors (dict): Dictionary with error messages.
-            hubs (dict): Mapping of hub IDs to their names.
-            api_key (str): Retrieved API key.
-
-        """
-        errors = {}  # init errors, as with multiple hubs errors of other hubs might still be set
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
+        errors = {}  # Fehler zurücksetzen
+        url_auth = f"{BASE_API_URL}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
         payload = {
             "Login": {
                 "username": user_input.get("username", ""),
@@ -259,39 +286,39 @@ class DiveraCredentials:
             }
         }
 
-        hubs = {}
+        clusters = {}
         api_key = ""
 
         try:
-            async with session.post(url, json=payload, timeout=10) as response:
-                data = await response.json()
+            async with session.post(url_auth, json=payload, timeout=10) as response:
+                data_auth = await response.json()
 
-                if not data.get("success"):
-                    raw_errors = data.get("errors", {})
+                if not data_auth.get("success"):
+                    raw_errors = data_auth.get("errors", {})
                     formatted_errors = {}
 
                     if isinstance(raw_errors, list):
                         formatted_errors["base"] = "; ".join(raw_errors)
                     elif isinstance(raw_errors, dict):
-                        for value in raw_errors.values():
-                            if isinstance(value, list):
-                                formatted_errors["base"] = "; ".join(value)
-                            else:
-                                formatted_errors["base"] = str(value)
+                        formatted_errors["base"] = "; ".join(
+                            v if isinstance(v, str) else "; ".join(v)
+                            for v in raw_errors.values()
+                        )
                     else:
                         formatted_errors["base"] = str(raw_errors)
 
-                    return formatted_errors, hubs, api_key
+                    return formatted_errors, clusters, api_key
 
-                user_data = data.get("data", {}).get("user", {})
-                api_key = user_data.get("access_token", "")
+                data_ucr = data_auth.get("data", {}).get("ucr", {})
+                data_user = data_auth.get("data", {}).get("user", {})
+                api_key = data_user.get("access_token", "")
 
-                hubs = (
+                clusters = (
                     {
                         str(ucr["id"]): ucr.get("name", f"Hub_{ucr['id']}")
-                        for ucr in data.get("data", {}).get("ucr", [])
+                        for ucr in data_auth.get("data", {}).get("ucr", [])
                     }
-                    if "ucr" in data.get("data", {})
+                    if "ucr" in data_auth.get("data", {})
                     else {}
                 )
 
@@ -302,7 +329,56 @@ class DiveraCredentials:
         except Exception:
             errors["base"] = "unknown"
 
-        return errors, hubs, api_key
+        # Cluster-Daten abrufen
+        raw_url_ucr = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
+        clusters = {}
+
+        for item in data_ucr:
+            ucr = str(item.get("id"))  # ID der UCR als String
+            if ucr:
+                url_ucr = f"{raw_url_ucr}?accesskey={api_key}&ucr={ucr}"
+                try:
+                    async with session.get(url_ucr, timeout=10) as response:
+                        data_ucr_response = await response.json()
+
+                        if not data_ucr_response.get(
+                            "success"
+                        ) or response.status not in [
+                            200,
+                            201,
+                        ]:
+                            errors["base"] = data_ucr_response.get("message", {})
+                            return errors, clusters, api_key
+
+                    data_ucr_data = data_ucr_response.get(D_DATA, {}).get(D_UCR, {})
+                    data_user = data_ucr_response.get(D_DATA, {}).get(D_USER, {})
+
+                    cluster_id = str(data_ucr_data.get(ucr, {}).get("cluster_id", ""))
+                    cluster_name = data_ucr_data.get(ucr, {}).get("name", "")
+                    user_name = f"{data_user.get('firstname', '')} {data_user.get('lastname', '')}".strip()
+
+                    # 1. Falls `cluster_id` noch nicht existiert, initialisiere es mit einem Dictionary, das `ucr_name` speichert
+                    if cluster_id not in clusters:
+                        clusters[cluster_id] = {
+                            "cluster_name": cluster_name,
+                            "user_cluster_relations": {},
+                        }
+
+                    # 2. Falls `ucr` unter `cluster_id` nicht existiert, füge es hinzu
+                    if ucr not in clusters[cluster_id]["user_cluster_relations"]:
+                        clusters[cluster_id]["user_cluster_relations"][ucr] = {
+                            "user_name": user_name,
+                            "api_key": api_key,
+                        }
+
+                except (ClientError, TimeoutError):
+                    errors["base"] = "cannot_connect"
+                except (TypeError, AttributeError):
+                    errors["base"] = "no_data"
+                except Exception:
+                    errors["base"] = "unknown"
+
+        return errors, clusters, api_key
 
     @staticmethod
     async def validate_api_key(
@@ -319,12 +395,12 @@ class DiveraCredentials:
 
         Returns:
             errors (dict): Dictionary with error messages.
-            hubs (dict): Mapping of hub IDs to their names.
+            cluster (dict): Mapping of hub IDs to their names.
             api_key (str): Retrieved API key.
 
         """
-        hubs = {}
-        errors = {}  # init errors, as with multiple hubs errors of other hubs might still be set
+        clusters = {}
+        errors = {}
         api_key = user_input.get("api_key", "")
         url = (
             f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
@@ -336,10 +412,10 @@ class DiveraCredentials:
 
                 if response.status not in [200, 201]:
                     errors["base"] = data.get("message", {})
-                    return errors, hubs, api_key
+                    return errors, clusters, api_key
 
                 ucr_data = data.get("data", {}).get("ucr", {})
-                hubs = {key: value["name"] for key, value in ucr_data.items()}
+                clusters = {key: value["name"] for key, value in ucr_data.items()}
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
@@ -348,4 +424,4 @@ class DiveraCredentials:
         except Exception:
             errors["base"] = "unknown"
 
-        return errors, hubs, api_key
+        return errors, clusters, api_key

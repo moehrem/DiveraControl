@@ -17,6 +17,7 @@ from aiohttp import ClientError
 
 from .const import (
     # data
+    D_API_KEY,
     D_DATA,
     D_ACTIVE_ALARM_COUNT,
     D_UCR,
@@ -38,6 +39,7 @@ from .const import (
     D_ACCESS,
     D_CLUSTER_ADDRESS,
     D_VEHICLE,
+    D_UCR_ID,
     D_STATUS_SORT,
     D_STATUS_CONF,
     # permissions
@@ -91,9 +93,10 @@ async def update_operational_data(api, data):
         None: Updates the `data` dictionary in place.
 
     """
-
     try:
-        raw_ucr_data = await api.get_ucr_data()
+        ucr_id = data[D_UCR_ID]
+        api.set_api_key(data.get(D_API_KEY, ""))
+        raw_ucr_data = await api.get_ucr_data(ucr_id)
 
         # check for successful API response data
         if not raw_ucr_data.get("success", False):
@@ -177,8 +180,21 @@ async def update_operational_data(api, data):
         # handle vehicle data
         try:
             vehicle_data = cluster.get(D_VEHICLE, {})
-            data[D_VEHICLE] = vehicle_data
+            data[D_VEHICLE] = vehicle_data.copy()
             _LOGGER.debug("Vehicle data updated: %s", vehicle_data)
+
+            # adding properties to vehicle
+            for key in vehicle_data.keys():
+                raw_vehicle_property = await api.get_vehicle_property(key)
+                vehicle_property = raw_vehicle_property.get(D_DATA, {})
+                if isinstance(vehicle_property, dict):
+                    data[D_VEHICLE][key].update(vehicle_property)
+                else:
+                    _LOGGER.warning(
+                        "Unexpected vehicle property format for %s: %s",
+                        key,
+                        vehicle_property,
+                    )
 
         except (ClientError, ValueError, KeyError) as e:
             _LOGGER.error("Error updating vehicles: %s", e)
@@ -258,3 +274,5 @@ async def update_operational_data(api, data):
 
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
+
+    return data
