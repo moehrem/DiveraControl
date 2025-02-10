@@ -4,18 +4,11 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: '0 0 * * *'
+    - cron:  '0 0 * * *'
 
 jobs:
   validate:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
-
-      - name: Set working directory
-        run: cd custom_components/diveracontrol
-
-      - name: Run hassfest in specific directory
-        working-directory: custom_components/diveracontrol
-        run: |
-          python3 -m script.hassfest
+        - uses: "actions/checkout@v4"
+        - uses: "home-assistant/actions/hassfest@master"
