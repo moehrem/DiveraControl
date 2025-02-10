@@ -69,7 +69,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.errors:
             return self._show_api_key_form()
 
-        return await self._process_hubs(clusters, api_key, user_input)
+        return await self._process_hubs(clusters, user_input)
 
     async def async_step_api_key(
         self, user_input: dict[str, Any] | None = None
@@ -86,7 +86,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.errors:
             return self._show_user_form()
 
-        return await self._process_hubs(clusters, api_key, user_input)
+        return await self._process_hubs(clusters, user_input)
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -102,13 +102,13 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="hub_not_found")
 
         if user_input is not None:
-            new_api_key = user_input[D_API_KEY]
+            # new_api_key = user_input[D_API_KEY]
             new_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
             new_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
 
             new_data = {
                 **existing_entry.data,
-                D_API_KEY: new_api_key,
+                # D_API_KEY: new_api_key,
                 D_UPDATE_INTERVAL_DATA: new_interval_data,
                 D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
             }
@@ -120,10 +120,9 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         current_interval_data = existing_entry.data.get(D_UPDATE_INTERVAL_DATA)
         current_interval_alarm = existing_entry.data.get(D_UPDATE_INTERVAL_ALARM)
-        api_key = existing_entry.data.get(D_API_KEY)
 
         return self._show_reconfigure_form(
-            current_interval_data, current_interval_alarm, api_key
+            current_interval_data, current_interval_alarm
         )
 
     def _show_user_form(self):
@@ -167,13 +166,10 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _show_reconfigure_form(
-        self, current_interval_data, current_interval_alarm, api_key
-    ):
+    def _show_reconfigure_form(self, current_interval_data, current_interval_alarm):
         """Display the reconfigure input form."""
         data_schema = vol.Schema(
             {
-                vol.Optional(CONF_API_KEY, default=api_key): cv.string,
                 vol.Required(
                     D_UPDATE_INTERVAL_DATA, default=current_interval_data
                 ): vol.All(vol.Coerce(int), vol.Range(min=30)),
@@ -189,9 +185,9 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    async def _process_hubs(self, clusters, api_key, user_input):
+    async def _process_hubs(self, clusters, user_input):
         """Process hub creation or identify existing hubs."""
-        await self._create_hubs(clusters, api_key, user_input)
+        await self._create_hubs(clusters, user_input)
 
         if self.cluster_created:
             return self.async_abort(
@@ -219,7 +215,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_abort(reason="no_new_hubs_found")
 
-    async def _create_hubs(self, clusters, api_key, user_input):
+    async def _create_hubs(self, clusters, user_input):
         """Create new hubs if they do not already exist, or add user_cluster_relations to existing hubs."""
         processed_hubs = set()  # Verhindert doppelte Erstellung
         existing_entry = None
