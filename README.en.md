@@ -73,6 +73,11 @@ Divera provides many endpoints. Not all of them can be accessed through this int
 
 ## What should DiveraControl be able to do?
 - Adding crew members to vehicles
+- Requesting data upon open alarms only (accepting webhooks from Divera)
+- nice to have: auto-creation and deletion of zones per firestation and alarm location
+
+- Datenabfrage nur bei offenen Alarmen (Entgegennehmen von Webhooks von Divera)
+- Nice to have: automatisches Einrichten und Löschen von Zonen für Gebäude und Einsatzorte
 
 ---
 
