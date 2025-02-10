@@ -82,6 +82,7 @@ DiveraControl ist noch nicht im HACS-Store verfügbar, kann aber als eigenes Rep
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![Öffne HomeAssistant und für die Integration als eigenes Repo hinzu.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
+3. Integration per Button "Herunterladen" unten rechts installieren
 
 ### manuelle Installation
 Zur manuellen Installation den [letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen und in den HomeAssistant-Ordner `config/custom_components/diveracontrol` extrahieren.
