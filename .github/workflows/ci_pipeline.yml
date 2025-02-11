@@ -56,13 +56,18 @@ jobs:
     name: "🕵️ Secret Scanning"
     runs-on: ubuntu-latest
     steps:
+      - name: 📥 Checkout Code (Full History)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: 🐽 TruffleHog OSS
         uses: trufflesecurity/trufflehog@v3.88.6
         with:
-          scan: git
-          base: HEAD~50   # Prüft die letzten 50 Commits
+          base: HEAD~50
           head: HEAD
           extra_args: "--only-verified --json"
+
 
 
   # tests:
