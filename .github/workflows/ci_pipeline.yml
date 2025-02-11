@@ -63,7 +63,8 @@ jobs:
         run: pip install trufflehog
 
       - name: 🔎 Scan for Secrets
-        run: trufflehog filesystem --directory=. --entropy=True --json
+        run: trufflehog filesystem . --entropy=True --json
+
 
   # tests:
   #   name: "✅ Unit Tests"
