@@ -1,0 +1,120 @@
+name: ✅ CI Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"  # Läuft jeden Montag um 03:00 UTC für automatische Updates
+
+jobs:
+  dependency_update:
+    name: "🔄 Update Dependencies"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: 📦 Install pip-tools
+        run: pip install pip-tools
+
+      - name: 🔄 Update Dependencies
+        run: |
+          if [ ! -f requirements.in ]; then
+            cp requirements.txt requirements.in
+          fi
+          pip-compile --upgrade requirements.in
+          pip-sync
+
+      - name: 🚀 Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add requirements.txt
+          git commit -m "🔄 Auto-update dependencies" || exit 0
+          git push origin HEAD:main || exit 0
+
+  lint:
+    name: "🔍 Linting & Static Analysis"
+    runs-on: ubuntu-latest
+    needs: dependency_update
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: 🔍 Install Linting Tools
+        run: pip install flake8
+
+      - name: 🛠️ Run Linting
+        run: flake8 .
+
+  security_checks:
+    name: "🔒 Security Checks"
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: 🔒 Install Security Tools
+        run: pip install bandit safety
+
+      - name: 🔍 Run Bandit (Code Security)
+        run: bandit -r .
+
+      - name: 🛡️ Run Safety (Dependency Security)
+        run: safety check --full-report
+
+  secrets_scan:
+    name: "🕵️ Secret Scanning"
+    runs-on: ubuntu-latest
+    needs: security_checks
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🕵️ Install TruffleHog
+        run: pip install trufflehog
+
+      - name: 🔎 Scan for Secrets
+        run: trufflehog filesystem --path . --regex --entropy=True
+
+  tests:
+    name: "✅ Unit Tests"
+    runs-on: ubuntu-latest
+    needs: secrets_scan
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: 🧪 Install Dependencies and Test Tools
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: 🏗️ Run Tests
+        run: pytest
