@@ -1,0 +1,100 @@
+name: ✅ CI Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    - cron: "0 3 * * 1"  # Läuft jeden Montag um 03:00 UTC für automatische Updates
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install black flake8
+
+      - name: Check formatting with Black
+        run: black --check .
+
+      - name: Run Flake8
+        run: flake8 .
+
+  security_checks:
+    name: "🔒 Security Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: 🔒 Install Security Tools
+        run: pip install bandit safety
+
+      - name: 🔍 Run Bandit (Code Security)
+        run: bandit -r .
+
+      - name: 🛡️ Run Safety (Dependency Security)
+        run: safety check --full-report
+
+  secrets_scan:
+    name: "🕵️ Secret Scanning"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🕵️ Install TruffleHog
+        run: pip install trufflehog
+
+      - name: 🔎 Scan for Secrets
+        run: trufflehog filesystem --path . --regex --entropy=True
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio
+
+      - name: Run Tests
+        run: pytest
+
+  homeassistant_ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Home Assistant Core
+        run: pip install homeassistant
+
+      - name: Run Home Assistant Core Tests
+        run: python3 -m homeassistant --script check_config

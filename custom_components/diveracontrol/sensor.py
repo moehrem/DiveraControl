@@ -1,13 +1,16 @@
-"""Definition der Home Assistant Sensoren für die Divera-Integration.
+"""Definition of Home Assistant Sensors for the Divera Integration.
 
-Verantwortung:
-    - Abonnieren der Daten vom DataUpdateCoordinator (pro HUB).
-    - Bereitstellen von Sensordaten (state, extra_state_attributes, etc.) für Home Assistant.
-    - Handhaben von Attributen wie unique_id, name, etc., die für die Sensorintegration benötigt werden.
+Responsibilities:
+- Subscribe to data from the DataUpdateCoordinator (per HUB).
+- Provide sensor data (state, extra_state_attributes, etc.) for Home Assistant.
+- Handle attributes such as unique_id, name, etc., required for sensor integration.
+- Adding and removing of sensors.
 
-Kommunikation:
-    - Bezieht die Daten vom DataUpdateCoordinator (pro HUB).
-    - Liefert die Daten an Home Assistant zur Anzeige in der Benutzeroberfläche oder zur Nutzung in Automationen.
+Communication:
+- Retrieves data from the DataUpdateCoordinator (per HUB).
+- Delivers data to Home Assistant for display in the user interface or use in automations.
+
+
 """
 
 import asyncio
@@ -46,9 +49,9 @@ from .const import (
     MINOR_VERSION,
     PATCH_VERSION,
 )
-from .utils import sanitize_entity_id
+from .utils import BaseDiveraEntity, sanitize_entity_id, get_device_info
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -93,14 +96,12 @@ async def async_setup_entry(
                 .setdefault("sensors", {})
             )
 
-            # Statische Sensoren hinzufügen
+            # adding static sensors
             static_sensor_map = {
                 D_ACTIVE_ALARM_COUNT: DiveraAlarmCountSensor(
                     coordinator, ucr_data, ucr_id
                 ),
-                D_CLUSTER_ADDRESS: DiveraFirestationSensor(
-                    coordinator, ucr_data, ucr_id
-                ),
+                D_CLUSTER_ADDRESS: DiveraUnitSensor(coordinator, ucr_data, ucr_id),
             }
 
             if usergroup_id not in [5, 19]:
@@ -113,14 +114,14 @@ async def async_setup_entry(
                     new_sensors.append(sensor_instance)
                     test_current_sensors[sensor_name] = sensor_instance
 
-            # Alarm-Sensoren hinzufügen
+            # adding alarm sensors
             new_alarms = new_alarm_data - test_current_sensors.keys()
             for alarm_id in new_alarms:
                 sensor = DiveraAlarmSensor(coordinator, ucr_data, alarm_id, ucr_id)
                 new_sensors.append(sensor)
                 test_current_sensors[alarm_id] = sensor
 
-            # Fahrzeug-Sensoren hinzufügen
+            # adding behicle sensors
             new_vehicles = new_vehicle_data - test_current_sensors.keys()
             for vehicle_id in new_vehicles:
                 sensor = DiveraVehicleSensor(coordinator, ucr_data, vehicle_id, ucr_id)
@@ -134,16 +135,15 @@ async def async_setup_entry(
                 sensor = test_current_sensors.pop(sensor_id, None)
                 if sensor:
                     await sensor.remove_from_hass()
-                    _LOGGER.debug("Removed sensor: %s", sensor_id)
+                    LOGGER.debug("Removed sensor: %s", sensor_id)
 
-        # Neue Sensoren registrieren
+        # register new sensors
         if new_sensors:
             async_add_entities(new_sensors, update_before_add=True)
 
-    # Initiale Synchronisierung
     await sync_sensors()
 
-    # Listener für Updates hinzufügen
+    # adding listener for updates
     coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
 
 
@@ -153,102 +153,115 @@ async def async_remove_sensors(hass: HomeAssistant, cluster_id: str) -> None:
         sensors = hass.data[DOMAIN][cluster_id].get("sensors", {})
         for sensor_id, sensor in sensors.items():
             sensor.remove_from_hass()
-            _LOGGER.info("Removed sensor: %s for HUB: %s", sensor_id, cluster_id)
+            LOGGER.info("Removed sensor: %s for HUB: %s", sensor_id, cluster_id)
 
-        # Entferne die Sensor-Liste
+        # remove sensor list
         hass.data[DOMAIN][cluster_id].pop("sensors", None)
 
 
-class BaseDiveraSensor(Entity):
+class BaseDiveraSensor(Entity, BaseDiveraEntity):
     """Basisklasse für Divera-Sensoren."""
 
     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-        """Init class BaseDiveraSensor."""
-        self.coordinator = coordinator
-        self.cluster_id = coordinator.cluster_id
-        self.ucr_id = ucr_id
-        self.ucr_data = ucr_data
+        """Initialisiert einen Sensor."""
+        Entity.__init__(self)
+        BaseDiveraEntity.__init__(self, coordinator, ucr_data, ucr_id)
 
     @property
     def device_info(self):
-        """Return device information for the sensor."""
-        self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-        self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
-        return {
-            "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-            "name": f"{self.firstname} {self.lastname}",
-            "manufacturer": MANUFACTURER,
-            "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-            "entry_type": "service",
-            # "via_device": (DOMAIN, self.cluster_id),
-        }
+        """Fetch device info."""
+        return get_device_info(self.ucr_data, self.ucr_id)
 
-    @property
-    def should_poll(self) -> bool:
-        return False
 
-    async def async_added_to_hass(self) -> None:
-        """Registriere Updates."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+# class BaseDiveraSensor(Entity):
+#     """Base-class for all sensors."""
 
-    # async def async_update(self) -> None:
-    #     """Fordere ein Update vom Koordinator an."""
-    #     await self.coordinator.async_request_refresh()
+#     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
+#         """Init class BaseDiveraSensor."""
+#         self.coordinator = coordinator
+#         self.cluster_id = coordinator.cluster_id
+#         self.ucr_id = ucr_id
+#         self.ucr_data = ucr_data
 
-    async def remove_from_hass(self) -> None:
-        """Vollständige Entfernung der Entität aus Home Assistant."""
-        _LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
+#     @property
+#     def device_info(self):
+#         """Return device information for the sensor."""
+#         self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
+#         self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
+#         return {
+#             "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
+#             "name": f"{self.firstname} {self.lastname} / {self.ucr_id}",
+#             "manufacturer": MANUFACTURER,
+#             "model": DOMAIN,
+#             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+#             "entry_type": "service",
+#         }
 
-        # 1. Entferne die Entität aus dem Entity Registry
-        try:
-            registry = er.async_get(self.hass)
-            if registry.async_is_registered(self.entity_id):
-                registry.async_remove(self.entity_id)
-                _LOGGER.debug("Removed entity from registry: %s", self.entity_id)
-            else:
-                _LOGGER.debug("Entity not found in registry: %s", self.entity_id)
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from registry: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
+#     @property
+#     def should_poll(self) -> bool:
+#         return False
 
-        # 2. Entferne die Entität aus dem State Machine
-        try:
-            self.hass.states.async_remove(self.entity_id)
-            _LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from state machine: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
+#     async def async_added_to_hass(self) -> None:
+#         """Registriere Updates."""
+#         self.async_on_remove(
+#             self.coordinator.async_add_listener(self.async_write_ha_state)
+#         )
 
-        # 3. Entferne die Entität aus internen Datenstrukturen
-        try:
-            if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-                sensors = self.hass.data[DOMAIN][self.cluster_id].get("sensors", {})
-                if self.entity_id in sensors:
-                    del sensors[self.entity_id]
-                    _LOGGER.debug(
-                        "Removed entity from internal storage: %s", self.entity_id
-                    )
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from internal storage: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
+#     # async def async_update(self) -> None:
+#     #     """Fordere ein Update vom Koordinator an."""
+#     #     await self.coordinator.async_request_refresh()
 
-        _LOGGER.info("Entity successfully removed: %s", self.entity_id)
+#     async def remove_from_hass(self) -> None:
+#         """Fully remove an entity from Home Assistant."""
+#         LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
+
+#         # 1. remove entity from entity-registry
+#         try:
+#             registry = er.async_get(self.hass)
+#             if registry.async_is_registered(self.entity_id):
+#                 registry.async_remove(self.entity_id)
+#                 LOGGER.debug("Removed entity from registry: %s", self.entity_id)
+#             else:
+#                 LOGGER.debug("Entity not found in registry: %s", self.entity_id)
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from registry: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         # 2. remove entity from state machine
+#         try:
+#             self.hass.states.async_remove(self.entity_id)
+#             LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from state machine: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         # 3. remove entity from internal structures
+#         try:
+#             if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
+#                 sensors = self.hass.data[DOMAIN][self.cluster_id].get("sensors", {})
+#                 if self.entity_id in sensors:
+#                     del sensors[self.entity_id]
+#                     LOGGER.debug(
+#                         "Removed entity from internal storage: %s", self.entity_id
+#                     )
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from internal storage: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         LOGGER.info("Entity successfully removed: %s", self.entity_id)
 
 
 class DiveraAlarmSensor(BaseDiveraSensor):
-    """Ein Sensor, der einen einzelnen Alarm darstellt."""
+    """Sensor to represent a single alarm."""
 
     def __init__(self, coordinator, ucr_data, alarm_id: str, cluster_id: str) -> None:
         """Init class DiveraAlarmSensor."""
@@ -258,38 +271,38 @@ class DiveraAlarmSensor(BaseDiveraSensor):
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
+        """Entity-ID of sensor."""
         return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_alarm_{self.alarm_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
+        """Set entity-id of sensor."""
         self._entity_id = value
 
     @property
     def unique_id(self) -> str:
-        """Eindeutige ID des Sensors."""
+        """Unique ID of sensor."""
         return f"{self.ucr_id}_alarm_{self.alarm_id}"
 
     @property
     def name(self) -> str:
-        """Name des Sensors."""
+        """Name of sensor."""
         return f"Alarm ID {self.alarm_id}"
 
     @property
     def state(self) -> str:
-        """Aktueller Zustand des Sensors."""
+        """State of sensor."""
         alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
         return alarm_data.get("title", "Unknown")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Zusätzliche Attribute des Sensors."""
+        """Additional attributes of sensor."""
         return self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
 
     @property
     def icon(self) -> str:
-        """Icon des Sensors."""
+        """Icon of sensor."""
         alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
         closed = alarm_data.get("closed", False)
         priority = alarm_data.get("priority", False)
@@ -302,10 +315,10 @@ class DiveraAlarmSensor(BaseDiveraSensor):
 
 
 class DiveraVehicleSensor(BaseDiveraSensor):
-    """Ein Sensor, der ein einzelnes Fahrzeug darstellt."""
+    """Sensor to represent a single vehicle."""
 
     def __init__(self, coordinator, ucr_data, vehicle_id: str, cluster_id: str) -> None:
-        """INit class DiveraVehicleSensor."""
+        """Init class DiveraVehicleSensor."""
         super().__init__(coordinator, ucr_data, cluster_id)
         self._vehicle_id = vehicle_id
 
@@ -317,17 +330,17 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
+        """Set entity-id of sensor."""
         self._entity_id = value
 
     @property
     def unique_id(self) -> str:
-        """Eindeutige ID des Sensors."""
+        """Unique if if sensor."""
         return f"{self.ucr_id}_vehicle_{self._vehicle_id}"
 
     @property
     def name(self) -> str:
-        """Name des Sensors."""
+        """Name of sensor."""
         vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
         shortname = vehicle_data.get("shortname", "Unknown")
         veh_name = vehicle_data.get("name", "Unknown")
@@ -335,13 +348,13 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 
     @property
     def state(self) -> str:
-        """Aktueller Zustand des Sensors."""
+        """State of sensor."""
         vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
         return vehicle_data.get("fmsstatus_id", "Unknown")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Zusätzliche Attribute des Sensors."""
+        """Additional attributes of sensor."""
         extra_state_attributes = {}
         extra_state_attributes["Vehicle-ID"] = self._vehicle_id
         extra_state_attributes.update(
@@ -351,40 +364,36 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 
     @property
     def icon(self) -> str:
-        """Icon des Sensors."""
+        """Icon of sensor."""
         return I_VEHICLE
 
 
-class DiveraFirestationSensor(BaseDiveraSensor):
-    """Ein Sensor, der eine Feuerwehrwache darstellt."""
+class DiveraUnitSensor(BaseDiveraSensor):
+    """Sensor to represent a divera-unit."""
 
     def __init__(self, coordinator, ucr_data, cluster_id: str) -> None:
-        """Init class DiveraFirestationSensor."""
+        """Init class DiveraUnitSensor."""
         super().__init__(coordinator, ucr_data, cluster_id)
         self.fs_name = next(iter(ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()), "Unknown")
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
+        """Entity-ID of sensor."""
         return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_cluster_address')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
+        """Set entity-id of sensor."""
         self._entity_id = value
 
     @property
     def unique_id(self) -> str:
-        """Eindeutige ID des Sensors."""
-        fs_name = next(
-            iter(self.ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()),
-            "Unknown",
-        )
+        """Unique-ID of sensor."""
         return f"{self.ucr_id}_cluster_address"
 
     @property
     def name(self) -> str:
-        """Name des Sensors."""
+        """Name of sensor.."""
         return next(
             iter(self.ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()),
             "Unknown",
@@ -392,7 +401,7 @@ class DiveraFirestationSensor(BaseDiveraSensor):
 
     @property
     def state(self) -> str:
-        """Aktueller Zustand der Feuerwehrwache."""
+        """State of sensor."""
         return next(
             iter(self.ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()),
             "Unknown",
@@ -400,7 +409,7 @@ class DiveraFirestationSensor(BaseDiveraSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Zusätzliche Attribute des Sensors."""
+        """Additional attributes of sensor."""
         firestation_data = self.ucr_data.get(D_CLUSTER_ADDRESS, {}).get(
             self.fs_name, {}
         )
@@ -419,12 +428,12 @@ class DiveraFirestationSensor(BaseDiveraSensor):
 
     @property
     def icon(self) -> str:
-        """Icon des Sensors."""
+        """Icon of sensor."""
         return I_FIRESTATION
 
 
 class DiveraAlarmCountSensor(BaseDiveraSensor):
-    """Ein Sensor, der die Anzahl der aktiven Alarme darstellt."""
+    """Sensor to count active alarms."""
 
     def __init__(self, coordinator, ucr_data, cluster_id: str) -> None:
         """Init class DiveraAlarmCountSensor."""
@@ -432,27 +441,27 @@ class DiveraAlarmCountSensor(BaseDiveraSensor):
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
+        """Entity-ID of sensor."""
         return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_active_alarm_count')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
+        """Set entity-id of sensor."""
         self._entity_id = value
 
     @property
     def unique_id(self) -> str:
-        """Eindeutige ID des Sensors."""
+        """Unique-ID of sensor."""
         return f"{self.ucr_id}_active_alarm_count"
 
     @property
     def name(self) -> str:
-        """Name des Sensors."""
+        """Name of sensor."""
         return f"Open Alarms {self.ucr_id}"
 
     @property
     def state(self) -> int:
-        """Aktueller Zustand des Sensors."""
+        """State of sensor."""
         try:
             return int(self.ucr_data.get(D_ACTIVE_ALARM_COUNT, 0))
         except (ValueError, TypeError):
@@ -460,12 +469,12 @@ class DiveraAlarmCountSensor(BaseDiveraSensor):
 
     @property
     def icon(self) -> str:
-        """Icon des Sensors."""
+        """Icon of sensor."""
         return I_COUNTER_ACTIVE_ALARMS
 
 
 class DiveraStatusSensor(BaseDiveraSensor):
-    """Ein Sensor, der den Status des Nutzers darstellt."""
+    """Sensor to represent the user status."""
 
     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
         """Init class DiveraStatusSensor."""
@@ -474,28 +483,28 @@ class DiveraStatusSensor(BaseDiveraSensor):
 
     @property
     def entity_id(self) -> str:
-        """Entitäts-ID des Sensors."""
+        """Entity-ID of sensor."""
         return self._entity_id
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
-        """Setze die Entitäts-ID des Sensors."""
+        """Set entity-ID of sensor."""
         self._entity_id = value
 
     @property
     def unique_id(self) -> str:
-        """Eindeutige ID des Sensors."""
+        """Unique-ID of sensor."""
         return f"{self.ucr_id}_status"
 
     @property
     def name(self) -> str:
-        """Name des Sensors."""
-        unit_name = self.ucr_data.get(D_UCR, {}).get("name", "Unit Unknown")
-        return f"Status {unit_name}"
+        """Name of sensor."""
+        # unit_name = self.ucr_data.get(D_UCR, {}).get("name", "Unit Unknown")
+        return "Status"
 
     @property
     def state(self) -> str:
-        """Aktueller Zustand des Sensors."""
+        """State of sensor."""
         status_id = str(self.ucr_data.get(D_STATUS, {}).get("status_id", {}))
         return (
             self.ucr_data.get(D_STATUS_CONF, {})
@@ -505,7 +514,7 @@ class DiveraStatusSensor(BaseDiveraSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Rückgabe weiterer Statusdetails."""
+        """Additional attributes of sensor."""
         status_options = []
         for status_id, status_details in self.ucr_data.get(D_STATUS_CONF, {}).items():
             status_name = f"{status_details.get('name', 'Unknown')} ({status_id})"
@@ -513,7 +522,6 @@ class DiveraStatusSensor(BaseDiveraSensor):
                 status_options.append(status_name)
 
         status_id = str(self.ucr_data.get(D_STATUS, {}).get("status_id", {}))
-        # status_id.append(status_id)
 
         return {
             "status_id": status_id,
@@ -522,5 +530,5 @@ class DiveraStatusSensor(BaseDiveraSensor):
 
     @property
     def icon(self) -> str:
-        """Icon des Sensors."""
+        """Icon of sensor."""
         return I_STATUS
