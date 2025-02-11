@@ -2,52 +2,16 @@ name: ✅ CI Pipeline
 
 on:
   push:
-    branches: [main]
-    tags:
-      - 'v*'
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   schedule:
     - cron: "0 3 * * 1"  # Läuft jeden Montag um 03:00 UTC für automatische Updates
 
 jobs:
-  dependency_update:
-    name: "🔄 Update Dependencies"
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v3
-
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-
-      - name: 📦 Install pip-tools
-        run: pip install pip-tools
-
-      - name: 🔄 Update Dependencies
-        run: |
-          if [ ! -f requirements.in ]; then
-            cp requirements.txt requirements.in
-          fi
-          pip-compile --upgrade requirements.in
-          pip-sync
-
-      - name: 🚀 Commit and Push Changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add requirements.txt
-          git commit -m "🔄 Auto-update dependencies" || exit 0
-          git push origin HEAD:main || exit 0
-
   lint:
     name: "🔍 Linting & Static Analysis"
     runs-on: ubuntu-latest
-    needs: dependency_update
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
@@ -66,7 +30,6 @@ jobs:
   security_checks:
     name: "🔒 Security Checks"
     runs-on: ubuntu-latest
-    needs: lint
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
@@ -88,7 +51,6 @@ jobs:
   secrets_scan:
     name: "🕵️ Secret Scanning"
     runs-on: ubuntu-latest
-    needs: security_checks
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
@@ -102,7 +64,7 @@ jobs:
   tests:
     name: "✅ Unit Tests"
     runs-on: ubuntu-latest
-    needs: secrets_scan
+    needs: [security_checks, secrets_scan]  # Läuft erst, wenn Security & Secret-Scan bestanden sind
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v3
@@ -112,9 +74,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: 🧪 Install Dependencies and Test Tools
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+      - name: 🧪 Install Test Tools
+        run: pip install pytest
+
       - name: 🏗️ Run Tests
         run: pytest
