@@ -10,6 +10,7 @@ on:
 
 jobs:
   lint:
+    name: "🔍 Linting & Static Analysis"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -65,6 +66,7 @@ jobs:
         run: trufflehog filesystem --path . --regex --entropy=True
 
   tests:
+    name: "✅ Unit Tests"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -83,6 +85,7 @@ jobs:
         run: pytest
 
   homeassistant_ci:
+    name: "🏠 HomeAssistant CI"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
