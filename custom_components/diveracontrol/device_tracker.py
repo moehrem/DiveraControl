@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 import homeassistant.helpers.entity_registry as er
 
-from .utils import sanitize_entity_id
+from .utils import BaseDiveraEntity, sanitize_entity_id, get_device_info
 from .const import (
     D_ALARM,
     D_COORDINATOR,
@@ -27,15 +27,13 @@ from .const import (
     PATCH_VERSION,
 )
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry, async_add_entities
 ) -> None:
     """Set up Divera device trackers."""
-
-    # return
 
     cluster = config_entry.data
     cluster_id = cluster[D_CLUSTER_ID]
@@ -73,7 +71,7 @@ async def async_setup_entry(
                 new_trackers.append(tracker)
                 test_current_trackers[alarm_id] = tracker
 
-            # add new vehicle trackers
+            # add vehicle trackers
             new_vehicle_trackers = new_vehicle_data - test_current_trackers.keys()
             for vehicle_id in new_vehicle_trackers:
                 tracker = DiveraVehicleTracker(
@@ -89,106 +87,118 @@ async def async_setup_entry(
                 sensor = test_current_trackers.pop(tracker_id, None)
                 if sensor:
                     await sensor.remove_from_hass()
-                    _LOGGER.debug("Removed trackers: %s", tracker_id)
+                    LOGGER.debug("Removed trackers: %s", tracker_id)
 
         # Add new trackers to Home Assistant
         if new_trackers:
             async_add_entities(new_trackers, update_before_add=True)
 
-    # Initial synchronization
     await sync_sensors()
 
     # Add listener for updates
     coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
 
 
-class BaseDiveraTracker(TrackerEntity):
+# class BaseDiveraTracker(TrackerEntity):
+#     """Baseclass for Divera-Tracker."""
+
+#     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
+#         """Init class BaseDiveraTracker."""
+#         self.coordinator = coordinator
+#         self.cluster_id = coordinator.cluster_id
+#         self.ucr_id = ucr_id
+#         self.ucr_data = ucr_data
+
+#     @property
+#     def device_info(self):
+#         """Return device information for the tracker."""
+#         self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
+#         self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
+#         return {
+#             "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
+#             "name": f"{self.firstname} {self.lastname} / {self.ucr_id}",
+#             "manufacturer": MANUFACTURER,
+#             "model": DOMAIN,
+#             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+#             "entry_type": "service",
+#         }
+
+#     @property
+#     def should_poll(self):
+#         """Indicate that the entity does not require polling."""
+#         return False
+
+#     async def async_added_to_hass(self) -> None:
+#         """Register updates."""
+#         self.async_on_remove(
+#             self.coordinator.async_add_listener(self.async_write_ha_state)
+#         )
+
+#     # async def async_update(self) -> None:
+#     #     """Fordere ein Update vom Koordinator an."""
+#     #     await self.coordinator.async_request_refresh()
+
+#     async def remove_from_hass(self) -> None:
+#         """Vollständige Entfernung der Entität aus Home Assistant."""
+#         LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
+
+#         # 1. Entferne die Entität aus dem Entity Registry
+#         try:
+#             registry = er.async_get(self.hass)
+#             if registry.async_is_registered(self.entity_id):
+#                 registry.async_remove(self.entity_id)
+#                 LOGGER.debug("Removed entity from registry: %s", self.entity_id)
+#             else:
+#                 LOGGER.debug("Entity not found in registry: %s", self.entity_id)
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from registry: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         # 2. Entferne die Entität aus dem State Machine
+#         try:
+#             self.hass.states.async_remove(self.entity_id)
+#             LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from state machine: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         # 3. Entferne die Entität aus internen Datenstrukturen
+#         try:
+#             if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
+#                 trackers = self.hass.data[DOMAIN][self.cluster_id].get("trackers", {})
+#                 if self.entity_id in trackers:
+#                     del trackers[self.entity_id]
+#                     LOGGER.debug(
+#                         "Removed entity from internal storage: %s", self.entity_id
+#                     )
+#         except Exception as e:
+#             LOGGER.error(
+#                 "Failed to remove entity from internal storage: %s, Error: %s",
+#                 self.entity_id,
+#                 e,
+#             )
+
+#         LOGGER.info("Entity successfully removed: %s", self.entity_id)
+
+
+class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
     """Basisklasse für Divera-Tracker."""
 
     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-        """Init class BaseDiveraTracker."""
-        self.coordinator = coordinator
-        self.cluster_id = coordinator.cluster_id
-        self.ucr_id = ucr_id
-        self.ucr_data = ucr_data
+        """Initialisiert einen Tracker."""
+        TrackerEntity.__init__(self)
+        BaseDiveraEntity.__init__(self, coordinator, ucr_data, ucr_id)
 
     @property
     def device_info(self):
-        """Return device information for the tracker."""
-        self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-        self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
-        return {
-            "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-            "name": f"{self.firstname} {self.lastname}",
-            "manufacturer": MANUFACTURER,
-            "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-            "entry_type": "service",
-            # "via_device": (DOMAIN, self.cluster_id),
-        }
-
-    @property
-    def should_poll(self):
-        """Indicate that the entity does not require polling."""
-        return False
-
-    async def async_added_to_hass(self) -> None:
-        """Register updates."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
-
-    async def async_update(self) -> None:
-        """Fordere ein Update vom Koordinator an."""
-        await self.coordinator.async_request_refresh()
-
-    async def remove_from_hass(self) -> None:
-        """Vollständige Entfernung der Entität aus Home Assistant."""
-        _LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
-
-        # 1. Entferne die Entität aus dem Entity Registry
-        try:
-            registry = er.async_get(self.hass)
-            if registry.async_is_registered(self.entity_id):
-                registry.async_remove(self.entity_id)
-                _LOGGER.debug("Removed entity from registry: %s", self.entity_id)
-            else:
-                _LOGGER.debug("Entity not found in registry: %s", self.entity_id)
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from registry: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        # 2. Entferne die Entität aus dem State Machine
-        try:
-            self.hass.states.async_remove(self.entity_id)
-            _LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from state machine: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        # 3. Entferne die Entität aus internen Datenstrukturen
-        try:
-            if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-                trackers = self.hass.data[DOMAIN][self.cluster_id].get("trackers", {})
-                if self.entity_id in trackers:
-                    del trackers[self.entity_id]
-                    _LOGGER.debug(
-                        "Removed entity from internal storage: %s", self.entity_id
-                    )
-        except Exception as e:
-            _LOGGER.error(
-                "Failed to remove entity from internal storage: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        _LOGGER.info("Entity successfully removed: %s", self.entity_id)
+        """Fetch device info."""
+        return get_device_info(self.ucr_data, self.ucr_id)
 
 
 class DiveraAlarmTracker(BaseDiveraTracker):
