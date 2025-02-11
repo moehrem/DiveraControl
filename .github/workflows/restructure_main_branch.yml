@@ -1,35 +1,35 @@
-name: Move Files After Merge
+# name: Move Files After Merge
 
-on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
+# on:
+#   pull_request:
+#     types:
+#       - closed
+#     branches:
+#       - main
 
-jobs:
-  move-files:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_PAT }}
+# jobs:
+#   move-files:
+#     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+#         with:
+#           token: ${{ secrets.GH_PAT }}
 
-      - name: Move Files
-        run: |
-          mkdir -p custom_components/diveracontrol
-          mv *.py *.yaml manifest.json custom_components/diveracontrol/
-          mv translations custom_components/diveracontrol/
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
+#       - name: Move Files
+#         run: |
+#           mkdir -p custom_components/diveracontrol
+#           mv *.py *.yaml manifest.json custom_components/diveracontrol/
+#           mv translations custom_components/diveracontrol/
+#           git config --global user.email "github-actions@github.com"
+#           git config --global user.name "GitHub Actions"
 
-          if git diff --quiet; then
-            echo "Keine Änderungen, Workflow wird übersprungen."
-            exit 0
-          fi
+#           if git diff --quiet; then
+#             echo "Keine Änderungen, Workflow wird übersprungen."
+#             exit 0
+#           fi
 
-          git add .
-          git commit -m "Automatisch: Dateien verschoben"
-          git push
+#           git add .
+#           git commit -m "Automatisch: Dateien verschoben"
+#           git push
