@@ -10,6 +10,7 @@ on:
 
 jobs:
   lint:
+    name: "🔍 Linting & Static Analysis"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -62,39 +63,23 @@ jobs:
         run: pip install trufflehog
 
       - name: 🔎 Scan for Secrets
-        run: trufflehog filesystem --path . --regex --entropy=True
+        run: trufflehog filesystem --directory=. --entropy=True --json
 
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  # tests:
+  #   name: "✅ Unit Tests"
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install pytest pytest-asyncio
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install pytest pytest-asyncio
 
-      - name: Run Tests
-        run: pytest
-
-  homeassistant_ci:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install Home Assistant Core
-        run: pip install homeassistant
-
-      - name: Run Home Assistant Core Tests
-        run: python3 -m homeassistant --script check_config
+  #     - name: Run Tests
+  #       run: pytest

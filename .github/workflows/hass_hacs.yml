@@ -1,4 +1,4 @@
-name: Validate integration
+name: Home Assistant Quality Checks
 
 on:
   push:
@@ -8,12 +8,14 @@ on:
 
 jobs:
   hass:
+    name: HASS
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "home-assistant/actions/hassfest@master"
 
   hacs:
+    name: HACS
     runs-on: "ubuntu-latest"
     steps:
       - name: Checkout Code
