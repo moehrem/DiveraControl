@@ -1,4 +1,4 @@
-name: Home Assistant Quality Checks
+name: 🏠 Home Assistant Quality Checks
 
 on:
   push:
