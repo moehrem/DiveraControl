@@ -48,10 +48,8 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self.session = None
         self.errors: dict[str, str] = {}
-        self.cluster_created: list = []
-        self.cluster_existing: list = []
-        self.device_created: list = []
-        self.device_existing: list = []
+        self.new_data: list = []
+        self.existing_data: list = []
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -62,7 +60,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self._show_user_form()
 
-        self.errors, clusters, api_key = await dc.validate_login(
+        self.errors, clusters = await dc.validate_login(
             self.errors, self.session, user_input
         )
 
@@ -79,7 +77,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             return self._show_api_key_form()
 
         self.errors = {}
-        self.errors, clusters, api_key = await dc.validate_api_key(
+        self.errors, clusters = await dc.validate_api_key(
             self.errors, self.session, user_input
         )
 
@@ -189,42 +187,54 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Process hub creation or identify existing hubs."""
         await self._create_hubs(clusters, user_input)
 
-        if self.cluster_created:
+        if self.new_data and not self.existing_data:
             return self.async_abort(
-                reason="cluster_created",
-                description_placeholders={"names": ", ".join(self.cluster_created)},
+                reason="new_data_only",
+                description_placeholders={"new_data": ", ".join(self.new_data)},
             )
 
-        if self.device_created:
+        if not self.new_data and self.existing_data:
             return self.async_abort(
-                reason="device_created",
-                description_placeholders={"names": ", ".join(self.device_created)},
+                reason="existing_data_only",
+                description_placeholders={
+                    "existing_data": ", ".join(self.existing_data)
+                },
             )
 
-        if self.cluster_existing:
+        if self.new_data and self.existing_data:
             return self.async_abort(
-                reason="cluster_existing",
-                description_placeholders={"names": ", ".join(self.cluster_existing)},
-            )
-
-        if self.device_existing:
-            return self.async_abort(
-                reason="device_existing",
-                description_placeholders={"names": ", ".join(self.device_existing)},
+                reason="new_and_existing_data",
+                description_placeholders={
+                    "new_data": ", ".join(self.existing_data),
+                    "existing_data": ", ".join(self.existing_data),
+                },
             )
 
         return self.async_abort(reason="no_new_hubs_found")
 
-    async def _create_hubs(self, clusters, user_input):
-        """Create new hubs if they do not already exist, or add user_cluster_relations to existing hubs."""
-        processed_hubs = set()  # Verhindert doppelte Erstellung
+    async def _create_hubs(self, clusters, user_input) -> None:
+        """Create new hubs(clusters) if they do not already exist, or add devices(users) to existing hubs(clusters).
+
+        Import:
+        - clusters: dict - {cluster_id: cluster_data}
+        - user_input: dict - {username, password, update_interval_data, update_interval_alarm}
+
+        Export:
+        - None, but writes to self.new_data and self.existing_data
+
+        This method will check if there is an existing config_entry for the hub(cluster) the user entered. If so, a new device(user) will be
+        created for the hub(cluster) by updating the existing entry. If not, a new cluster(entry) will be created.
+        To be able to add multiple hubs at one, a task will be added per hub(cluster) to start async_create_entry.
+        """
+
+        processed_hubs = set()
         existing_entry = None
         new_devices = {}
 
         for cluster_id, cluster_data in clusters.items():
             cluster_name = cluster_data["cluster_name"]
 
-            # Prüfen, ob der Hub bereits existiert
+            # checking for existing hub(cluster)
             for entry in self._async_current_entries():
                 existing_cluster_id = entry.data.get(D_CLUSTER_ID)
                 if existing_cluster_id == cluster_id:
@@ -237,8 +247,10 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                     cluster_name,
                 )
 
-                # check if device(user) exists
-                existing_devices = existing_entry.data.get("user_cluster_relations", {})
+                # checking for existing device(user)
+                existing_devices = dict(
+                    existing_entry.data.get("user_cluster_relations", {})
+                )
 
                 for ucr_id, ucr_data in cluster_data.get(
                     "user_cluster_relations", {}
@@ -246,6 +258,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                     if ucr_id not in existing_devices:
                         new_devices[ucr_id] = ucr_data
 
+                # create new devices(users) by updating config_entry
                 if new_devices:
                     existing_devices.update(new_devices)
                     self.hass.config_entries.async_update_entry(
@@ -261,29 +274,34 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                         list(new_devices.keys()),
                     )
 
-                    # **Sende das Event NACH der Datenaktualisierung**
+                    # updating coordinator
                     async_dispatcher_send(
                         self.hass, f"{DOMAIN}_config_updated", existing_entry.entry_id
                     )
 
-                    self.device_created.append(f"\n{ucr_id}")
+                    self.new_data.append(
+                        f"\n{cluster_name} - {ucr_data.get(D_USERNAME)}"
+                    )
+
                     continue
 
                 LOGGER.debug("No new users found for hub '%s'", cluster_name)
-                self.device_existing.append(f"\n{cluster_name}")
+                self.existing_data.append(
+                    f"\n{cluster_name} - {ucr_data.get(D_USERNAME)}"
+                )
                 continue
 
-            # Falls der Hub noch nicht existiert und noch nicht verarbeitet wurde
+            # creating hub(cluster)
             if cluster_id in processed_hubs:
                 LOGGER.warning(
                     "Skipping duplicate hub creation attempt for '%s'", cluster_name
                 )
+
+                self.existing_data.append(f"\n{cluster_name}")
                 continue
 
-            # Erstelle einen neuen Hub für die Cluster-ID
             new_hub = {
                 D_CLUSTER_ID: cluster_id,
-                # D_API_KEY: api_key,
                 D_UPDATE_INTERVAL_DATA: user_input[D_UPDATE_INTERVAL_DATA],
                 D_UPDATE_INTERVAL_ALARM: user_input[D_UPDATE_INTERVAL_ALARM],
                 "cluster_name": cluster_name,
@@ -298,85 +316,33 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                 },
             }
 
-            # Markiere diesen Hub als verarbeitet
+            # mark hub(cluster) as processed
             processed_hubs.add(cluster_id)
 
-            # Starte den Konfigurationsprozess für den neuen Hub
+            # create taks per found hub(cluster). each task will create an entry.
             self.hass.async_create_task(
                 self.hass.config_entries.flow.async_init(
                     DOMAIN, context={"source": "import"}, data=new_hub
                 )
             )
-            self.cluster_created.append(f"\n{cluster_name}")
 
-    async def async_step_import(self, import_data: dict[str, Any]) -> ConfigFlowResult:
-        """Handle automatic creation of a hub configuration from YAML."""
-        existing_entry = next(
-            (
-                entry
-                for entry in self._async_current_entries()
-                if entry.data.get(D_CLUSTER_ID) == import_data[D_CLUSTER_ID]
-            ),
-            None,
-        )
-
-        if existing_entry:
-            LOGGER.info(
-                "Hub '%s' already exists, checking for missing users",
-                import_data["cluster_name"],
-            )
-
-            existing_cluster_id = existing_entry.data.get(D_CLUSTER_ID)
-            hass_data = self.hass.data.get(DOMAIN, {})
-            coordinator = hass_data.get(existing_cluster_id, {}).get("coordinator")
-
-            if not coordinator:
-                LOGGER.warning(
-                    "No coordinator found for hub '%s'. Users may not be updated.",
-                    import_data["cluster_name"],
-                )
-                return self.async_abort(reason="hubs_existing")
-
-            existing_devices = existing_entry.data.get("user_cluster_relations", {})
-
-            # Nur fehlende Geräte hinzufügen
-            new_devices = {}
-
-            for ucr_id, user_name in import_data.get(
+            for ucr_id, user_data in cluster_data.get(
                 "user_cluster_relations", {}
             ).items():
-                if ucr_id not in existing_devices:
-                    new_devices[ucr_id] = {D_UCR_ID: ucr_id}
+                self.new_data.append(f"\n{cluster_name} - {user_data.get(D_USERNAME)}")
 
-            if new_devices:
-                existing_devices.update(new_devices)
-                self.hass.config_entries.async_update_entry(
-                    existing_entry,
-                    data={
-                        **existing_entry.data,
-                        "user_cluster_relations": existing_devices,
-                    },
-                )
+    async def async_step_import(self, import_data: dict[str, Any]) -> ConfigFlowResult:
+        """Handle automatic creation of a hub configuration - usually from YAML.
 
-                LOGGER.info(
-                    "Added new users to existing hub '%s': %s",
-                    import_data["cluster_name"],
-                    list(new_devices.keys()),
-                )
+        Import:
+        - import_data: dict - {cluster_id, cluster_name, user_cluster_relations}
 
-                # **Coordinator über die Änderung informieren**
-                async_dispatcher_send(
-                    self.hass, f"{DOMAIN}_config_updated", existing_entry.entry_id
-                )
+        Export:
+        - ConfigFlowResult
 
-                return self.async_abort(reason="hubs_existing")
 
-            LOGGER.info(
-                "No new users found for existing hub '%s'",
-                import_data["cluster_name"],
-            )
-
-            return self.async_abort(reason="hubs_existing")
+        This method is used as a workaround to create multiple entries This is needed, if a user is member of multiple Divera-units.
+        """
 
         LOGGER.info("Creating new hub '%s'", import_data["cluster_name"])
         return self.async_create_entry(
