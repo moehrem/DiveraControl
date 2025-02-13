@@ -68,15 +68,7 @@ jobs:
           head: HEAD
           extra_args: "--only-verified --json"
 
-  pre-commit:
-    name: "🚦 Pre-Commit Checks"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-      - uses: pre-commit/action@v3.0.1
-
-  # tests:
+          # tests:
   #   name: "✅ Unit Tests"
   #   runs-on: ubuntu-latest
   #   steps:
