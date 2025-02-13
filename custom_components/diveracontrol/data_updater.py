@@ -69,7 +69,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def update_operational_data(api, data):
+async def update_operational_data(api, data) -> None:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates

@@ -76,10 +76,8 @@ class DiveraAPI:
 
     def __init__(self, hass: HomeAssistant, cluster_id: str) -> None:
         """Initialize the API client."""
-        # self.api_key = api_key
         self.api_key = None
         self.cluster_id = cluster_id
-        # self.data = hass.data[DOMAIN][str(ucr)][D_COORDINATOR].data
         self.hass = hass
 
         self.session = async_get_clientsession(hass)
