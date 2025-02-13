@@ -17,10 +17,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Set up myDivera from a config entry."""
+    """Set up DiveraControl from a config entry."""
     cluster = config_entry.data
     cluster_id = cluster.get(D_CLUSTER_ID)
-    api_key = cluster.get(D_API_KEY)
 
     if not cluster_id:
         LOGGER.error("Missing cluster ID in config entry: %s", config_entry)
@@ -30,15 +29,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "Setting up cluster: %s (%s)", cluster.get("name", "Unknown"), cluster_id
     )
 
-    api = DiveraAPI(hass, api_key, cluster_id)
+    api = DiveraAPI(hass, cluster_id)
     coordinator = DiveraCoordinator(
         hass, api, cluster, cluster_id, config_entry.entry_id
     )
 
     hass.data.setdefault(DOMAIN, {})[cluster_id] = {
         "coordinator": coordinator,
-        "sensors": {},
         "api": api,
+        "sensors": {},
+        # "device_trackers": {},
     }
 
     try:
@@ -85,6 +85,10 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
     LOGGER.info("Unloading cluster: %s (%s)", cluster.get("name", "Unknown"), hub_id)
 
+    api: DiveraAPI = hass.data[DOMAIN].pop(config_entry.entry_id, None)
+    if api:
+        await api.close()
+
     unload_ok = await hass.config_entries.async_unload_platforms(
         config_entry, PLATFORMS
     )
@@ -105,53 +109,3 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
             hass.data.pop(DOMAIN, None)
 
     return unload_ok
-
-
-async def async_step_import(self, import_data: dict[str, Any]) -> ConfigFlowResult:
-    """Handle automatic creation of a cluster configuration from YAML."""
-    if any(
-        entry.data.get(D_UCR) == import_data[D_UCR]
-        for entry in self._async_current_entries()
-    ):
-        LOGGER.warning("cluster '%s' already configured", import_data[D_UCR])
-        return self.async_abort(reason="already_configured")
-
-    LOGGER.info("Creating cluster '%s'", import_data["name"])
-    return self.async_create_entry(title=import_data["name"], data=import_data)
-
-
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old config entry to new schema."""
-    LOGGER.debug(
-        "Migrating configuration from version %s.%s",
-        entry.version,
-        getattr(entry, "minor_version", "N/A"),
-    )
-
-    if entry.version != VERSION:
-        new_data = (
-            entry.data.copy()
-        )  # Kopiere die Daten, um Änderungen sicher vorzunehmen
-
-        hass.config_entries.async_update_entry(
-            entry,
-            data=new_data,
-            version=VERSION,
-            minor_version=MINOR_VERSION,
-        )
-        LOGGER.info("Migrated config entry to version %s.%s", VERSION, MINOR_VERSION)
-
-    if entry.minor_version != MINOR_VERSION:
-        new_data = (
-            entry.data.copy()
-        )  # Kopiere die Daten, um Änderungen sicher vorzunehmen
-
-        hass.config_entries.async_update_entry(
-            entry,
-            data=new_data,
-            version=VERSION,
-            minor_version=MINOR_VERSION,
-        )
-        LOGGER.info("Migrated config entry to version %s.%s", VERSION, MINOR_VERSION)
-
-    return True

@@ -44,7 +44,7 @@ async def async_setup_entry(
 
         new_trackers = []
 
-        for ucr_id, ucr_data in coordinator.data.items():
+        for ucr_id, ucr_data in coordinator.cluster_data.items():
             new_alarm_data = ucr_data.get(D_ALARM, {})
             new_vehicle_data = ucr_data.get(D_VEHICLE, {})
 
@@ -58,33 +58,33 @@ async def async_setup_entry(
             else:
                 new_vehicle_data = set()
 
-            test_current_trackers = (
+            current_trackers = (
                 hass.data[DOMAIN][cluster_id]
                 .setdefault(ucr_id, {})
                 .setdefault("device_tracker", {})
             )
 
             # add alarm trackers
-            new_alarm_tracker = new_alarm_data - test_current_trackers.keys()
+            new_alarm_tracker = new_alarm_data - current_trackers.keys()
             for alarm_id in new_alarm_tracker:
                 tracker = DiveraAlarmTracker(coordinator, ucr_data, alarm_id, ucr_id)
                 new_trackers.append(tracker)
-                test_current_trackers[alarm_id] = tracker
+                current_trackers[alarm_id] = tracker
 
             # add vehicle trackers
-            new_vehicle_trackers = new_vehicle_data - test_current_trackers.keys()
+            new_vehicle_trackers = new_vehicle_data - current_trackers.keys()
             for vehicle_id in new_vehicle_trackers:
                 tracker = DiveraVehicleTracker(
                     coordinator, ucr_data, vehicle_id, ucr_id
                 )
                 new_trackers.append(tracker)
-                test_current_trackers[vehicle_id] = tracker
+                current_trackers[vehicle_id] = tracker
 
             # remove outdated sensors
             active_ids = new_alarm_data | new_vehicle_data
-            removable_trackers = set(test_current_trackers.keys() - active_ids)
+            removable_trackers = set(current_trackers.keys() - active_ids)
             for tracker_id in removable_trackers:
-                sensor = test_current_trackers.pop(tracker_id, None)
+                sensor = current_trackers.pop(tracker_id, None)
                 if sensor:
                     await sensor.remove_from_hass()
                     LOGGER.debug("Removed trackers: %s", tracker_id)
@@ -97,94 +97,6 @@ async def async_setup_entry(
 
     # Add listener for updates
     coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
-
-
-# class BaseDiveraTracker(TrackerEntity):
-#     """Baseclass for Divera-Tracker."""
-
-#     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-#         """Init class BaseDiveraTracker."""
-#         self.coordinator = coordinator
-#         self.cluster_id = coordinator.cluster_id
-#         self.ucr_id = ucr_id
-#         self.ucr_data = ucr_data
-
-#     @property
-#     def device_info(self):
-#         """Return device information for the tracker."""
-#         self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-#         self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
-#         return {
-#             "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-#             "name": f"{self.firstname} {self.lastname} / {self.ucr_id}",
-#             "manufacturer": MANUFACTURER,
-#             "model": DOMAIN,
-#             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-#             "entry_type": "service",
-#         }
-
-#     @property
-#     def should_poll(self):
-#         """Indicate that the entity does not require polling."""
-#         return False
-
-#     async def async_added_to_hass(self) -> None:
-#         """Register updates."""
-#         self.async_on_remove(
-#             self.coordinator.async_add_listener(self.async_write_ha_state)
-#         )
-
-#     # async def async_update(self) -> None:
-#     #     """Fordere ein Update vom Koordinator an."""
-#     #     await self.coordinator.async_request_refresh()
-
-#     async def remove_from_hass(self) -> None:
-#         """Vollständige Entfernung der Entität aus Home Assistant."""
-#         LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
-
-#         # 1. Entferne die Entität aus dem Entity Registry
-#         try:
-#             registry = er.async_get(self.hass)
-#             if registry.async_is_registered(self.entity_id):
-#                 registry.async_remove(self.entity_id)
-#                 LOGGER.debug("Removed entity from registry: %s", self.entity_id)
-#             else:
-#                 LOGGER.debug("Entity not found in registry: %s", self.entity_id)
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from registry: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         # 2. Entferne die Entität aus dem State Machine
-#         try:
-#             self.hass.states.async_remove(self.entity_id)
-#             LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from state machine: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         # 3. Entferne die Entität aus internen Datenstrukturen
-#         try:
-#             if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-#                 trackers = self.hass.data[DOMAIN][self.cluster_id].get("trackers", {})
-#                 if self.entity_id in trackers:
-#                     del trackers[self.entity_id]
-#                     LOGGER.debug(
-#                         "Removed entity from internal storage: %s", self.entity_id
-#                     )
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from internal storage: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         LOGGER.info("Entity successfully removed: %s", self.entity_id)
 
 
 class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):

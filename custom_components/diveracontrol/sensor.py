@@ -62,16 +62,13 @@ async def async_setup_entry(
     cluster = config_entry.data
     cluster_id = cluster[D_CLUSTER_ID]
     coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
-    usergroup_id = (
-        coordinator.data.get(D_UCR, {}).get(cluster_id, {}).get("usergroup_id", None)
-    )
 
     async def sync_sensors():
         """Synchronize all sensors with the current data from coordinator."""
 
         new_sensors = []
 
-        for ucr_id, ucr_data in coordinator.data.items():
+        for ucr_id, ucr_data in coordinator.cluster_data.items():
             new_alarm_data = ucr_data.get(D_ALARM, {})
             new_vehicle_data = ucr_data.get(D_VEHICLE, {})
             new_static_sensors_data = {
@@ -90,7 +87,7 @@ async def async_setup_entry(
             else:
                 new_vehicle_data = set()
 
-            test_current_sensors = (
+            current_sensors = (
                 hass.data[DOMAIN][cluster_id]
                 .setdefault(ucr_id, {})
                 .setdefault("sensors", {})
@@ -104,35 +101,39 @@ async def async_setup_entry(
                 D_CLUSTER_ADDRESS: DiveraUnitSensor(coordinator, ucr_data, ucr_id),
             }
 
+            usergroup_id = (
+                ucr_data.get(D_UCR, {}).get(ucr_id, {}).get("usergroup_id", None)
+            )
+
             if usergroup_id not in [5, 19]:
                 static_sensor_map[D_STATUS] = DiveraStatusSensor(
                     coordinator, ucr_data, ucr_id
                 )
 
             for sensor_name, sensor_instance in static_sensor_map.items():
-                if sensor_name not in test_current_sensors:
+                if sensor_name not in current_sensors:
                     new_sensors.append(sensor_instance)
-                    test_current_sensors[sensor_name] = sensor_instance
+                    current_sensors[sensor_name] = sensor_instance
 
             # adding alarm sensors
-            new_alarms = new_alarm_data - test_current_sensors.keys()
+            new_alarms = new_alarm_data - current_sensors.keys()
             for alarm_id in new_alarms:
                 sensor = DiveraAlarmSensor(coordinator, ucr_data, alarm_id, ucr_id)
                 new_sensors.append(sensor)
-                test_current_sensors[alarm_id] = sensor
+                current_sensors[alarm_id] = sensor
 
             # adding behicle sensors
-            new_vehicles = new_vehicle_data - test_current_sensors.keys()
+            new_vehicles = new_vehicle_data - current_sensors.keys()
             for vehicle_id in new_vehicles:
                 sensor = DiveraVehicleSensor(coordinator, ucr_data, vehicle_id, ucr_id)
                 new_sensors.append(sensor)
-                test_current_sensors[vehicle_id] = sensor
+                current_sensors[vehicle_id] = sensor
 
             # remove outdated sensors
             active_ids = new_alarm_data | new_vehicle_data | new_static_sensors_data
-            removable_sensors = set(test_current_sensors.keys() - active_ids)
+            removable_sensors = set(current_sensors.keys() - active_ids)
             for sensor_id in removable_sensors:
-                sensor = test_current_sensors.pop(sensor_id, None)
+                sensor = current_sensors.pop(sensor_id, None)
                 if sensor:
                     await sensor.remove_from_hass()
                     LOGGER.debug("Removed sensor: %s", sensor_id)
@@ -171,93 +172,6 @@ class BaseDiveraSensor(Entity, BaseDiveraEntity):
     def device_info(self):
         """Fetch device info."""
         return get_device_info(self.ucr_data, self.ucr_id)
-
-
-# class BaseDiveraSensor(Entity):
-#     """Base-class for all sensors."""
-
-#     def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-#         """Init class BaseDiveraSensor."""
-#         self.coordinator = coordinator
-#         self.cluster_id = coordinator.cluster_id
-#         self.ucr_id = ucr_id
-#         self.ucr_data = ucr_data
-
-#     @property
-#     def device_info(self):
-#         """Return device information for the sensor."""
-#         self.firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-#         self.lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
-#         return {
-#             "identifiers": {(DOMAIN, f"{self.firstname} {self.lastname}")},
-#             "name": f"{self.firstname} {self.lastname} / {self.ucr_id}",
-#             "manufacturer": MANUFACTURER,
-#             "model": DOMAIN,
-#             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-#             "entry_type": "service",
-#         }
-
-#     @property
-#     def should_poll(self) -> bool:
-#         return False
-
-#     async def async_added_to_hass(self) -> None:
-#         """Registriere Updates."""
-#         self.async_on_remove(
-#             self.coordinator.async_add_listener(self.async_write_ha_state)
-#         )
-
-#     # async def async_update(self) -> None:
-#     #     """Fordere ein Update vom Koordinator an."""
-#     #     await self.coordinator.async_request_refresh()
-
-#     async def remove_from_hass(self) -> None:
-#         """Fully remove an entity from Home Assistant."""
-#         LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
-
-#         # 1. remove entity from entity-registry
-#         try:
-#             registry = er.async_get(self.hass)
-#             if registry.async_is_registered(self.entity_id):
-#                 registry.async_remove(self.entity_id)
-#                 LOGGER.debug("Removed entity from registry: %s", self.entity_id)
-#             else:
-#                 LOGGER.debug("Entity not found in registry: %s", self.entity_id)
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from registry: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         # 2. remove entity from state machine
-#         try:
-#             self.hass.states.async_remove(self.entity_id)
-#             LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from state machine: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         # 3. remove entity from internal structures
-#         try:
-#             if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-#                 sensors = self.hass.data[DOMAIN][self.cluster_id].get("sensors", {})
-#                 if self.entity_id in sensors:
-#                     del sensors[self.entity_id]
-#                     LOGGER.debug(
-#                         "Removed entity from internal storage: %s", self.entity_id
-#                     )
-#         except Exception as e:
-#             LOGGER.error(
-#                 "Failed to remove entity from internal storage: %s, Error: %s",
-#                 self.entity_id,
-#                 e,
-#             )
-
-#         LOGGER.info("Entity successfully removed: %s", self.entity_id)
 
 
 class DiveraAlarmSensor(BaseDiveraSensor):

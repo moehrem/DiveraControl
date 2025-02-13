@@ -11,6 +11,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import (
     DOMAIN,
     D_ACTIVE_ALARM_COUNT,
+    D_LAST_UPDATE_ALARM,
+    D_LAST_UPDATE_DATA,
     D_API_KEY,
     D_HUB_ID,
     D_UCR,
@@ -40,6 +42,7 @@ from .const import (
     D_CLUSTER_ID,
 )
 from .data_updater import update_operational_data
+from .utils import log_execution_time
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +60,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self.api = api
         self.cluster_id = cluster_id
         # self.entry_id = entry_id
-        self.data = {}
+        self.cluster_data = {}
 
         # **Listener für Änderungen im ConfigEntry**
         async_dispatcher_connect(
@@ -65,12 +68,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
         )
 
         for ucr_id in cluster.get("user_cluster_relations", {}):
-            self.data[ucr_id] = {
+            self.cluster_data[ucr_id] = {
                 D_UCR_ID: ucr_id,
                 D_API_KEY: cluster.get("user_cluster_relations", {})
                 .get(ucr_id, "")
                 .get(D_API_KEY, ""),
                 D_ACTIVE_ALARM_COUNT: "",
+                D_LAST_UPDATE_ALARM: "",
+                D_LAST_UPDATE_DATA: "",
                 D_UCR: {},
                 D_UCR_DEFAULT: {},
                 D_UCR_ACTIVE: {},
@@ -103,14 +108,19 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         self._listeners = {}
 
+    @log_execution_time
     async def initialize_data(self):
         """Initialize data at start one time only."""
-        for ucr_id, ucr_data in self.data.items():
+        now = asyncio.get_running_loop().time()
+
+        for ucr_id, ucr_data in self.cluster_data.items():
             try:
                 ucr_data = {
                     D_UCR_ID: ucr_id,
                     D_API_KEY: ucr_data.get(D_API_KEY, ""),
                     D_ACTIVE_ALARM_COUNT: "",
+                    D_LAST_UPDATE_ALARM: "",
+                    D_LAST_UPDATE_DATA: "",
                     D_UCR: {},
                     D_UCR_DEFAULT: {},
                     D_UCR_ACTIVE: {},
@@ -143,8 +153,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
                     ucr_id,
                 )
 
-                now = asyncio.get_running_loop().time()
-                self._last_data_update = now
+                # set last update times
+                ucr_data[D_LAST_UPDATE_ALARM] = now
+                ucr_data[D_LAST_UPDATE_DATA] = now
 
             except Exception as e:
                 LOGGER.error(
@@ -153,14 +164,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
                     str(e),
                 )
 
-            self.data[ucr_id] = ucr_data
+            self.cluster_data[ucr_id] = ucr_data
 
         LOGGER.debug("Finished initializing all data")
 
+    @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Divera API and update cache on a regular basis."""
         now = asyncio.get_running_loop().time()
-        updates = []  # Liste für parallele API-Requests
 
         # Helper function für eine Toleranz bei der Update-Ausführung
         def should_update(last_update, interval, tolerance=0.5):
@@ -170,7 +181,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 or loop_time > interval.total_seconds()
             )
 
-        for ucr_id, ucr_data in self.data.items():
+        for ucr_id, ucr_data in self.cluster_data.items():
             # Wähle das richtige Intervall basierend auf der Alarmanzahl
             new_interval = (
                 self.interval_alarm
@@ -189,45 +200,38 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
             # Wähle den passenden Zeitstempel
             last_update = (
-                self._last_alarm_update
+                ucr_data[D_LAST_UPDATE_ALARM]
                 if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
-                else self._last_data_update
+                else ucr_data[D_LAST_UPDATE_DATA]
             )
 
             # Prüfe, ob ein Update nötig ist
             if should_update(last_update, new_interval):
-                updates.append((ucr_id, ucr_data))
+                user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
 
-        # Parallele API-Anfragen für alle notwendigen Updates
-        if updates:
-            try:
-                await asyncio.gather(
-                    *[
-                        update_operational_data(self.api, update_ucr_data)
-                        for update_ucr_id, update_ucr_data in updates
-                    ]
+                LOGGER.info(
+                    "Start updating data for user %s (%s) ",
+                    user_name,
+                    ucr_id,
                 )
 
-                # Setze den letzten Aktualisierungszeitpunkt für jede `ucr_id`
-                for ucr_id, ucr_data in updates:
-                    if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0:
-                        self._last_alarm_update = now
-                    else:
-                        self._last_data_update = now
+                ucr_data = await update_operational_data(self.api, ucr_data)
 
-                LOGGER.debug(
-                    "Finished updating operational data for %d UCRs", len(updates)
+                LOGGER.info(
+                    "Successfully updated data for user %s (%s) ",
+                    user_name,
+                    ucr_id,
                 )
 
-            except Exception as err:
-                LOGGER.error(
-                    "Error fetching operational data for HUB %s: %s",
-                    self.cluster_id,
-                    err,
-                )
-                raise UpdateFailed(f"Error fetching data: {err}") from err
+                # set update times
+                if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0:
+                    ucr_data[D_LAST_UPDATE_ALARM] = now
+                else:
+                    ucr_data[D_LAST_UPDATE_DATA] = now
 
-        return self.data  # Gibt alle aktualisierten Daten zurück
+            self.cluster_data[ucr_id] = ucr_data
+
+        return self.cluster_data
 
     def async_add_listener(self, update_callback):
         """Add a listener and store the remove function."""
@@ -256,7 +260,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             "ConfigEntry für Einheit %s wurde aktualisiert, lade neue Daten...",
             self.cluster_id,
         )
-        self.data.update(
+        self.cluster_data.update(
             self.hass.config_entries.async_get_entry(entry_id).data.get(
                 "user_cluster_relations", {}
             )
