@@ -2,7 +2,9 @@ name: 🏠 Home Assistant Quality Checks
 
 on:
   push:
+    branches: [dev]
   pull_request:
+    branches: [main]
   schedule:
     - cron: "0 0 * * *"
 

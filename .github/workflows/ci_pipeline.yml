@@ -2,11 +2,11 @@ name: ✅ CI Pipeline
 
 on:
   push:
-    branches: [main, dev]
+    branches: [dev]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
   schedule:
-    - cron: "0 3 * * 1"  # Läuft jeden Montag um 03:00 UTC für automatische Updates
+    - cron: "0 3 * * 1" # Läuft jeden Montag um 03:00 UTC für automatische Updates
 
 jobs:
   lint:
@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -41,7 +41,7 @@ jobs:
       - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: 🔒 Install Security Tools
         run: pip install bandit safety
@@ -68,7 +68,13 @@ jobs:
           head: HEAD
           extra_args: "--only-verified --json"
 
-
+  pre-commit:
+    name: "🚦 Pre-Commit Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - uses: pre-commit/action@v3.0.1
 
   # tests:
   #   name: "✅ Unit Tests"
