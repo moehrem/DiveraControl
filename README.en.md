@@ -4,155 +4,134 @@
   </a>
 </p>
 
-- [🇩🇪 Deutsch](README.md)
+- [🇩🇪 German](README.md)
 
-# DiveraControl
+# DiveraControl for HomeAssistant
 
-**DiveraControl is still under development and will contain bugs. Some planned features are still missing, and optimization has not yet been performed. However, if you're curious, feel free to test the [prereleases](https://github.com/moehrem/DiveraControl/releases)!**
+> **Note:** DiveraControl is still in development. Errors may occur, and some planned features are still missing. Optimization has not yet taken place. If you're curious, you can test the [pre-release versions](https://github.com/moehrem/DiveraControl/releases)!
 
-**If you find any bugs or missing a feature, please create an [issue](https://github.com/moehrem/DiveraControl/issues). Thank you!**
+💡 **Found a bug or have a feature request?** Please create an [issue](https://github.com/moehrem/DiveraControl/issues). Thank you! 👍
 
----
+## 🔍 What is DiveraControl?
 
-**DiveraControl** is an integration of Divera 24/7 into Home Assistant. The goal of this integration is to enable extensive data exchange between HomeAssistant and Divera 24/7, aiming for local admins or unit owners at Divera 24/7.
+**DiveraControl** is an integration of [Divera 24/7](https://www.divera247.com) into [HomeAssistant](https://www.home-assistant.io/). It enables local administrators or unit owners to extensively exchange data between HomeAssistant and Divera 24/7.
 
-Fire stations, vehicles, and equipment are becoming increasingly smarter. However, there is hardly any integrative provider (at least an affordable one for small fire departments) for central management, control, and distribution of this data with the aim of coordinating smart devices. This is where Home Assistant comes in. It can serve as a cost-effective central control for lighting, doors and gates, monitors, voice output, vehicle positions, crews, vehicle statuses, equipment locations, battery levels, custom monitors, etc. However, it requires a connection to the alerting software – and this is where this integration helps.
+Fire stations and emergency vehicles collect a lot of data that can be useful in emergency situations. Unfortunately, there are hardly any affordable, integrated solutions for managing and controlling this data. **HomeAssistant** provides a cost-effective central hub for controlling:
+- Lighting, doors & gates
+- Monitors & voice announcements
+- Vehicle locations, crew & statuses
+- Device locations & battery levels
 
-To fully utilize this integration, extensive permissions are required in the connected unit. The target group of this integration is administrators or interface users of a unit.
+This is where **DiveraControl** comes in: It provides the interface to the alarm software and enables seamless integration.
 
-As a firefighter myself, my focus for this application is the fire department. However, since Divera 24/7 is widely used and the interface is the same for all, this integration can certainly be used for purposes outside of firefighting as well.
+**Who is this integration for?**
+- **Administrators** and **interface users** of a unit
+- **Curious users** exploring the API capabilities
 
-The integration also works with limited permissions but will not provide the same range of features. For personal use, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) might be a better fit.
-
----
-
-## Disclaimer
-
-In the BOS (public safety) sector, data protection is of particular importance. Any use of Home Assistant and this integration in real-world scenarios is at **your own risk**. Compliance with data protection regulations, especially but not limited to "data sharing with third parties," "data processing," and "data security," is entirely the user's responsibility.
-
-This integration is **not affiliated** with Divera 24/7 and is **not supported** by Divera 24/7.
+> **Note:** The integration also works with limited permissions, but with reduced functionality. Unit users can use the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera).
 
 ---
 
-## What can DiveraControl do?
+## ⚠️ Disclaimer
 
-- Manage multiple users within the same unit
-- Connect multiple units for the same user
-- Receive and process alarms
-- Read and update vehicle data
+**Data privacy** is particularly important in the emergency services sector. Any use of HomeAssistant and this integration in real-life scenarios is **at your own risk**. Compliance with data protection regulations – especially regarding **data transfer, processing, and security** – is entirely the responsibility of the user.
 
-### Data Retrieval
+> This integration is **not affiliated** with Divera 24/7 and is **not supported** by Divera.
+
+---
+
+## ✅ Features
+
+### 📥 **Data Retrieval**
 - Alarm data
 - User status
 - Unit details
 - Availability
-- Vehicle data including custom properties
+- Vehicle data & custom attributes
 - Permissions
-- Messaging channels
+- Message channels
 
-### Data Submission
-With **DiveraControl**, data can be sent to Divera. Corresponding services have been implemented in Home Assistant. The following endpoints are available:
-- User status (simple and advanced)
-- Alarm creation
-- Alarm modification
-- Alarm closure
-- Vehicle data including custom properties
-- Incident feedback
-- Messages (Messenger)
+### 📤 **Data Submission**
+HomeAssistant services allow sending data to Divera:
+- User status (basic & extended)
+- Alarm creation, modification & closure
+- Vehicle data & custom attributes
+- Response to alarms
+- Message dispatch
 
 ---
 
-## What can't DiveraControl do (yet)?
-Divera provides many endpoints. Not all of them can be accessed through this integration. Missing features include:
-- Deleting and archiving alarms, messages, notifications, appointments
-- Creating, modifying, deleting appointments
+## ❌ Not Yet Included
+Divera offers numerous endpoints, but not all are integrated:
+- Deleting & archiving alarms, messages & events
+- Managing events (create, edit, delete)
 - Adding attachments
-- Adding crew members to vehicles, neither inside nor outside of incidents
+- Assigning crew to vehicles
 - Control center functions
-- PRO version features (e.g., cross-unit alerting)
+- PRO version features (cross-unit alarm management)
 
-## What should DiveraControl be able to do?
-- Adding crew members to vehicles
-- Requesting data upon open alarms only (accepting webhooks from Divera)
-- nice to have: auto-creation and deletion of zones per firestation and alarm location
-
-- Datenabfrage nur bei offenen Alarmen (Entgegennehmen von Webhooks von Divera)
-- Nice to have: automatisches Einrichten und Löschen von Zonen für Gebäude und Einsatzorte
+**Planned Features:**
+- Adding crew to vehicles
+- Querying data only for active alarms (via Divera Webhook)
+- Automatic creation & deletion of zones for buildings & incident locations
 
 ---
 
-## Installation
+## 📂 Installation
 
-### HACS (recommended)
-DiveraControl is not yet available in the HACS store but can be added as a custom repository.
+### 🏆 **HACS (Recommended)**
+DiveraControl is (not yet) available in the HACS store but can be added manually:
 
 1. [Install HACS](https://www.hacs.xyz/docs/use/)
-2. [![Opens your HomeAssistant and adds integration as custom repo.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
-3. install integration by using butten "Download" in the lower right corner
+2. [![Add HACS Repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
+3. **Installation:** Click "Download" at the bottom right.
 
-### manual Installation
-For manual installation, download the [latest release](https://github.com/moehrem/DiveraControl/releases/latest) and extract it into the Home Assistant folder `config/custom_components/diveracontrol`.
+### 🔧 **Manual Installation**
+- Download the [latest release](https://github.com/moehrem/DiveraControl/releases/latest)
+- Extract files into `config/custom_components/diveracontrol`
 
+---
 
-## Setup
-The setup is done by entering a username and password. None of this information is stored; instead, the API key of the user is retrieved during the initialization of the integration and stored in Home Assistant.
+## ⚙️ Configuration
 
-For login, personal credentials can be used. In this case, if the user is assigned to multiple units, each unit will be added as a hub in the integration.
+### 🔑 **Authentication**
+To set up the integration, you need **username & password** or the **API key**. The initial login must always be done with **personal credentials**. These are not stored but only used to retrieve the user's API key.
 
-However, it is advisable to use a system user of the unit for centralized rights management. Divera allows this under **Administration** -> **Interfaces** -> **System Users**. System users cannot log in directly, instead, the integration will ask for the user’s API key.
+2.  (Recommended for admins) → API key must be entered manually
+3.  (Central, permissions not adjustable) → API key can be retrieved under Management → Interfaces
 
-Another alternative is to use the central interface user of the unit. The API key can be found under **Administration** -> **Interfaces**. However, the permissions of the interface user cannot be adjusted.
+If login with username/password fails or if you are using **system, interface, monitor, or vehicle accounts**, the integration will directly ask for the API key.
 
-If login with a username and password fails, the integration will directly ask for the API key.
+### ⏳ **Query Intervals**
+Intervals are always set per unit:
+- **Outside of emergencies:** Longer interval
+- **During an emergency:** Shorter interval for faster updates
 
-Additionally, two intervals can be configured: one for non-emergency mode and one for active emergency situations. The integration evaluates the situation (whether an alarm is active or not) and updates the data accordingly.
+---
 
+## 👍 Usage
 
-## Usage
-There are two main functions: retrieving and submitting data to Divera.
+### 🔍 **Data Retrieval**
+Queries run automatically in the background. The following sensors are available:
+- **Unit details** (name, address, coordinates)
+- **Vehicles** (status, location, crew, attributes)
+- **Alarms** (keyword, message, responses)
+- **User status** (only for "real" users)
+- **Open alarms** (count)
+- **Trackers** (for incidents & vehicles)
 
-### Retrieval
-Retrieval happens according to the configured interval, and sensor data is automatically updated. The sensors include:
-- Unit details
-    - Name, short name, address, coordinates, etc.
-- Vehicles
-    - Status, coordinates, crew, position, etc.
-    - Custom vehicle properties (if set in Divera)
-- Alarms
-    - Keyword, text, time, feedback, report, etc.
-- Status
-    - Available only for "real" users (not monitor, system, or vehicle users)
-    - Personal user status
-    - Possible status IDs
-- Active Alarms
-    - Number of open (not closed) alarms
-- Trackers
-    - For alarms, if coordinates have been provided
-    - For vehicles
-
-### Submission
-Data submission is done through Home Assistant services. These interact with Divera's respective endpoints. Each service can be tested in the Home Assistant developer tools, where documentation for the required data is also available.
-- Set user status (simple)
-    - Status per unit, but without details
-- Set user status (advanced)
-    - Status **only** for the main unit, but with additional details
+### 📤 **Data Submission** (HomeAssistant Services)
+- Set user status (basic/extended)
 - Update vehicle data
-- Create alarm
-- Modify alarm
-- Close alarm
+- Create, modify & close alarms
 - Send messages
 
-### Sensors
-Various sensors are provided, including those that interpret Divera's data. Each sensor contains corresponding data as attributes, including:
-- Alarms
-- Vehicles
-- Unit details
-- Number of active alarms
-- Personal status
-- Incident trackers
-- Vehicle trackers
+### 🔄 **Sensor Handling**
+- Sensors update automatically
+- Sensors without current data are removed from HomeAssistant
 
-Sensors that no longer receive data from Divera will be removed from Home Assistant.
+### ⚙️ **Configuration Changes**
+Adjustable via HomeAssistant integrations management:
+- Query intervals for normal & alarm situations
 
-### Configuration Changes
-Existing hubs can be modified via Home Assistant's integration management. The API key, data retrieval interval, and emergency mode retrieval interval can be adjusted.
+---
