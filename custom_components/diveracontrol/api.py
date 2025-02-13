@@ -143,14 +143,6 @@ class DiveraAPI:
             ) as response:
                 if response.status == 200:
                     try:
-                        LOGGER.info(
-                            "Response for %s request for cluster id '%s'. Status: '%s', reason: '%s', url: '%s'",
-                            method,
-                            self.cluster_id,
-                            response.status,
-                            response.reason,
-                            log_url,
-                        )
                         return await response.json()
                     except Exception:
                         return response
@@ -173,14 +165,6 @@ class DiveraAPI:
                 log_url,
             )
             return {}
-
-    # async def get_master_data(self) -> dict:
-    #     """GET all data based on current users authorizations from the Divera API."""
-    #     LOGGER.debug("Fetching master data")
-    #     url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
-    #     method = "GET"
-    #     perm_key = None
-    #     return await self.api_request(url, perm_key, method)
 
     async def get_ucr_data(self, ucr_id) -> dict:
         """GET all data for user cluster relation from the Divera API."""

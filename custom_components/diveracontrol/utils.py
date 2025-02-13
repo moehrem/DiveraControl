@@ -169,7 +169,7 @@ def log_execution_time(func):
             result = await func(*args, **kwargs)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            LOGGER.info(
+            LOGGER.debug(
                 "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
             )
             return result
@@ -183,7 +183,7 @@ def log_execution_time(func):
             result = func(*args, **kwargs)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            LOGGER.info(
+            LOGGER.debug(
                 "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
             )
             return result
