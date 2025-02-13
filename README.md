@@ -6,149 +6,131 @@
 
 - [🇬🇧 English](README.en.md)
 
-# DiveraControl
+# DiveraControl für HomeAssistant
 
-**DiveraControl ist noch in der Entwicklung und wird daher Fehler aufweisen. Es fehlen noch ein paar geplante Funktionen. Eine Optimierung hat bisher nicht stattgefunden. Wer trotzdem neugierig ist, darf gerne die [Vorabversionen](https://github.com/moehrem/DiveraControl/releases) testen!**
+> **Hinweis:** DiveraControl befindet sich noch in der Entwicklung. Es können Fehler auftreten, und einige geplante Funktionen fehlen noch. Eine Optimierung hat bislang nicht stattgefunden. Wer trotzdem neugierig ist, kann die [Vorabversionen](https://github.com/moehrem/DiveraControl/releases) testen!
 
-**Wer Fehler findet oder Funktionen vermisst, erstellt bitte einen [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank!**
+💡 **Fehler oder Funktionswünsche?** Bitte erstelle ein [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank! 👍
+
+## 🔍 Was ist DiveraControl?
+
+**DiveraControl** ist eine Integration von [Divera 24/7](https://www.divera247.com) in [HomeAssistant](https://www.home-assistant.io/). Sie ermöglicht lokalen Administratoren oder Einheitenbesitzern den umfangreichen Datenaustausch zwischen HomeAssistant und Divera 24/7.
+
+In Feuerwehrgebäuden und Fahrzeugen sammeln sich zahlreiche Daten an, die im Einsatzfall sinnvoll genutzt werden können. Leider gibt es kaum erschwingliche, integrierte Lösungen für die Verwaltung und Steuerung dieser Daten. **HomeAssistant** bietet hier eine kostengünstige Zentrale zur Steuerung von:
+- Beleuchtung, Türen & Toren
+- Monitoren & Sprachausgaben
+- Fahrzeugpositionen, Besatzungen & Status
+- Gerätepositionen & Akkuständen
+
+Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmierungssoftware bereit und ermöglicht so eine nahtlose Integration.
+
+**Für wen ist diese Integration gedacht?**
+- **Administratoren** und **Schnittstellennutzer** einer Einheit
+- **Neugierige Nutzer**, die die Möglichkeiten der API erkunden wollen
+
+> **Hinweis:** Die Integration funktioniert auch mit eingeschränkten Rechten, dann allerdings mit reduziertem Funktionsumfang. Nutzer einer Einheit können die bestehende [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) verwenden.
 
 ---
 
-**DiveraControl** ist eine Integration von Divera 24/7 in den HomeAssistant. Ziel dieser Integration ist es, lokalen Admins oder Besitzern von Divera-Einheiten einen umfangreichen Datenaustausch zwischen HomeAssistant und Divera 24/7 zu ermöglichen.
+## ⚠️ Disclaimer
 
-Feuerwehrgebäude, Fahrzeuge und Gerätschaften werden zunehmend smarter. Jedoch gibt es kaum einen (oder zumindest für kleine Feuerwehren kaum einen erschwinglichen) integrativen Anbieter für eine zentrale Verwaltung, Steuerung und Verteilung dieser Daten mit dem Ziel, smarte Geräte zu koordinieren. Hier kommt HomeAssistant ins Spiel. Dieser kann als kostengünstige zentrale Steuerung für zB Beleuchtung, Türen und Tore, Monitore, Sprachausgaben, Fahrzeugpositionen, -besatzungen und -status, Gerätepositionen, Ladestand von Akkus, individuelle Monitore usw. eingesetzt werden. Vorausgesetzt es gibt eine Anbindung zur Alarmierungssoftware - und hier soll diese Integration helfen.
+Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von HomeAssistant und dieser Integration in realen Lagen erfolgt **auf eigene Verantwortung**. Die Einhaltung der Datenschutzrichtlinien – insbesondere im Hinblick auf **Datenweitergabe, -verarbeitung und -sicherheit** – liegt vollständig beim Nutzer.
 
-Um die Integration voll ausschöpfen zu können, sind umfangreiche Berechtigungen in der anzubindenden Einheit nötig. Zielgruppe der Integration sind Administratoren bzw Schnittstellennutzer einer Einheit.
-
-Da ich selbst Feuerwehrmann bin, habe ich für die Anwendung klar die Feuerwehr im Fokus. Da Divera 24/7 jedoch vielfältig genutzt wird, die Schnittstelle aber für alle gleich ist, kann diese Integration sicher auch für Zwecke außerhalb der Feuerwehr eingesetzt werden.
-
-Die Integration funktioniert auch mit eingeschränkten Rechten, bietet dann aber nicht denselben Umfang. Für den persönlichen Einsatz bietet sich die schon länger existierende Integration [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) an.
+> Diese Integration steht in **keiner Verbindung** zu Divera 24/7 und wird von Divera **nicht unterstützt**.
 
 ---
 
-## Disclaimer
+## ✅ Funktionsumfang
 
-Im BOS-Bereich besitzt das Thema Datenschutz bekanntermaßen eine besondere Bedeutung. Jeder Einsatz von HomeAssistant und dieser Integration in realen Lagen erfolgt auf **eigene Verantwortung**. Die Berücksichtigung der Datenschutzbestimmungen, insbesondere, jedoch nicht beschränkt auf "Weitergabe von Daten an Dritte", "Datenverarbeitung" und "Datensicherheit", liegt vollständig in der Verantwortung des Nutzers.
-Diese Integration steht in **keiner Verbindung** zu Divera 24/7 und wird von Divera 24/7 auch **nicht unterstützt**.
-
----
-
-## Was kann DiveraControl?
-
-- Verwaltung mehrerer Nutzer derselben Einheit
-- Anbindung mehrerer Einheiten desselben Nutzers
-- Empfangen und Bearbeiten von Alarmen
-- Lesen und Schreiben der Fahrzeugdaten
-
-### Datenabfrage
+### 📥 **Datenabfrage**
 - Alarmdaten
 - Nutzerstatus
 - Einheitendetails
-- Verfügbarkeit
-- Fahrzeugdaten inkl der individuellen Fahrzeugeigenschaften
+- Verfügbarkeiten
+- Fahrzeugdaten & individuelle Eigenschaften
 - Berechtigungen
 - Nachrichtenkanäle
 
-### Datenübergabe
-Mit **DiveraControl** können Daten an Divera übergeben werden. Dazu wurden in HomeAssistant entsprechende Services implementiert. Umgesetzt sind folgende Endpunkte:
-- Nutzerstatus (erweitert und einfach)
-- Alarmerstellung
-- Alarmänderung
-- Alarmabschluss
-- Fahrzeugdaten inkl der individuellen Fahrzeugeigenschaften
-- Einsatzrückmeldung
-- Nachrichten (Messenger)
+### 📤 **Datenübergabe**
+HomeAssistant-Services ermöglichen das Übermitteln von Daten an Divera:
+- Nutzerstatus (einfach & erweitert)
+- Alarmerstellung, -änderung & -abschluss
+- Fahrzeugdaten & individuelle Eigenschaften
+- Einsatzrückmeldungen
+- Nachrichtenversand
 
 ---
 
-## Was kann DiveraControl (noch) nicht?
-Von Divera werden sehr viele Endpunkte bereit gestellt. Nicht alle davon können über diese Integration angesprochen werden. Nicht enthaltene Funktionen sind:
-- Löschen und Archivieren von Alarmen, Mitteilungen, Nachrichten, Terminen
-- Anlegen, Ändern, Löschen von Terminen
-- Hinzufügen von Anhängen
-- Hinzufügen von Besatzung zu Fahrzeugen, weder außerhalb noch innerhalb von Einsätzen
-- Funktionen für Leitstellen
-- Funktionen der PRO-Version (zB einheitenübergreifende Alarmierung)
+## ❌ Noch nicht enthalten
+Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
+- Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
+- Verwaltung von Terminen (Erstellen, Ändern, Löschen)
+- Anhänge hinzufügen
+- Besatzung zu Fahrzeugen hinzufügen
+- Leitstellen-Funktionen
+- PRO-Version-Features (einheitenübergreifende Alarmierung)
 
-## Was sollte DiveraControl können?
+**Geplante Funktionen:**
 - Hinzufügen von Besatzung zu Fahrzeugen
-- Datenabfrage nur bei offenen Alarmen (Entgegennehmen von Webhooks von Divera)
-- Nice to have: automatisches Einrichten und Löschen von Zonen für Gebäude und Einsatzorte
+- Datenabfrage nur bei offenen Alarmen (per Webhook von Divera)
+- Automatisches Erstellen & Löschen von Zonen für Gebäude & Einsatzorte
 
 ---
 
-## Installation
+## 📂 Installation
 
-### HACS (empfohlen)
-DiveraControl ist noch nicht im HACS-Store verfügbar, kann aber als eigenes Repo einfach dem HACS hinzugefügt werden.
+### 🏆 **HACS (empfohlen)**
+DiveraControl ist (noch) nicht im HACS-Store verfügbar, kann aber manuell hinzugefügt werden:
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
-2. [![Öffne HomeAssistant und für die Integration als eigenes Repo hinzu.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
-3. Integration per Button "Herunterladen" unten rechts installieren
+2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
+3. **Installation:** Unten rechts auf "Herunterladen" klicken.
 
-### manuelle Installation
-Zur manuellen Installation den [letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen und in den HomeAssistant-Ordner `config/custom_components/diveracontrol` extrahieren.
+### 🔧 **Manuelle Installation**
+- [Letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen
+- Dateien in `config/custom_components/diveracontrol` extrahieren
 
+---
 
-## Einrichtung
-Die Einrichtung erfolgt durch Eingabe des Nutzernamens und des Passwortes. Nichts davon wird gespeichert, stattdessen wird mit der Initialisierung der Integration der API-Schlüssel des Nutzers abgefragt und in HomeAssistant abgelegt.
-Für die Anmeldung können die persönlichen Zugangsdaten genutzt werden. In diesem Fall werden, falls der Nutzer mehreren Einheiten zugewiesen ist, die einzelnen Einheiten als Hubs zur Integration angelegt.
+## ⚙️ Einrichtung
 
-Es bietet sich jedoch an, für eine zentrale Rechteverwaltung einen Systembenutzer der Einheit zu verwenden. Hierfür bietet Divera die Möglichkeit der Anlage unter **Verwaltung** -> **Schnittstellen** -> **System-Benutzer**. Systembenutzer können nicht angemeldet werden, stattdessen wird die Integration nach dem API-Schlüssel des Nutzers fragen.
+### 🔑 **Authentifizierung**
+Zur Einrichtung benötigt man **Benutzername & Passwort** oder direkt den **API-Schlüssel**. Die Anmeldung initial immer mit den **persönlichen Zugangsdaten**. Diese werden nicht gespeichert, es wird damit nur der API-Schlüssel des Nutzers abgefragt.
+2.  (empfohlen für Admins) → API-Schlüssel muss manuell eingegeben werden
+3.  (zentral, Berechtigungen nicht anpassbar) → API-Schlüssel unter Verwaltung → Schnittstellen abrufbar
 
-Eine weitere Alternative besteht darin, den zentralen Schnittstellenbenutzer der Einheit zu verwenden. Der API-Schlüssel ist unter **Verwaltung** -> **Schnittstellen** zu finden. Allerdings lassen sich die Berechtigungen des Schnittstellennutzers nicht anpassen.
+Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **System-, Schnittstellen-, Monitor- oder Fahrzeugbenutzer** handelt, fragt die Integration direkt nach dem API-Schlüssel.
 
-Im Falle einer gescheiterten Anmeldung mit Nutzername und Passwort fragt die Integration direkt nach dem API-Schlüssel.
+### ⏳ **Abfrageintervalle**
+Die Intervalle werden immer je Einheit eingestellt.
+- **Außerhalb von Einsätzen**: längeres Intervall
+- **Während eines Einsatzes**: kürzeres Intervall für schnellere Updates
 
-In jedem Fall können außerdem zwei Intervalle eingegeben werden: Ein Interval außerhalb von Einsätzen und ein Interval bei laufenden Einsätzen. Die Integration wertet die Situation aus (Alarm offen oder nicht) und aktualisiert die Daten im entsprechenden Interval.
+---
 
+## 👍 Benutzung
 
-## Benutzung
-Es gibt zwei Grundfunktionen: Das Abfrgen und das Übergeben von Daten an Divera.
+### 🔍 **Datenabfrage**
+Die Abfragen laufen automatisiert im Hintergrund. Folgende Sensoren stehen zur Verfügung:
+- **Einheitendetails** (Name, Adresse, Koordinaten)
+- **Fahrzeuge** (Status, Position, Besatzung, Eigenschaften)
+- **Alarme** (Stichwort, Text, Rückmeldungen)
+- **Nutzerstatus** (nur für "echte" Benutzer)
+- **Offene Alarme** (Anzahl)
+- **Tracker** (für Einsätze & Fahrzeuge)
 
-### Abfragen
-Die Abfragen werden entsprechend dem eingestellten Intervall wiederholt, die Sensordaten automatisch aktualisiert. Zu den Sensoren gehören:
-- Einheitendetails
-    - Name, Kurzname, Adresse, Koordinaten etc.
-- Fahrzeuge
-    - Status, Koordinaten, Besatzung, Position etc.
-    - individuelle Fahrzeugeigenschaften (wenn in Divera eingestellt)
-- Alarme
-    - Stichwort, Text, Zeit, Rückmeldungen, Bericht etc.
-- Status
-    - wird nur für "echte" Benutzer (also keine Monitor-, System-, Fahrzeugnutzer) bereitgestellt
-    - persönlicher Nutzerstatus
-    - mögliche Status-IDs
-- Offene Alarme
-    - Anzahl offener (nicht geschlossener) Alarme
-- Tracker
-    - für Alarme, wenn Koordinaten übergeben wurden
-    - für Fahrzeuge
+### 📤 **Datenübergabe** (HomeAssistant-Services)
+- Nutzerstatus setzen (einfach/erweitert)
+- Fahrzeugdaten aktualisieren
+- Alarme erstellen, ändern & schließen
+- Nachrichten senden
 
-### Übergabe
-Für die Übergabe von Daten werden Services bereitgestellt. Damit werden die entsprechenden Endpunkte in Divera angesprochen. Jeder Service kann in den HomeAssistant-Entwicklerwerkzeugen getestet werden. Dort findet sich auch eine Doku zu den notwendigen Daten.
-- Setzen des Nutzerstatus, einfach
-    - Status je Einheit, jedoch ohne Details
-- Setzen des Nutzerstatus, erweitert
-    - Status **nur** für Haupteinheit, jedoch mit vielen Details
-- Setzen von Fahrzeugdaten
-    - Status, Position, Kommentar, individuelle Merkmale
-- Erstellung Alarm
-- Änderung Alarm
-- Schließen Alarm
-- Senden von Nachrichten
+### 🔄 **Sensoren-Handling**
+- Sensoren werden automatisch aktualisiert
+- Sensoren ohne aktuelle Daten werden aus HomeAssistant entfernt
 
-### Sensoren
-Es werden verschiedene Sensoren bereitgestellt, auch solche, die Daten von Divera bereits interpretieren. Jeder Sensor enthält die entsprechenden Daten als Attribute. Dazu gehören:
-- Alarme
-- Fahrzeuge
-- Einheitendetails
-- Anzahl offener Alarme
-- persönlicher Status
-- Tracker für Einsätze
-- Tracker für Fahrzeuge
+### ⚙️ **Konfigurationsänderungen**
+Über die HomeAssistant-Integrationsverwaltung anpassbar:
+- Abfrageintervalle für normale & Alarm-Situationen
 
-Sensoren, zu denen von Divera keine Daten mehr empfangen werden, werden aus Home Assistant gelöscht.
-
-### Änderung der Konfiguration
-Bestehende Hubs können über die Integrationsverwaltung im HomeAssistant angepasst werden. Änderbar sind der API-Schlüssel, das Abfrageinterval für Daten und das Abfrageinterval im Alarmfall.
+---
