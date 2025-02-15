@@ -59,6 +59,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         )
         self.api = api
         self.cluster_id = cluster_id
+        self.cluster_name = cluster.get("name", "")
         # self.entry_id = entry_id
         self.cluster_data = {}
 
@@ -147,7 +148,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 ucr_data = await update_operational_data(self.api, ucr_data)
 
                 user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
-                LOGGER.info(
+                LOGGER.debug(
                     "Successfully initialized data for user %s (%s) ",
                     user_name,
                     ucr_id,
@@ -166,7 +167,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
             self.cluster_data[ucr_id] = ucr_data
 
-        LOGGER.debug("Finished initializing all data")
+        LOGGER.info("Successfully initialized data for unit %s", self.cluster_name)
 
     @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
@@ -209,7 +210,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             if should_update(last_update, new_interval):
                 user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
 
-                LOGGER.info(
+                LOGGER.debug(
                     "Start updating data for user %s (%s) ",
                     user_name,
                     ucr_id,
@@ -217,7 +218,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
                 ucr_data = await update_operational_data(self.api, ucr_data)
 
-                LOGGER.info(
+                LOGGER.debug(
                     "Successfully updated data for user %s (%s) ",
                     user_name,
                     ucr_id,
@@ -255,10 +256,10 @@ class DiveraCoordinator(DataUpdateCoordinator):
         LOGGER.debug("Removed update listeners for HUB: %s", self.cluster_id)
 
     async def _config_entry_updated(self, entry_id):
-        """Reagiere auf Änderungen im ConfigEntry und lade Daten neu."""
+        """Load new data upon changes of config_entry."""
         LOGGER.info(
-            "ConfigEntry für Einheit %s wurde aktualisiert, lade neue Daten...",
-            self.cluster_id,
+            "Configuration for unit %s changed, loading new data...",
+            self.cluster_name,
         )
         self.cluster_data.update(
             self.hass.config_entries.async_get_entry(entry_id).data.get(
