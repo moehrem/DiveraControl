@@ -4,11 +4,11 @@
   </a>
 </p>
 
---
+---
 
 [![English](https://img.shields.io/badge/🇬🇧%20-English-blue)](README.en.md)
 
---
+---
 
 ![update-badge](https://img.shields.io/github/last-commit/moehrem/diveracontrol?label=last%20update)
 
@@ -23,6 +23,8 @@
 
 ![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations)
 [![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg)](https://github.com/hacs/integration)
+
+---
 
 # DiveraControl für HomeAssistant
 
@@ -150,5 +152,3 @@ Die Abfragen laufen automatisiert im Hintergrund. Folgende Sensoren stehen zur V
 ### ⚙️ **Konfigurationsänderungen**
 Über die HomeAssistant-Integrationsverwaltung anpassbar:
 - Abfrageintervalle für normale & Alarm-Situationen
-
----
