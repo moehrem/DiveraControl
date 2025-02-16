@@ -8,8 +8,8 @@
 
 ![update-badge](https://img.shields.io/github/last-commit/moehrem/diveracontrol?label=last%20update)
 
-[![GitHub Release](https://img.shields.io/github/v/release/moehrem/DiveraControl?sort=semver&color=green)](https://github.com/moehrem/DiveraControl/releases)
-<!-- [![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl?color=green)](https://github.com/moehrem/DiveraControl/releases) -->
+[![GitHub Release](https://img.shields.io/github/v/release/moehrem/DiveraControl?sort=semver)](https://github.com/moehrem/DiveraControl/releases)
+<!-- [![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl)](https://github.com/moehrem/DiveraControl/releases) -->
 <!-- ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/moehrem/DiveraControl/latest/total?label=Downloads%20latest%20Release)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/moehrem/DiveraControl/ci_pipeline.yml?branch=main) -->
 
@@ -17,7 +17,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/moehrem/DiveraControl)
 ![GitHub issues](https://img.shields.io/github/issues/moehrem/DiveraControl)
 
-![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations&color=red)
+![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations)
 [![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg)](https://github.com/hacs/integration)
 
 # DiveraControl für HomeAssistant
