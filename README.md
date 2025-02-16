@@ -7,9 +7,9 @@
 - [🇬🇧 English](README.en.md)
 
 [![GitHub Release](https://img.shields.io/github/v/release/moehrem/DiveraControl?sort=semver&style=for-the-badge&color=green)](https://github.com/moehrem/DiveraControl/releases)
-[![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl?style=for-the-badge&color=green)](https://github.com/moehrem/DiveraControl/releases)
-![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/moehrem/DiveraControl/latest/total?style=for-the-badge&label=Downloads%20latest%20Release)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/moehrem/DiveraControl/ci_pipeline.yml?branch=main&style=for-the-badge)
+<!-- [![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl?style=for-the-badge&color=green)](https://github.com/moehrem/DiveraControl/releases) -->
+<!-- ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/moehrem/DiveraControl/latest/total?style=for-the-badge&label=Downloads%20latest%20Release)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/moehrem/DiveraControl/ci_pipeline.yml?branch=main&style=for-the-badge) -->
 
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/moehrem/DiveraControl?style=for-the-badge)
 ![GitHub last commit](https://img.shields.io/github/last-commit/moehrem/DiveraControl?style=for-the-badge)
