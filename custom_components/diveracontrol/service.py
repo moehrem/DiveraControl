@@ -48,62 +48,62 @@ def get_coordinator_data(
     return ucr_data
 
 
-async def handle_post_user_status_advanced(hass: HomeAssistant, call: dict):
-    """Setzt den erweiterten Benutzerstatus."""
-    cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
+# async def handle_post_user_status_advanced(hass: HomeAssistant, call: dict):
+#     """Setzt den erweiterten Benutzerstatus."""
+#     cluster_id = call.data.get("cluster_id")
+#     hub_id = call.data.get("hub_id")
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+#     # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
+#     # api_instance.set_api_key = api_key
+#     api_instance = prep_api_instance(hass, cluster_id, hub_id)
 
-    payload = {"Status": {k: v for k, v in call.data.items() if v is not None}}
+#     payload = {"Status": {k: v for k, v in call.data.items() if v is not None}}
 
-    try:
-        success = await api_instance.post_user_status_advanced(payload)
-        if not success:
-            raise HomeAssistantError(
-                "Failed to set user status (advanced), check logs for details."
-            )
-    except Exception as e:
-        error_msg = f"Failed to set user status (advanced): {e}"
-        LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+#     try:
+#         success = await api_instance.post_user_status_advanced(payload)
+#         if not success:
+#             raise HomeAssistantError(
+#                 "Failed to set user status (advanced), check logs for details."
+#             )
+#     except Exception as e:
+#         error_msg = f"Failed to set user status (advanced): {e}"
+#         LOGGER.error(error_msg)
+#         raise HomeAssistantError(error_msg)
 
 
-async def handle_post_user_status_simple(hass: HomeAssistant, call: dict):
-    """Setzt den einfachen Benutzerstatus."""
-    cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
-    status_id = call.data.get("status_id")
+# async def handle_post_user_status_simple(hass: HomeAssistant, call: dict):
+#     """Setzt den einfachen Benutzerstatus."""
+#     cluster_id = call.data.get("cluster_id")
+#     hub_id = call.data.get("hub_id")
+#     status_id = call.data.get("status_id")
 
-    ucr_data = get_coordinator_data(hass, cluster_id, hub_id)
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+#     ucr_data = get_coordinator_data(hass, cluster_id, hub_id)
+#     # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
+#     # api_instance.set_api_key = api_key
+#     api_instance = prep_api_instance(hass, cluster_id, hub_id)
 
-    try:
-        status_sorting = ucr_data.get(D_STATUS_SORT, [])
-        if status_sorting:
-            status = status_sorting.index(status_id) + 1
-        else:
-            raise ValueError
-    except ValueError:
-        error_msg = f"Status-ID {status_id} not found in status sorting."
-        LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+#     try:
+#         status_sorting = ucr_data.get(D_STATUS_SORT, [])
+#         if status_sorting:
+#             status = status_sorting.index(status_id) + 1
+#         else:
+#             raise ValueError
+#     except ValueError:
+#         error_msg = f"Status-ID {status_id} not found in status sorting."
+#         LOGGER.error(error_msg)
+#         raise HomeAssistantError(error_msg)
 
-    try:
-        success = await api_instance.post_user_status_simple(
-            {"status": status, "ucr": hub_id}
-        )
-        if not success:
-            raise HomeAssistantError(
-                f"Failed to set user status {status_id}, check logs."
-            )
-    except Exception as e:
-        LOGGER.exception("Failed to set user status (simple): %s", e)
-        raise HomeAssistantError(f"Failed to set user status (simple): {e}")
+#     try:
+#         success = await api_instance.post_user_status_simple(
+#             {"status": status, "ucr": hub_id}
+#         )
+#         if not success:
+#             raise HomeAssistantError(
+#                 f"Failed to set user status {status_id}, check logs."
+#             )
+#     except Exception as e:
+#         LOGGER.exception("Failed to set user status (simple): %s", e)
+#         raise HomeAssistantError(f"Failed to set user status (simple): {e}")
 
 
 async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
@@ -295,29 +295,29 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
 async def async_register_services(hass, domain):
     """Registriert alle Services für die Integration."""
     service_definitions = {
-        "post_user_status_advanced": (
-            handle_post_user_status_advanced,
-            {
-                vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
-                vol.Required("id"): cv.positive_int,
-                vol.Optional("vehicle"): cv.positive_int,
-                vol.Optional("note"): cv.string,
-                vol.Optional("reset_date"): cv.positive_int,
-                vol.Optional("reset_to"): cv.positive_int,
-                vol.Optional("alarm_skip", default=False): cv.boolean,
-                vol.Optional("status_skip_statusplan", default=False): cv.boolean,
-                vol.Optional("status_skip_geofence", default=False): cv.boolean,
-            },
-        ),
-        "post_user_status_simple": (
-            handle_post_user_status_simple,
-            {
-                vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
-                vol.Required("status_id"): cv.positive_int,
-            },
-        ),
+        # "post_user_status_advanced": (
+        #     handle_post_user_status_advanced,
+        #     {
+        #         vol.Required("cluster_id"): cv.positive_int,
+        #         vol.Required("hub_id"): cv.positive_int,
+        #         vol.Required("id"): cv.positive_int,
+        #         vol.Optional("vehicle"): cv.positive_int,
+        #         vol.Optional("note"): cv.string,
+        #         vol.Optional("reset_date"): cv.positive_int,
+        #         vol.Optional("reset_to"): cv.positive_int,
+        #         vol.Optional("alarm_skip", default=False): cv.boolean,
+        #         vol.Optional("status_skip_statusplan", default=False): cv.boolean,
+        #         vol.Optional("status_skip_geofence", default=False): cv.boolean,
+        #     },
+        # ),
+        # "post_user_status_simple": (
+        #     handle_post_user_status_simple,
+        #     {
+        #         vol.Required("cluster_id"): cv.positive_int,
+        #         vol.Required("hub_id"): cv.positive_int,
+        #         vol.Required("status_id"): cv.positive_int,
+        #     },
+        # ),
         "post_vehicle_status": (
             handle_post_vehicle_status,
             {

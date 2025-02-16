@@ -6,6 +6,13 @@
 
 - [🇬🇧 English](README.en.md)
 
+[![GitHub Release](https://img.shields.io/github/v/release/moehrem/DiveraControl?sort=semver&style=for-the-badge&color=green)](https://github.com/moehrem/DiveraControl/releases)
+[![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl?style=for-the-badge&color=green)](https://github.com/moehrem/DiveraControl/releases)
+![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/moehrem/DiveraControl/latest/total?style=for-the-badge&label=Downloads%20latest%20Release)
+![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.divera.total&style=for-the-badge&label=Active%20Installations&color=red)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/moehrem/DiveraControl?style=for-the-badge)
+[![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg?style=for-the-badge)](https://github.com/hacs/integration)
+
 # DiveraControl für HomeAssistant
 
 > **Hinweis:** DiveraControl befindet sich noch in der Entwicklung. Es können Fehler auftreten, und einige geplante Funktionen fehlen noch. Eine Optimierung hat bislang nicht stattgefunden. Wer trotzdem neugierig ist, kann die [Vorabversionen](https://github.com/moehrem/DiveraControl/releases) testen!
@@ -80,7 +87,7 @@ Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
 ## 📂 Installation
 
 ### 🏆 **HACS (empfohlen)**
-DiveraControl ist (noch) nicht im HACS-Store verfügbar, kann aber manuell hinzugefügt werden:
+DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber manuell hinzugefügt werden:
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)

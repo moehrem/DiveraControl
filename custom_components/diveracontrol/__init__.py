@@ -20,6 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     """Set up DiveraControl from a config entry."""
     cluster = config_entry.data
     cluster_id = cluster.get(D_CLUSTER_ID)
+    api_key = cluster.get(D_API_KEY)
 
     if not cluster_id:
         LOGGER.error("Missing cluster ID in config entry: %s", config_entry)
@@ -29,16 +30,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "Setting up cluster: %s (%s)", cluster.get("name", "Unknown"), cluster_id
     )
 
-    api = DiveraAPI(hass, cluster_id)
-    coordinator = DiveraCoordinator(
-        hass, api, cluster, cluster_id, config_entry.entry_id
-    )
+    api = DiveraAPI(hass, cluster_id, api_key)
+    coordinator = DiveraCoordinator(hass, api, cluster, cluster_id)
 
     hass.data.setdefault(DOMAIN, {})[cluster_id] = {
         "coordinator": coordinator,
         "api": api,
         "sensors": {},
-        # "device_trackers": {},
+        "device_trackers": {},
     }
 
     try:

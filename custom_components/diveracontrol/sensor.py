@@ -35,6 +35,7 @@ from .const import (
     D_STATUS_CONF,
     D_UCR,
     D_VEHICLE,
+    D_UCR_ID,
     D_USER,
     DOMAIN,
     I_CLOSED_ALARM,
@@ -66,77 +67,74 @@ async def async_setup_entry(
     async def sync_sensors():
         """Synchronize all sensors with the current data from coordinator."""
 
+        cluster_data = coordinator.cluster_data
+        current_sensors = hass.data[DOMAIN][cluster_id].setdefault("sensors", {})
         new_sensors = []
 
-        for ucr_id, ucr_data in coordinator.cluster_data.items():
-            new_alarm_data = ucr_data.get(D_ALARM, {})
-            new_vehicle_data = ucr_data.get(D_VEHICLE, {})
-            new_static_sensors_data = {
-                D_ACTIVE_ALARM_COUNT,
-                D_CLUSTER_ADDRESS,
-                D_STATUS,
-            }
+        new_alarm_data = cluster_data.get(D_ALARM, {})
+        new_vehicle_data = cluster_data.get(D_VEHICLE, {})
+        new_static_sensors_data = {
+            D_ACTIVE_ALARM_COUNT,
+            D_CLUSTER_ADDRESS,
+            D_STATUS,
+        }
 
-            if isinstance(new_alarm_data, dict):
-                new_alarm_data = set(new_alarm_data.keys())
-            else:
-                new_alarm_data = set()
+        if isinstance(new_alarm_data, dict):
+            new_alarm_data = set(new_alarm_data.keys())
+        else:
+            new_alarm_data = set()
 
-            if isinstance(new_vehicle_data, dict):
-                new_vehicle_data = set(new_vehicle_data.keys())
-            else:
-                new_vehicle_data = set()
+        if isinstance(new_vehicle_data, dict):
+            new_vehicle_data = set(new_vehicle_data.keys())
+        else:
+            new_vehicle_data = set()
 
-            current_sensors = (
-                hass.data[DOMAIN][cluster_id]
-                .setdefault(ucr_id, {})
-                .setdefault("sensors", {})
+        # adding static sensors
+        static_sensor_map = {
+            D_ACTIVE_ALARM_COUNT: DiveraAlarmCountSensor(
+                coordinator, cluster_data, cluster_id
+            ),
+            D_CLUSTER_ADDRESS: DiveraUnitSensor(coordinator, cluster_data, cluster_id),
+        }
+
+        # usergroup_id = (
+        #     cluster_data.get(D_UCR, {}).get(cluster_id, {}).get("usergroup_id", None)
+        # )
+
+        # if usergroup_id not in [5, 19]:
+        #     static_sensor_map[D_STATUS] = DiveraStatusSensor(
+        #         coordinator, cluster_data, cluster_id
+        #     )
+
+        for sensor_name, sensor_instance in static_sensor_map.items():
+            if sensor_name not in current_sensors:
+                new_sensors.append(sensor_instance)
+                current_sensors[sensor_name] = sensor_instance
+
+        # adding alarm sensors
+        new_alarms = new_alarm_data - current_sensors.keys()
+        for alarm_id in new_alarms:
+            sensor = DiveraAlarmSensor(coordinator, cluster_data, alarm_id, cluster_id)
+            new_sensors.append(sensor)
+            current_sensors[alarm_id] = sensor
+
+        # adding behicle sensors
+        new_vehicles = new_vehicle_data - current_sensors.keys()
+        for vehicle_id in new_vehicles:
+            sensor = DiveraVehicleSensor(
+                coordinator, cluster_data, vehicle_id, cluster_id
             )
+            new_sensors.append(sensor)
+            current_sensors[vehicle_id] = sensor
 
-            # adding static sensors
-            static_sensor_map = {
-                D_ACTIVE_ALARM_COUNT: DiveraAlarmCountSensor(
-                    coordinator, ucr_data, ucr_id
-                ),
-                D_CLUSTER_ADDRESS: DiveraUnitSensor(coordinator, ucr_data, ucr_id),
-            }
-
-            usergroup_id = (
-                ucr_data.get(D_UCR, {}).get(ucr_id, {}).get("usergroup_id", None)
-            )
-
-            if usergroup_id not in [5, 19]:
-                static_sensor_map[D_STATUS] = DiveraStatusSensor(
-                    coordinator, ucr_data, ucr_id
-                )
-
-            for sensor_name, sensor_instance in static_sensor_map.items():
-                if sensor_name not in current_sensors:
-                    new_sensors.append(sensor_instance)
-                    current_sensors[sensor_name] = sensor_instance
-
-            # adding alarm sensors
-            new_alarms = new_alarm_data - current_sensors.keys()
-            for alarm_id in new_alarms:
-                sensor = DiveraAlarmSensor(coordinator, ucr_data, alarm_id, ucr_id)
-                new_sensors.append(sensor)
-                current_sensors[alarm_id] = sensor
-
-            # adding behicle sensors
-            new_vehicles = new_vehicle_data - current_sensors.keys()
-            for vehicle_id in new_vehicles:
-                sensor = DiveraVehicleSensor(coordinator, ucr_data, vehicle_id, ucr_id)
-                new_sensors.append(sensor)
-                current_sensors[vehicle_id] = sensor
-
-            # remove outdated sensors
-            active_ids = new_alarm_data | new_vehicle_data | new_static_sensors_data
-            removable_sensors = set(current_sensors.keys() - active_ids)
-            for sensor_id in removable_sensors:
-                sensor = current_sensors.pop(sensor_id, None)
-                if sensor:
-                    await sensor.remove_from_hass()
-                    LOGGER.debug("Removed sensor: %s", sensor_id)
+        # remove outdated sensors
+        active_ids = new_alarm_data | new_vehicle_data | new_static_sensors_data
+        removable_sensors = set(current_sensors.keys() - active_ids)
+        for sensor_id in removable_sensors:
+            sensor = current_sensors.pop(sensor_id, None)
+            if sensor:
+                await sensor.remove_from_hass()
+                LOGGER.debug("Removed sensor: %s", sensor_id)
 
         # register new sensors
         if new_sensors:
@@ -163,30 +161,40 @@ async def async_remove_sensors(hass: HomeAssistant, cluster_id: str) -> None:
 class BaseDiveraSensor(Entity, BaseDiveraEntity):
     """Basisklasse für Divera-Sensoren."""
 
-    def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
+    def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Initialisiert einen Sensor."""
         Entity.__init__(self)
-        BaseDiveraEntity.__init__(self, coordinator, ucr_data, ucr_id)
+        BaseDiveraEntity.__init__(self, coordinator, cluster_data, cluster_id)
+
+        self.ucr_id = cluster_data.get(D_UCR_ID, "")
+        self.cluster_name = (
+            cluster_data.get(D_UCR, {}).get(self.ucr_id).get("name", "Unit Unknown")
+        )
 
     @property
     def device_info(self):
         """Fetch device info."""
-        return get_device_info(self.ucr_data, self.ucr_id)
+        return get_device_info(self.cluster_name)
 
 
 class DiveraAlarmSensor(BaseDiveraSensor):
     """Sensor to represent a single alarm."""
 
-    def __init__(self, coordinator, ucr_data, alarm_id: str, cluster_id: str) -> None:
+    def __init__(
+        self, coordinator, cluster_data, alarm_id: str, cluster_id: str
+    ) -> None:
         """Init class DiveraAlarmSensor."""
-        super().__init__(coordinator, ucr_data, cluster_id)
+        super().__init__(coordinator, cluster_data, cluster_id)
         self.alarm_id = alarm_id
-        self.alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        self.alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
 
     @property
     def entity_id(self) -> str:
         """Entity-ID of sensor."""
-        return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_alarm_{self.alarm_id}')}"
+        return f"sensor.{f'{self.cluster_id}_alarm_{self.alarm_id}'}"
+        # return (
+        #     f"sensor.{sanitize_entity_id(f'{self.cluster_id}_alarm_{self.alarm_id}')}"
+        # )
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -196,7 +204,7 @@ class DiveraAlarmSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Unique ID of sensor."""
-        return f"{self.ucr_id}_alarm_{self.alarm_id}"
+        return f"{self.cluster_id}_alarm_{self.alarm_id}"
 
     @property
     def name(self) -> str:
@@ -206,18 +214,18 @@ class DiveraAlarmSensor(BaseDiveraSensor):
     @property
     def state(self) -> str:
         """State of sensor."""
-        alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
         return alarm_data.get("title", "Unknown")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Additional attributes of sensor."""
-        return self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        return self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
 
     @property
     def icon(self) -> str:
         """Icon of sensor."""
-        alarm_data = self.ucr_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
         closed = alarm_data.get("closed", False)
         priority = alarm_data.get("priority", False)
         if closed:
@@ -231,16 +239,18 @@ class DiveraAlarmSensor(BaseDiveraSensor):
 class DiveraVehicleSensor(BaseDiveraSensor):
     """Sensor to represent a single vehicle."""
 
-    def __init__(self, coordinator, ucr_data, vehicle_id: str, cluster_id: str) -> None:
+    def __init__(
+        self, coordinator, cluster_data, vehicle_id: str, cluster_id: str
+    ) -> None:
         """Init class DiveraVehicleSensor."""
-        super().__init__(coordinator, ucr_data, cluster_id)
+        super().__init__(coordinator, cluster_data, cluster_id)
         self._vehicle_id = vehicle_id
 
     @property
     def entity_id(self) -> str:
-        return (
-            f"sensor.{sanitize_entity_id(f'{self.ucr_id}_vehicle_{self._vehicle_id}')}"
-        )
+        """Entity-ID of sensor."""
+        return f"sensor.{f'{self.cluster_id}_vehicle_{self._vehicle_id}'}"
+        # return f"sensor.{sanitize_entity_id(f'{self.cluster_id}_vehicle_{self._vehicle_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -250,12 +260,12 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Unique if if sensor."""
-        return f"{self.ucr_id}_vehicle_{self._vehicle_id}"
+        return f"{self.cluster_id}_vehicle_{self._vehicle_id}"
 
     @property
     def name(self) -> str:
         """Name of sensor."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
         shortname = vehicle_data.get("shortname", "Unknown")
         veh_name = vehicle_data.get("name", "Unknown")
         return f"{shortname} / {veh_name} "
@@ -263,7 +273,7 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def state(self) -> str:
         """State of sensor."""
-        vehicle_data = self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
         return vehicle_data.get("fmsstatus_id", "Unknown")
 
     @property
@@ -272,7 +282,7 @@ class DiveraVehicleSensor(BaseDiveraSensor):
         extra_state_attributes = {}
         extra_state_attributes["Vehicle-ID"] = self._vehicle_id
         extra_state_attributes.update(
-            self.ucr_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+            self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
         )
         return extra_state_attributes
 
@@ -285,15 +295,18 @@ class DiveraVehicleSensor(BaseDiveraSensor):
 class DiveraUnitSensor(BaseDiveraSensor):
     """Sensor to represent a divera-unit."""
 
-    def __init__(self, coordinator, ucr_data, cluster_id: str) -> None:
+    def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Init class DiveraUnitSensor."""
-        super().__init__(coordinator, ucr_data, cluster_id)
-        self.fs_name = next(iter(ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()), "Unknown")
+        super().__init__(coordinator, cluster_data, cluster_id)
+        self.fs_name = next(
+            iter(cluster_data.get(D_CLUSTER_ADDRESS, {}).keys()), "Unknown"
+        )
 
     @property
     def entity_id(self) -> str:
         """Entity-ID of sensor."""
-        return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_cluster_address')}"
+        return f"sensor.{f'{self.cluster_id}_cluster_address'}"
+        # return f"sensor.{sanitize_entity_id(f'{self.cluster_id}_cluster_address')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -303,13 +316,13 @@ class DiveraUnitSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Unique-ID of sensor."""
-        return f"{self.ucr_id}_cluster_address"
+        return f"{self.cluster_id}_cluster_address"
 
     @property
     def name(self) -> str:
         """Name of sensor.."""
         return next(
-            iter(self.ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()),
+            iter(self.cluster_data.get(D_CLUSTER_ADDRESS, {}).keys()),
             "Unknown",
         )
 
@@ -317,19 +330,19 @@ class DiveraUnitSensor(BaseDiveraSensor):
     def state(self) -> str:
         """State of sensor."""
         return next(
-            iter(self.ucr_data.get(D_CLUSTER_ADDRESS, {}).keys()),
+            iter(self.cluster_data.get(D_CLUSTER_ADDRESS, {}).keys()),
             "Unknown",
         )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Additional attributes of sensor."""
-        firestation_data = self.ucr_data.get(D_CLUSTER_ADDRESS, {}).get(
+        firestation_data = self.cluster_data.get(D_CLUSTER_ADDRESS, {}).get(
             self.fs_name, {}
         )
         address = firestation_data.get("address", {})
         return {
-            "cluster_id": self.ucr_id,
+            "cluster_id": self.cluster_id,
             "shortname": firestation_data.get("shortname", "Unknown"),
             "latitude": address.get("lat"),
             "longitude": address.get("lng"),
@@ -349,14 +362,15 @@ class DiveraUnitSensor(BaseDiveraSensor):
 class DiveraAlarmCountSensor(BaseDiveraSensor):
     """Sensor to count active alarms."""
 
-    def __init__(self, coordinator, ucr_data, cluster_id: str) -> None:
+    def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Init class DiveraAlarmCountSensor."""
-        super().__init__(coordinator, ucr_data, cluster_id)
+        super().__init__(coordinator, cluster_data, cluster_id)
 
     @property
     def entity_id(self) -> str:
         """Entity-ID of sensor."""
-        return f"sensor.{sanitize_entity_id(f'{self.ucr_id}_active_alarm_count')}"
+        return f"sensor.{f'{self.cluster_id}_active_alarm_count'}"
+        # return f"sensor.{sanitize_entity_id(f'{self.cluster_id}_active_alarm_count')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -366,18 +380,18 @@ class DiveraAlarmCountSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Unique-ID of sensor."""
-        return f"{self.ucr_id}_active_alarm_count"
+        return f"{self.cluster_id}_active_alarm_count"
 
     @property
     def name(self) -> str:
         """Name of sensor."""
-        return f"Open Alarms {self.ucr_id}"
+        return f"Open Alarms {self.cluster_id}"
 
     @property
     def state(self) -> int:
         """State of sensor."""
         try:
-            return int(self.ucr_data.get(D_ACTIVE_ALARM_COUNT, 0))
+            return int(self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0))
         except (ValueError, TypeError):
             return 0
 
@@ -387,62 +401,64 @@ class DiveraAlarmCountSensor(BaseDiveraSensor):
         return I_COUNTER_ACTIVE_ALARMS
 
 
-class DiveraStatusSensor(BaseDiveraSensor):
-    """Sensor to represent the user status."""
+# class DiveraStatusSensor(BaseDiveraSensor):
+#     """Sensor to represent the user status."""
 
-    def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
-        """Init class DiveraStatusSensor."""
-        super().__init__(coordinator, ucr_data, ucr_id)
-        self._entity_id = f"sensor.{self.ucr_id}_status"
+#     def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
+#         """Init class DiveraStatusSensor."""
+#         super().__init__(coordinator, cluster_data, cluster_id)
+#         self._entity_id = f"sensor.{self.cluster_id}_status"
 
-    @property
-    def entity_id(self) -> str:
-        """Entity-ID of sensor."""
-        return self._entity_id
+#     @property
+#     def entity_id(self) -> str:
+#         """Entity-ID of sensor."""
+#         return self._entity_id
 
-    @entity_id.setter
-    def entity_id(self, value: str) -> None:
-        """Set entity-ID of sensor."""
-        self._entity_id = value
+#     @entity_id.setter
+#     def entity_id(self, value: str) -> None:
+#         """Set entity-ID of sensor."""
+#         self._entity_id = value
 
-    @property
-    def unique_id(self) -> str:
-        """Unique-ID of sensor."""
-        return f"{self.ucr_id}_status"
+#     @property
+#     def unique_id(self) -> str:
+#         """Unique-ID of sensor."""
+#         return f"{self.cluster_id}_status"
 
-    @property
-    def name(self) -> str:
-        """Name of sensor."""
-        # unit_name = self.ucr_data.get(D_UCR, {}).get("name", "Unit Unknown")
-        return "Status"
+#     @property
+#     def name(self) -> str:
+#         """Name of sensor."""
+#         # unit_name = self.cluster_data.get(D_UCR, {}).get("name", "Unit Unknown")
+#         return "Status"
 
-    @property
-    def state(self) -> str:
-        """State of sensor."""
-        status_id = str(self.ucr_data.get(D_STATUS, {}).get("status_id", {}))
-        return (
-            self.ucr_data.get(D_STATUS_CONF, {})
-            .get(status_id, {})
-            .get("name", "Unknown")
-        )
+#     @property
+#     def state(self) -> str:
+#         """State of sensor."""
+#         status_id = str(self.cluster_data.get(D_STATUS, {}).get("status_id", {}))
+#         return (
+#             self.cluster_data.get(D_STATUS_CONF, {})
+#             .get(status_id, {})
+#             .get("name", "Unknown")
+#         )
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Additional attributes of sensor."""
-        status_options = []
-        for status_id, status_details in self.ucr_data.get(D_STATUS_CONF, {}).items():
-            status_name = f"{status_details.get('name', 'Unknown')} ({status_id})"
-            if status_name and status_name not in status_options:
-                status_options.append(status_name)
+#     @property
+#     def extra_state_attributes(self) -> dict[str, Any]:
+#         """Additional attributes of sensor."""
+#         status_options = []
+#         for status_id, status_details in self.cluster_data.get(
+#             D_STATUS_CONF, {}
+#         ).items():
+#             status_name = f"{status_details.get('name', 'Unknown')} ({status_id})"
+#             if status_name and status_name not in status_options:
+#                 status_options.append(status_name)
 
-        status_id = str(self.ucr_data.get(D_STATUS, {}).get("status_id", {}))
+#         status_id = str(self.cluster_data.get(D_STATUS, {}).get("status_id", {}))
 
-        return {
-            "status_id": status_id,
-            "options": status_options,
-        }
+#         return {
+#             "status_id": status_id,
+#             "options": status_options,
+#         }
 
-    @property
-    def icon(self) -> str:
-        """Icon of sensor."""
-        return I_STATUS
+#     @property
+#     def icon(self) -> str:
+#         """Icon of sensor."""
+#         return I_STATUS

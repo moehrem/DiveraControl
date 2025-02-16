@@ -95,7 +95,7 @@ async def update_operational_data(api, data) -> None:
     """
     try:
         ucr_id = data[D_UCR_ID]
-        api.set_api_key(data.get(D_API_KEY, ""))
+        # api.set_api_key(data.get(D_API_KEY, ""))
         raw_ucr_data = await api.get_ucr_data(ucr_id)
 
         # check for successful API response data
