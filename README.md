@@ -64,7 +64,6 @@ Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von Home
 
 ### 📥 **Datenabfrage**
 - Alarmdaten
-- Nutzerstatus
 - Einheitendetails
 - Verfügbarkeiten
 - Fahrzeugdaten & individuelle Eigenschaften
@@ -73,7 +72,6 @@ Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von Home
 
 ### 📤 **Datenübergabe**
 HomeAssistant-Services ermöglichen das Übermitteln von Daten an Divera:
-- Nutzerstatus (einfach & erweitert)
 - Alarmerstellung, -änderung & -abschluss
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
@@ -81,7 +79,7 @@ HomeAssistant-Services ermöglichen das Übermitteln von Daten an Divera:
 
 ---
 
-## ❌ Noch nicht enthalten
+## ❌ (Noch) nicht enthalten
 Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
 - Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
 - Verwaltung von Terminen (Erstellen, Ändern, Löschen)
@@ -89,10 +87,11 @@ Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
 - Besatzung zu Fahrzeugen hinzufügen
 - Leitstellen-Funktionen
 - PRO-Version-Features (einheitenübergreifende Alarmierung)
+- Setzen von Nutzerstatus bzw. Rückmeldungen
 
 **Geplante Funktionen:**
 - Hinzufügen von Besatzung zu Fahrzeugen
-- Datenabfrage nur bei offenen Alarmen (per Webhook von Divera)
+- Datenabfrage nur bei offenen Alarmen
 - Automatisches Erstellen & Löschen von Zonen für Gebäude & Einsatzorte
 
 ---
@@ -100,7 +99,7 @@ Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
 ## 📂 Installation
 
 ### 🏆 **HACS (empfohlen)**
-DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber manuell hinzugefügt werden:
+DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber bereits manuell hinzugefügt werden:
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
@@ -115,16 +114,18 @@ DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber manuell hinzug
 ## ⚙️ Einrichtung
 
 ### 🔑 **Authentifizierung**
-Zur Einrichtung benötigt man **Benutzername & Passwort** oder direkt den **API-Schlüssel**. Die Anmeldung initial immer mit den **persönlichen Zugangsdaten**. Diese werden nicht gespeichert, es wird damit nur der API-Schlüssel des Nutzers abgefragt.
-2.  (empfohlen für Admins) → API-Schlüssel muss manuell eingegeben werden
-3.  (zentral, Berechtigungen nicht anpassbar) → API-Schlüssel unter Verwaltung → Schnittstellen abrufbar
+Zur Einrichtung benötigt man **Benutzername & Passwort** oder direkt den **API-Schlüssel**. Die Anmeldung erfolgt initial immer mit den **persönlichen Zugangsdaten**. Diese Daten werden nicht gespeichert, es wird damit nur der API-Schlüssel des Nutzers abgefragt.
 
 Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **System-, Schnittstellen-, Monitor- oder Fahrzeugbenutzer** handelt, fragt die Integration direkt nach dem API-Schlüssel.
+
+> Hinweis: Divera bietet verschiedene API-Schlüssel zur Nutzung an. Neben dem persönlichen Schlüssel unter **Profil -> Einstellungen -> Debug**, gibt es außerdem einen allgemeinen Schnittstellenschlüssel unter **Verwaltung -> Schnittstellen**. Empfohlen wird jedoch die Einrichtung und Nutzung eines Schnittstellennutzers unter **Verwaltung -> Schnittstellen -> System-Benutzer**. Nur zu diesem lassen sich sinnvoll Berechtigungen einrichten.
 
 ### ⏳ **Abfrageintervalle**
 Die Intervalle werden immer je Einheit eingestellt.
 - **Außerhalb von Einsätzen**: längeres Intervall
-- **Während eines Einsatzes**: kürzeres Intervall für schnellere Updates
+- **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme zur Aktualisierung der Daten genutzt wird
+
+> Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, dürfen keine Werte niedriger als 30s eingestellt werden.
 
 ---
 
@@ -135,12 +136,10 @@ Die Abfragen laufen automatisiert im Hintergrund. Folgende Sensoren stehen zur V
 - **Einheitendetails** (Name, Adresse, Koordinaten)
 - **Fahrzeuge** (Status, Position, Besatzung, Eigenschaften)
 - **Alarme** (Stichwort, Text, Rückmeldungen)
-- **Nutzerstatus** (nur für "echte" Benutzer)
 - **Offene Alarme** (Anzahl)
 - **Tracker** (für Einsätze & Fahrzeuge)
 
 ### 📤 **Datenübergabe** (HomeAssistant-Services)
-- Nutzerstatus setzen (einfach/erweitert)
 - Fahrzeugdaten aktualisieren
 - Alarme erstellen, ändern & schließen
 - Nachrichten senden
@@ -151,4 +150,5 @@ Die Abfragen laufen automatisiert im Hintergrund. Folgende Sensoren stehen zur V
 
 ### ⚙️ **Konfigurationsänderungen**
 Über die HomeAssistant-Integrationsverwaltung anpassbar:
-- Abfrageintervalle für normale & Alarm-Situationen
+- Abfrageintervalle
+- API-Schlüssel

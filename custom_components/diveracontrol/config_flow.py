@@ -160,7 +160,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                 ): vol.All(vol.Coerce(int), vol.Range(min=30)),
                 vol.Required(
                     D_UPDATE_INTERVAL_ALARM, default=UPDATE_INTERVAL_ALARM
-                ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
             }
         )
 
