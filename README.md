@@ -4,11 +4,11 @@
   </a>
 </p>
 
----
+--
 
-[![English](https://img.shields.io/badge/🇬🇧%20English-README-blue?style=for-the-badge)](README.en.md)
+[![English](https://img.shields.io/badge/🇬🇧%20-English-blue)](README.en.md)
 
----
+--
 
 ![update-badge](https://img.shields.io/github/last-commit/moehrem/diveracontrol?label=last%20update)
 
