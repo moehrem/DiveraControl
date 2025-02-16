@@ -6,7 +6,7 @@
 
 ---
 
-[![English](https://img.shields.io/badge/🇬🇧%20English-README.en.md-blue?style=flat-square)](README.en.md)
+[![English](https://img.shields.io/badge/🇬🇧%20English-README-blue?style=for-the-badge)](README.en.md)
 
 ---
 
