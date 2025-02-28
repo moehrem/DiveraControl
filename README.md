@@ -71,7 +71,7 @@ Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von Home
 - Nachrichtenkanäle
 
 ### 📤 **Datenübergabe**
-HomeAssistant-Services ermöglichen das Übermitteln von Daten an Divera:
+Verschiedene Divera-Endpunkte sind als Services in HomeAssistant umgesetzt und ermöglichen das Übermitteln von Daten an Divera:
 - Alarmerstellung, -änderung & -abschluss
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
@@ -79,20 +79,23 @@ HomeAssistant-Services ermöglichen das Übermitteln von Daten an Divera:
 
 ---
 
-## ❌ (Noch) nicht enthalten
-Divera bietet zahlreiche Endpunkte, nicht alle sind integriert:
-- Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
-- Verwaltung von Terminen (Erstellen, Ändern, Löschen)
-- Anhänge hinzufügen
-- Besatzung zu Fahrzeugen hinzufügen
-- Leitstellen-Funktionen
-- PRO-Version-Features (einheitenübergreifende Alarmierung)
-- Setzen von Nutzerstatus bzw. Rückmeldungen
-
-**Geplante Funktionen:**
+## 💡 Geplante Funktionen
+Folgende Funktionen sollen noch integriert werden:
 - Hinzufügen von Besatzung zu Fahrzeugen
 - Datenabfrage nur bei offenen Alarmen
 - Automatisches Erstellen & Löschen von Zonen für Gebäude & Einsatzorte
+- Start der Datenabfrage durch Divera-Webhook, um ständiges Polling bei Divera zu reduzieren
+- Verfügbarkeit der Einsatzkräft sowie der Rollen
+
+
+## ❌ Nicht enthalten und bisher nicht geplant
+Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung geplant:
+- Setzen von Nutzerstatus bzw. Rückmeldungen
+- Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
+- Verwaltung von Terminen (Erstellen, Ändern, Löschen)
+- Anhänge hinzufügen
+- Leitstellen-Funktionen
+- PRO-Version-Features (einheitenübergreifende Alarmierung)
 
 ---
 
@@ -126,29 +129,3 @@ Die Intervalle werden immer je Einheit eingestellt.
 - **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme zur Aktualisierung der Daten genutzt wird
 
 > Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, dürfen keine Werte niedriger als 30s eingestellt werden.
-
----
-
-## 👍 Benutzung
-
-### 🔍 **Datenabfrage**
-Die Abfragen laufen automatisiert im Hintergrund. Folgende Sensoren stehen zur Verfügung:
-- **Einheitendetails** (Name, Adresse, Koordinaten)
-- **Fahrzeuge** (Status, Position, Besatzung, Eigenschaften)
-- **Alarme** (Stichwort, Text, Rückmeldungen)
-- **Offene Alarme** (Anzahl)
-- **Tracker** (für Einsätze & Fahrzeuge)
-
-### 📤 **Datenübergabe** (HomeAssistant-Services)
-- Fahrzeugdaten aktualisieren
-- Alarme erstellen, ändern & schließen
-- Nachrichten senden
-
-### 🔄 **Sensoren-Handling**
-- Sensoren werden automatisch aktualisiert
-- Sensoren ohne aktuelle Daten werden aus HomeAssistant entfernt
-
-### ⚙️ **Konfigurationsänderungen**
-Über die HomeAssistant-Integrationsverwaltung anpassbar:
-- Abfrageintervalle
-- API-Schlüssel
