@@ -1,120 +1,52 @@
 """Create, handle and register all services."""
 
-import logging
-import voluptuous as vol
 import functools
+import logging
+
+import voluptuous as vol
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .const import D_STATUS_SORT, DOMAIN, D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL
+from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, D_STATUS_SORT, DOMAIN
+from .utils import DiveraPermissionDenied
 
 LOGGER = logging.getLogger(__name__)
 
 
-def prep_api_instance(hass: HomeAssistant, cluster_id: str, hub_id: str):
-    """Holt die API-Instanz für die gegebene hub_id oder wirft eine Exception."""
+def prep_api_instance(hass: HomeAssistant, cluster_id: str):
+    """Holt die API-Instanz für die gegebene cluster_id oder wirft eine Exception."""
     try:
         api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
-        api_key = hass.data[DOMAIN][str(cluster_id)][D_COORDINATOR].cluster_data[
-            str(hub_id)
-        ]["api_key"]
-
-        api_instance.set_api_key(api_key)
         return api_instance
+
     except KeyError:
         error_message = f"API-instance or API-key not found for cluster-ID {cluster_id}"
         LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
 
-def get_coordinator_data(
-    hass: HomeAssistant, cluster_id: str, hub_id: str
-) -> dict[str, any]:
-    """Holt die Koordinatordaten für die gegebene hub_id oder wirft eine Exception."""
-    ucr_data = (
-        hass.data.get(DOMAIN, {})
-        .get(str(cluster_id), "")
-        .get(D_COORDINATOR)
-        .cluster_data.get(str(hub_id), {})
+def get_coordinator_data(hass: HomeAssistant, cluster_id: str) -> dict[str, any]:
+    """Holt die Koordinatordaten für die gegebene cluster_id oder wirft eine Exception."""
+    coordinator_data = (
+        hass.data.get(DOMAIN, {}).get(str(cluster_id), "").get(D_COORDINATOR)
     )
 
-    if not ucr_data:
+    if not coordinator_data:
         error_msg = f"DiveraCoordinator for cluster {cluster_id} not found."
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
-    return ucr_data
-
-
-# async def handle_post_user_status_advanced(hass: HomeAssistant, call: dict):
-#     """Setzt den erweiterten Benutzerstatus."""
-#     cluster_id = call.data.get("cluster_id")
-#     hub_id = call.data.get("hub_id")
-
-#     # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-#     # api_instance.set_api_key = api_key
-#     api_instance = prep_api_instance(hass, cluster_id, hub_id)
-
-#     payload = {"Status": {k: v for k, v in call.data.items() if v is not None}}
-
-#     try:
-#         success = await api_instance.post_user_status_advanced(payload)
-#         if not success:
-#             raise HomeAssistantError(
-#                 "Failed to set user status (advanced), check logs for details."
-#             )
-#     except Exception as e:
-#         error_msg = f"Failed to set user status (advanced): {e}"
-#         LOGGER.error(error_msg)
-#         raise HomeAssistantError(error_msg)
-
-
-# async def handle_post_user_status_simple(hass: HomeAssistant, call: dict):
-#     """Setzt den einfachen Benutzerstatus."""
-#     cluster_id = call.data.get("cluster_id")
-#     hub_id = call.data.get("hub_id")
-#     status_id = call.data.get("status_id")
-
-#     ucr_data = get_coordinator_data(hass, cluster_id, hub_id)
-#     # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-#     # api_instance.set_api_key = api_key
-#     api_instance = prep_api_instance(hass, cluster_id, hub_id)
-
-#     try:
-#         status_sorting = ucr_data.get(D_STATUS_SORT, [])
-#         if status_sorting:
-#             status = status_sorting.index(status_id) + 1
-#         else:
-#             raise ValueError
-#     except ValueError:
-#         error_msg = f"Status-ID {status_id} not found in status sorting."
-#         LOGGER.error(error_msg)
-#         raise HomeAssistantError(error_msg)
-
-#     try:
-#         success = await api_instance.post_user_status_simple(
-#             {"status": status, "ucr": hub_id}
-#         )
-#         if not success:
-#             raise HomeAssistantError(
-#                 f"Failed to set user status {status_id}, check logs."
-#             )
-#     except Exception as e:
-#         LOGGER.exception("Failed to set user status (simple): %s", e)
-#         raise HomeAssistantError(f"Failed to set user status (simple): {e}")
+    return coordinator_data
 
 
 async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
     """Setzt den Fahrzeugstatus."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
     vehicle_id = call.data.get("vehicle_id")
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     payload = {k: v for k, v in call.data.items() if v is not None}
 
@@ -133,14 +65,11 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
 async def handle_post_alarm(hass: HomeAssistant, call: dict):
     """Erstellt einen Alarm."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
     group = call.data.get("group")
     user_cluster_relation = call.data.get("user_cluster_relation")
     notification_type = 4 if user_cluster_relation else 3 if group else 2
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     payload = {
         "Alarm": {k: v for k, v in call.data.items() if v is not None},
@@ -162,12 +91,9 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
 async def handle_put_alarm(hass: HomeAssistant, call: dict):
     """Change an existing alarm."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
     alarm_id = call.data.get("alarm_id")
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
 
@@ -186,12 +112,9 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
 async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
     """Close an existing alarm."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
     alarm_id = call.data.get("alarm_id")
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
 
@@ -210,15 +133,12 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
 async def handle_post_message(hass: HomeAssistant, call: dict):
     """Post message for alarm messenger."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data["hub_id"]
     message_channel_id = call.data.get("message_channel_id")
     alarm_id = call.data.get("alarm_id")
 
-    coordinator_data = get_coordinator_data(hass, cluster_id, hub_id)
+    coordinator_data = get_coordinator_data(hass, cluster_id)
     message_channel_items = coordinator_data.get(D_MESSAGE_CHANNEL, {}).get("items", {})
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     # If neither message_channel_id nor alarm_id is provided, abort early
     if not message_channel_id and not alarm_id:
@@ -270,12 +190,9 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
 async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
     """Set individual properties of a specific vehicle."""
     cluster_id = call.data.get("cluster_id")
-    hub_id = call.data.get("hub_id")
     vehicle_id = call.data.get("vehicle_id")
 
-    # api_instance, api_key = get_api_instance(hass, cluster_id, hub_id)
-    # api_instance.set_api_key = api_key
-    api_instance = prep_api_instance(hass, cluster_id, hub_id)
+    api_instance = prep_api_instance(hass, cluster_id)
 
     payload = {k: v for k, v in call.data.items() if v is not None}
 
@@ -295,34 +212,10 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
 async def async_register_services(hass, domain):
     """Registriert alle Services für die Integration."""
     service_definitions = {
-        # "post_user_status_advanced": (
-        #     handle_post_user_status_advanced,
-        #     {
-        #         vol.Required("cluster_id"): cv.positive_int,
-        #         vol.Required("hub_id"): cv.positive_int,
-        #         vol.Required("id"): cv.positive_int,
-        #         vol.Optional("vehicle"): cv.positive_int,
-        #         vol.Optional("note"): cv.string,
-        #         vol.Optional("reset_date"): cv.positive_int,
-        #         vol.Optional("reset_to"): cv.positive_int,
-        #         vol.Optional("alarm_skip", default=False): cv.boolean,
-        #         vol.Optional("status_skip_statusplan", default=False): cv.boolean,
-        #         vol.Optional("status_skip_geofence", default=False): cv.boolean,
-        #     },
-        # ),
-        # "post_user_status_simple": (
-        #     handle_post_user_status_simple,
-        #     {
-        #         vol.Required("cluster_id"): cv.positive_int,
-        #         vol.Required("hub_id"): cv.positive_int,
-        #         vol.Required("status_id"): cv.positive_int,
-        #     },
-        # ),
         "post_vehicle_status": (
             handle_post_vehicle_status,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Required("vehicle_id"): cv.positive_int,
                 vol.Optional("status"): cv.positive_int,
                 vol.Optional("status_id"): cv.positive_int,
@@ -335,7 +228,6 @@ async def async_register_services(hass, domain):
             handle_post_alarm,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
                 vol.Required("notification_type", default=2): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
@@ -364,7 +256,6 @@ async def async_register_services(hass, domain):
             handle_put_alarm,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Required("alarm_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
                 vol.Required("notification_type", default=2): cv.positive_int,
@@ -398,7 +289,6 @@ async def async_register_services(hass, domain):
             handle_post_close_alarm,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Required("alarm_id"): cv.positive_int,
                 vol.Optional("closed"): cv.boolean,
                 vol.Optional("report"): cv.string,
@@ -408,7 +298,6 @@ async def async_register_services(hass, domain):
             handle_post_message,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Optional("message_channel_id", default=None): vol.Any(
                     None, cv.positive_int
                 ),
@@ -420,7 +309,6 @@ async def async_register_services(hass, domain):
             handle_post_using_vehicle_property,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Required("hub_id"): cv.positive_int,
                 vol.Required("vehicle_id"): cv.positive_int,
                 vol.Extra: vol.Any(
                     vol.Coerce(str), vol.Coerce(int), vol.Coerce(float), None

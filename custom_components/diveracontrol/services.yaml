@@ -1,80 +1,3 @@
-post_user_status_advanced:
-  name: Nutzerstatus setzen, erweitert
-  description: Aktualisiert den Nutzerstatus in Divera 24/7. Setzt den Status nur für die Haupteinheit des Nutzers!
-  fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Gerätes/Nutzers, für den der Status aktualisiert werden soll. Zu finden im Namen des Dienstes.
-      required: true
-      example: 123456
-    id:
-      name: Status-ID
-      description: Die ID des neuen Status. Zu finden in den Attributen des Statussensors.
-      required: true
-      example: 67890
-    vehicle:
-      name: Fahrzeug-ID
-      description: (Optional) Die ID des Fahrzeugs, das dem Nutzer zugewiesen werden soll. Zu finden in den Attributen des Fahrzeugsensors. Erlischt bei erneutem Statuswechsel.
-      required: false
-      example: 13467
-    note:
-      name: Notiz
-      description: (Optional) Freitext zur Statusmeldung. Erlischt bei erneutem Statuswechsel.
-      required: false
-      example: "Komme mit dem Fahrrad"
-    reset_date:
-      name: Reset-Datum
-      description: (Optional) Zeitpunkt als UNIX-Zeitstempel, an dem der Status zurückgesetzt werden soll.
-      required: false
-      example: 1735562283
-    reset_to:
-      name: Zurücksetzen auf
-      description: (Optional) Status-ID, auf die zurückgesetzt werden soll.
-      required: false
-      example: 13468
-    alarm_skip:
-      name: Alarm überspringen
-      description: (Optional) Statusänderung ignorieren wenn gerade ein Einsatz anliegt.
-      required: false
-      example: false
-    status_skip_statusplan:
-      name: Statusplan ignorieren
-      description: (Optional) Alle Termine im Zeitraum überschreiben.
-      required: false
-      example: false
-    status_skip_geofence:
-      name: Geofence ignorieren
-      description: (Optional) Alle Geofences im Zeitraum ignorieren.
-      required: false
-      example: false
-
-
-post_user_status_simple:
-  name: Nutzerstatus setzen, einfach
-  description: Aktualisiert den Nutzerstatus in Divera 24/7. Setzt den Status je Einheit, kann jedoch keine weiteren Details übergeben.
-  fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
-    status_id:
-      name: Status-ID
-      description: Die ID des neuen Status. Zu finden in den Attributen des Statussensors.
-      required: true
-      example: 67890
-
-
 post_vehicle_status:
   name: Fahrzeugstatus und -daten setzen
   description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
@@ -84,11 +7,6 @@ post_vehicle_status:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     vehicle_id:
       name: Fahrzeug-ID
       description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
@@ -130,11 +48,6 @@ post_alarm:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     title:
       name: Stichwort
       description: Alarmstichwort
@@ -256,11 +169,6 @@ put_alarm:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Alarm aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     alarm_id:
       name: Alarm-ID
       description: Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
@@ -407,11 +315,6 @@ post_close_alarm:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     alarm_id:
       name: Alarm-ID
       description: Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
@@ -438,11 +341,6 @@ post_message:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     message_channel_id:
       name: Nachrichtenkanal-ID
       description: Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
@@ -469,11 +367,6 @@ post_using_vehicle_property:
       description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
-    hub_id:
-      name: HUB-ID
-      description: Die ID des Hubs/der Einheit, für den der Status aktualisiert werden soll. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 123456
     vehicle_id:
       name: Fahrzeug-ID
       description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.

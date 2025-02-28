@@ -68,6 +68,16 @@ class DiveraCoordinator(DataUpdateCoordinator):
             hass, f"{DOMAIN}_config_updated", self._config_entry_updated
         )
 
+        now = asyncio.get_running_loop().time()
+        self._last_data_update = now
+        self._last_alarm_update = now
+
+        self.interval_data = timedelta(seconds=cluster[D_UPDATE_INTERVAL_DATA])
+        self.interval_alarm = timedelta(seconds=cluster[D_UPDATE_INTERVAL_ALARM])
+
+        self._listeners = {}
+
+    def init_cluster_data_structure(self):
         self.cluster_data = {
             D_UCR_ID: self.ucr_id,
             D_ACTIVE_ALARM_COUNT: "",
@@ -96,19 +106,13 @@ class DiveraCoordinator(DataUpdateCoordinator):
             D_VEHICLE: {},
         }
 
-        now = asyncio.get_running_loop().time()
-        self._last_data_update = now
-        self._last_alarm_update = now
-
-        self.interval_data = timedelta(seconds=cluster[D_UPDATE_INTERVAL_DATA])
-        self.interval_alarm = timedelta(seconds=cluster[D_UPDATE_INTERVAL_ALARM])
-
-        self._listeners = {}
-
     @log_execution_time
-    async def initialize_data(self):
+    async def init_cluster_data(self):
         """Initialize data at start one time only."""
         now = asyncio.get_running_loop().time()
+
+        if not self.cluster_data:
+            self.init_cluster_data_structure()
 
         try:
             changing_data = self.cluster_data
@@ -123,16 +127,18 @@ class DiveraCoordinator(DataUpdateCoordinator):
             changing_data[D_LAST_UPDATE_ALARM] = now
             changing_data[D_LAST_UPDATE_DATA] = now
 
+            self.cluster_data = changing_data
+
+            LOGGER.info(
+                "Successfully initialized data for unit '%s'", self.cluster_name
+            )
+
         except Exception as e:
             LOGGER.error(
                 "Error during initialization for HUB %s: %s",
                 self.cluster_id,
                 str(e),
             )
-
-        self.cluster_data = changing_data
-
-        LOGGER.info("Successfully initialized data for unit '%s'", self.cluster_name)
 
     @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
@@ -215,16 +221,16 @@ class DiveraCoordinator(DataUpdateCoordinator):
         LOGGER.debug("Removed update listeners for HUB: %s", self.cluster_id)
 
     async def _config_entry_updated(self, entry_id):
-        """Load new data upon changes of config_entry."""
+        """Load new data upon changes of configuration."""
         LOGGER.info(
             "Configuration for unit '%s' changed, reloading data",
             self.cluster_name,
         )
-        self.cluster_data.update(
-            self.hass.config_entries.async_get_entry(entry_id).data.get(
-                "user_cluster_relations", {}
-            )
-        )
-        await self.initialize_data()
+        # self.cluster_data.update(
+        #     self.hass.config_entries.async_get_entry(entry_id).data.get(
+        #         "user_cluster_relations", {}
+        #     )
+        # )
+        # await self.initialize_data()
 
-        await self.async_request_refresh()
+        # await self.async_request_refresh()

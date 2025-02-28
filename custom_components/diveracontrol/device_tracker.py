@@ -109,7 +109,7 @@ class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
 
         self.ucr_id = cluster_data.get(D_UCR_ID, "")
         self.cluster_name = (
-            cluster_data.get(D_UCR, {}).get(self.ucr_id).get("name", "Unit Unknown")
+            cluster_data.get(D_UCR, {}).get(self.ucr_id, {}).get("name", "Unit Unknown")
         )
 
     @property
@@ -121,7 +121,8 @@ class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
 class DiveraAlarmTracker(BaseDiveraTracker):
     """A device tracker for alarms."""
 
-    def __init__(self, coordinator, cluster_data, alarm_id, cluster_id):
+    def __init__(self, coordinator, cluster_data, alarm_id, cluster_id) -> None:
+        """Initialize an alarm tracker."""
         super().__init__(coordinator, cluster_data, cluster_id)
         self.alarm_id = alarm_id
 
@@ -129,7 +130,6 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     def entity_id(self) -> str:
         """Entitäts-ID des Sensors."""
         return f"device_tracker.{f'{self.cluster_id}_alarmtracker_{self.alarm_id}'}"
-        # return f"device_tracker.{sanitize_entity_id(f'{self.cluster_id}_alarmtracker_{self.alarm_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -144,7 +144,7 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     @property
     def name(self):
         """Return the name of the device tracker."""
-        return f"Tracker Alarm ID {self.alarm_id}"
+        return f"Alarm {self.alarm_id}"
 
     @property
     def latitude(self):
@@ -185,7 +185,6 @@ class DiveraVehicleTracker(BaseDiveraTracker):
         return (
             f"device_tracker.{f'{self.cluster_id}_vehicletracker_{self._vehicle_id}'}"
         )
-        # return f"device_tracker.{sanitize_entity_id(f'{self.cluster_id}_vehicletracker_{self._vehicle_id}')}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -262,30 +261,30 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     def vertical_accuracy(self, value):
         self._vertical_accuracy = value
 
-    @property
-    def extra_state_attributes(self):
-        """Return additional attributes, including icon color."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        status = str(
-            vehicle_data.get("fmsstatus_id", "unknown")
-        )  # Sicherstellen, dass es ein String ist
+    # @property
+    # def extra_state_attributes(self):
+    #     """Return additional attributes, including icon color."""
+    #     vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+    #     status = str(
+    #         vehicle_data.get("fmsstatus_id", "unknown")
+    #     )  # Sicherstellen, dass es ein String ist
 
-        color_map = {
-            "1": "#55B300",  # Grün
-            "2": "#198215",  # Dunkelgrün
-            "3": "#FF460C",  # Orange-Rot
-            "4": "#D60000",  # Rot
-            "5": "#EFB200",  # Gelb
-            "6": "#3E3E3E",  # Grau
-            "7": "#0087E6",  # Blau
-            "8": "#0038A9",  # Dunkelblau
-            "9": "#001A7A",  # Navy
-            "0": "#E400FF",  # Lila
-        }
+    #     color_map = {
+    #         "1": "#55B300",  # Grün
+    #         "2": "#198215",  # Dunkelgrün
+    #         "3": "#FF460C",  # Orange-Rot
+    #         "4": "#D60000",  # Rot
+    #         "5": "#EFB200",  # Gelb
+    #         "6": "#3E3E3E",  # Grau
+    #         "7": "#0087E6",  # Blau
+    #         "8": "#0038A9",  # Dunkelblau
+    #         "9": "#001A7A",  # Navy
+    #         "0": "#E400FF",  # Lila
+    #     }
 
-        return {
-            "icon_color": color_map.get(status, "#808080"),  # Standard: Grau
-        }
+    #     return {
+    #         "icon_color": color_map.get(status, "#808080"),  # Standard: Grau
+    #     }
 
     @property
     def icon(self):
