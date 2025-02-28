@@ -95,7 +95,7 @@ async def update_operational_data(api, data) -> None:
     """
     try:
         ucr_id = data[D_UCR_ID]
-        api.set_api_key(data.get(D_API_KEY, ""))
+        # api.set_api_key(data.get(D_API_KEY, ""))
         raw_ucr_data = await api.get_ucr_data(ucr_id)
 
         # check for successful API response data
@@ -104,7 +104,7 @@ async def update_operational_data(api, data) -> None:
                 "Unexpected data format or API request failed: %s",
                 raw_ucr_data,
             )
-            return
+            return data
 
         # set data
         ucr = raw_ucr_data.get(D_DATA, {}).get(D_UCR, {})
@@ -186,15 +186,18 @@ async def update_operational_data(api, data) -> None:
             # adding properties to vehicle
             for key in vehicle_data.keys():
                 raw_vehicle_property = await api.get_vehicle_property(key)
-                vehicle_property = raw_vehicle_property.get(D_DATA, {})
-                if isinstance(vehicle_property, dict):
-                    data[D_VEHICLE][key].update(vehicle_property)
-                else:
-                    _LOGGER.warning(
-                        "Unexpected vehicle property format for %s: %s",
-                        key,
-                        vehicle_property,
-                    )
+
+                # if user is not allowed to access these data, expect None
+                if raw_vehicle_property:
+                    vehicle_property = raw_vehicle_property.get(D_DATA, {})
+                    if isinstance(vehicle_property, dict):
+                        data[D_VEHICLE][key].update(vehicle_property)
+                    else:
+                        _LOGGER.warning(
+                            "Unexpected vehicle property format for %s: %s",
+                            key,
+                            vehicle_property,
+                        )
 
         except (ClientError, ValueError, KeyError) as e:
             _LOGGER.error("Error updating vehicles: %s", e)

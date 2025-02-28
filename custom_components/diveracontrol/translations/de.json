@@ -4,12 +4,12 @@
       "step": {
           "user": {
               "title": "Anmeldung bei Divera 24/7",
-              "description": "Bitte gib einen Nutzernamen und Passwort ein. Beides wird nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Abfrageintervall ein. Von Zeiten niedriger als 30s wird abgeraten.",
+              "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
               "data": {
                   "username": "Benutzername",
                   "password": "Passwort",
-                  "update_interval_data": "Abfrageintervall Daten (Sekunden)",
-                  "update_interval_alarm": "Abfrageintervall Alarm (Sekunden)"
+              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
               }
           },
           "api_key": {
@@ -17,17 +17,24 @@
             "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
             "data": {
               "api_key": "API-Schlüssel",
-              "update_interval_data": "Abfrageintervall Daten (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall (Sekunden)"
+              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
             }
           },
           "reconfigure": {
             "title": "Änderung der Konfiguration für DiveraControl",
-            "description": "Hier können die initialen Einstellungen des Hubs/der Einheit angepasst werden.",
+            "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
             "data": {
               "api_key": "API-Schlüssel",
-              "update_interval_data": "Abfrageintervall Daten (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall (Sekunden)"
+              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
+            }
+          },
+          "multi_cluster": {
+            "title": "Auswahl der Einheit",
+            "description": "Zm eingegebenen Nutzer wurden mehrere Einheiten gefunden. Bitte wähle die gewünschte Einheit aus. Weitere Einheiten müssen separat hinzugefügt werden.",
+            "data": {
+              "clusters": "Einheiten"
             }
           }
       },

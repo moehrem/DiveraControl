@@ -14,6 +14,7 @@ from .const import (
     VERSION,
     MINOR_VERSION,
     PATCH_VERSION,
+    D_CLUSTER_NAME,
     D_USER,
     D_ACCESS,
     D_HUB_ID,
@@ -24,29 +25,27 @@ from .const import (
 LOGGER = logging.getLogger(__name__)
 
 
-def permission_request(data, perm_key):
+def permission_request(coordinator_data, perm_key):
     """Return permission to access data."""
 
-    management = data.get(D_ACCESS, {}).get(PERM_MANAGEMENT)
-    permission = data.get(D_ACCESS, {}).get(perm_key)
+    cluster_name = coordinator_data.cluster_name
+    management = coordinator_data.cluster_data.get("access", {}).get(PERM_MANAGEMENT)
+    permission = coordinator_data.cluster_data.get("access", {}).get(perm_key)
 
     if management:
-        access = management
+        sucess = management
     elif permission:
-        access = permission
+        sucess = permission
     else:
-        access = False
+        sucess = False
 
-    if not access:
-        hub_id = data.get(D_HUB_ID, "")
-        unit_name = data.get(D_UCR, {}).get(hub_id, "").get("name", "Unknown")
-        LOGGER.warning(
-            "Permission denied to access %s for unit '%s'",
-            perm_key.upper(),
-            unit_name,
-        )
+    if not sucess:
+        # raise DiveraPermissionDenied(
+        #     f"Permission denied for {perm_key} in cluster {cluster_name}"
+        # )
+        LOGGER.warning("Permission denied for %s in cluster %s", perm_key, cluster_name)
 
-    return access
+    return sucess
 
 
 def sanitize_entity_id(name):
@@ -57,21 +56,22 @@ def sanitize_entity_id(name):
 class BaseDiveraEntity:
     """Gemeinsame Basisklasse für Sensoren und Tracker."""
 
-    def __init__(self, coordinator, ucr_data, ucr_id: str) -> None:
+    def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Initialisiert die gemeinsame Basisklasse."""
         self.coordinator = coordinator
-        self.cluster_id = coordinator.cluster_id
-        self.ucr_id = ucr_id
-        self.ucr_data = ucr_data
+        # self.cluster_id = coordinator.cluster_id
+        self.cluster_id = cluster_id
+        self.cluster_data = cluster_data
 
     @property
     def device_info(self):
         """Gibt Geräteinformationen zurück."""
-        firstname = self.ucr_data.get(D_USER, {}).get("firstname", "")
-        lastname = self.ucr_data.get(D_USER, {}).get("lastname", "")
+        unit_name = self.cluster_name
+        # firstname = self.cluster_data.get(D_USER, {}).get("firstname", "")
+        # lastname = self.cluster_data.get(D_USER, {}).get("lastname", "")
         return {
-            "identifiers": {(DOMAIN, f"{firstname} {lastname}")},
-            "name": f"{firstname} {lastname} / {self.ucr_id}",
+            "identifiers": {(DOMAIN, unit_name)},
+            "name": unit_name,
             "manufacturer": MANUFACTURER,
             "model": DOMAIN,
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
@@ -144,13 +144,14 @@ class BaseDiveraEntity:
         LOGGER.info("Entity successfully removed: %s", self.entity_id)
 
 
-def get_device_info(ucr_data, ucr_id):
+def get_device_info(cluster_name):
     """Gibt Geräteinformationen für den Tracker zurück."""
-    firstname = ucr_data.get(D_USER, {}).get("firstname", "")
-    lastname = ucr_data.get(D_USER, {}).get("lastname", "")
+    unit_name = cluster_name
+    # firstname = ucr_data.get(D_USER, {}).get("firstname", "")
+    # lastname = ucr_data.get(D_USER, {}).get("lastname", "")
     return {
-        "identifiers": {(DOMAIN, f"{firstname} {lastname} / {ucr_id}")},
-        "name": f"{firstname} {lastname} / {ucr_id}",
+        "identifiers": {(DOMAIN, unit_name)},
+        "name": unit_name,
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
@@ -189,3 +190,21 @@ def log_execution_time(func):
             return result
 
         return sync_wrapper
+
+
+class DiveraAPIError(Exception):
+    """Fehler für Authentifizierungsprobleme bei Divera."""
+
+    def __init__(self, error: str) -> None:
+        """Initialisiert den Fehler."""
+        super().__init__(error)
+        LOGGER.error("Authentifizierung bei Divera fehlgeschlagen: %s", str(error))
+
+
+class DiveraPermissionDenied(Exception):
+    """Fehler für Authentifizierungsprobleme bei Divera."""
+
+    def __init__(self, error: str) -> None:
+        """Initialisiert den Fehler."""
+        super().__init__(error)
+        LOGGER.warning("Zugriff auf Divera-API verweigert: %s", str(error))

@@ -14,6 +14,7 @@ from .const import (
     D_LAST_UPDATE_ALARM,
     D_LAST_UPDATE_DATA,
     D_API_KEY,
+    D_CLUSTER_NAME,
     D_HUB_ID,
     D_UCR,
     D_UCR_ID,
@@ -48,57 +49,24 @@ LOGGER = logging.getLogger(__name__)
 
 
 class DiveraCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, api, cluster, cluster_id, entry_id=None):
+    def __init__(self, hass, api, cluster, cluster_id):
         """Initialize the coordinator."""
         super().__init__(
             hass,
             LOGGER,
             name=f"DiveraCoordinator_{cluster_id}",
             update_interval=timedelta(seconds=cluster[D_UPDATE_INTERVAL_DATA]),
-            # update_interval_alarm=timedelta(seconds=hub[D_UPDATE_INTERVAL_ALARM]),
         )
         self.api = api
         self.cluster_id = cluster_id
-        self.cluster_name = cluster.get("name", "")
-        # self.entry_id = entry_id
+        self.ucr_id = cluster.get(D_UCR_ID, "")
+        self.cluster_name = cluster.get(D_CLUSTER_NAME, "")
         self.cluster_data = {}
 
-        # **Listener für Änderungen im ConfigEntry**
+        # **Listener for changes to ConfigEntry**
         async_dispatcher_connect(
             hass, f"{DOMAIN}_config_updated", self._config_entry_updated
         )
-
-        for ucr_id in cluster.get("user_cluster_relations", {}):
-            self.cluster_data[ucr_id] = {
-                D_UCR_ID: ucr_id,
-                D_API_KEY: cluster.get("user_cluster_relations", {})
-                .get(ucr_id, "")
-                .get(D_API_KEY, ""),
-                D_ACTIVE_ALARM_COUNT: "",
-                D_LAST_UPDATE_ALARM: "",
-                D_LAST_UPDATE_DATA: "",
-                D_UCR: {},
-                D_UCR_DEFAULT: {},
-                D_UCR_ACTIVE: {},
-                D_TS: {},
-                D_USER: {},
-                D_STATUS: {},
-                D_CLUSTER: {},
-                D_MONITOR: {},
-                D_ALARM: {},
-                D_NEWS: {},
-                D_EVENTS: {},
-                D_DM: {},
-                D_MESSAGE_CHANNEL: {},
-                D_MESSAGE: {},
-                D_LOCALMONITOR: {},
-                D_STATUSPLAN: {},
-                D_ACCESS: {},
-                D_STATUS_CONF: {},
-                D_STATUS_SORT: {},
-                D_CLUSTER_ADDRESS: {},
-                D_VEHICLE: {},
-            }
 
         now = asyncio.get_running_loop().time()
         self._last_data_update = now
@@ -109,65 +77,68 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         self._listeners = {}
 
+    def init_cluster_data_structure(self):
+        self.cluster_data = {
+            D_UCR_ID: self.ucr_id,
+            D_ACTIVE_ALARM_COUNT: "",
+            D_LAST_UPDATE_ALARM: "",
+            D_LAST_UPDATE_DATA: "",
+            D_UCR: {},
+            D_UCR_DEFAULT: {},
+            D_UCR_ACTIVE: {},
+            D_TS: {},
+            D_USER: {},
+            D_STATUS: {},
+            D_CLUSTER: {},
+            D_MONITOR: {},
+            D_ALARM: {},
+            D_NEWS: {},
+            D_EVENTS: {},
+            D_DM: {},
+            D_MESSAGE_CHANNEL: {},
+            D_MESSAGE: {},
+            D_LOCALMONITOR: {},
+            D_STATUSPLAN: {},
+            D_ACCESS: {},
+            D_STATUS_CONF: {},
+            D_STATUS_SORT: {},
+            D_CLUSTER_ADDRESS: {},
+            D_VEHICLE: {},
+        }
+
     @log_execution_time
-    async def initialize_data(self):
+    async def init_cluster_data(self):
         """Initialize data at start one time only."""
         now = asyncio.get_running_loop().time()
 
-        for ucr_id, ucr_data in self.cluster_data.items():
-            try:
-                ucr_data = {
-                    D_UCR_ID: ucr_id,
-                    D_API_KEY: ucr_data.get(D_API_KEY, ""),
-                    D_ACTIVE_ALARM_COUNT: "",
-                    D_LAST_UPDATE_ALARM: "",
-                    D_LAST_UPDATE_DATA: "",
-                    D_UCR: {},
-                    D_UCR_DEFAULT: {},
-                    D_UCR_ACTIVE: {},
-                    D_TS: {},
-                    D_USER: {},
-                    D_STATUS: {},
-                    D_CLUSTER: {},
-                    D_MONITOR: {},
-                    D_ALARM: {},
-                    D_NEWS: {},
-                    D_EVENTS: {},
-                    D_DM: {},
-                    D_MESSAGE_CHANNEL: {},
-                    D_MESSAGE: {},
-                    D_LOCALMONITOR: {},
-                    D_STATUSPLAN: {},
-                    D_ACCESS: {},
-                    D_STATUS_CONF: {},
-                    D_STATUS_SORT: {},
-                    D_CLUSTER_ADDRESS: {},
-                    D_VEHICLE: {},
-                }
+        if not self.cluster_data:
+            self.init_cluster_data_structure()
 
-                ucr_data = await update_operational_data(self.api, ucr_data)
+        try:
+            changing_data = self.cluster_data
+            changing_data = await update_operational_data(self.api, changing_data)
 
-                user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
-                LOGGER.debug(
-                    "Successfully initialized data for user %s (%s) ",
-                    user_name,
-                    ucr_id,
-                )
+            LOGGER.debug(
+                "Successfully initialized data for unit '%s'",
+                self.cluster_name,
+            )
 
-                # set last update times
-                ucr_data[D_LAST_UPDATE_ALARM] = now
-                ucr_data[D_LAST_UPDATE_DATA] = now
+            # set last update times
+            changing_data[D_LAST_UPDATE_ALARM] = now
+            changing_data[D_LAST_UPDATE_DATA] = now
 
-            except Exception as e:
-                LOGGER.error(
-                    "Error during initialization for HUB %s: %s",
-                    self.cluster_id,
-                    str(e),
-                )
+            self.cluster_data = changing_data
 
-            self.cluster_data[ucr_id] = ucr_data
+            LOGGER.info(
+                "Successfully initialized data for unit '%s'", self.cluster_name
+            )
 
-        LOGGER.info("Successfully initialized data for unit %s", self.cluster_name)
+        except Exception as e:
+            LOGGER.error(
+                "Error during initialization for HUB %s: %s",
+                self.cluster_id,
+                str(e),
+            )
 
     @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
@@ -182,55 +153,49 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 or loop_time > interval.total_seconds()
             )
 
-        for ucr_id, ucr_data in self.cluster_data.items():
-            # Wähle das richtige Intervall basierend auf der Alarmanzahl
-            new_interval = (
-                self.interval_alarm
-                if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
-                else self.interval_data
+        # Wähle das richtige Intervall basierend auf der Alarmanzahl
+        new_interval = (
+            self.interval_alarm
+            if self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
+            else self.interval_data
+        )
+
+        # Falls das Intervall geändert werden muss
+        if self.update_interval != new_interval:
+            self.update_interval = new_interval
+            LOGGER.debug(
+                "Update interval changed to %s seconds for unit '%s'",
+                self.cluster_name,
             )
 
-            # Falls das Intervall geändert werden muss
-            if self.update_interval != new_interval:
-                self.update_interval = new_interval
-                LOGGER.debug(
-                    "Update interval changed to %s seconds for UCR %s",
-                    new_interval.total_seconds(),
-                    ucr_id,
-                )
+        # Wähle den passenden Zeitstempel
+        last_update = (
+            self.cluster_data[D_LAST_UPDATE_ALARM]
+            if self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
+            else self.cluster_data[D_LAST_UPDATE_DATA]
+        )
 
-            # Wähle den passenden Zeitstempel
-            last_update = (
-                ucr_data[D_LAST_UPDATE_ALARM]
-                if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
-                else ucr_data[D_LAST_UPDATE_DATA]
+        # Prüfe, ob ein Update nötig ist
+        if should_update(last_update, new_interval):
+            LOGGER.debug(
+                "Start updating data for unit '%s'",
+                self.cluster_name,
             )
 
-            # Prüfe, ob ein Update nötig ist
-            if should_update(last_update, new_interval):
-                user_name = f"{ucr_data.get(D_USER, {}).get('firstname', '')} {ucr_data.get(D_USER, {}).get('lastname', '')}"
+            changing_data = await update_operational_data(self.api, self.cluster_data)
 
-                LOGGER.debug(
-                    "Start updating data for user %s (%s) ",
-                    user_name,
-                    ucr_id,
-                )
+            LOGGER.debug(
+                "Successfully updated data for unit '%s' ",
+                self.cluster_name,
+            )
 
-                ucr_data = await update_operational_data(self.api, ucr_data)
+            # set update times
+            if changing_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0:
+                changing_data[D_LAST_UPDATE_ALARM] = now
+            else:
+                changing_data[D_LAST_UPDATE_DATA] = now
 
-                LOGGER.debug(
-                    "Successfully updated data for user %s (%s) ",
-                    user_name,
-                    ucr_id,
-                )
-
-                # set update times
-                if ucr_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0:
-                    ucr_data[D_LAST_UPDATE_ALARM] = now
-                else:
-                    ucr_data[D_LAST_UPDATE_DATA] = now
-
-            self.cluster_data[ucr_id] = ucr_data
+        self.cluster_data = changing_data
 
         return self.cluster_data
 
@@ -256,16 +221,16 @@ class DiveraCoordinator(DataUpdateCoordinator):
         LOGGER.debug("Removed update listeners for HUB: %s", self.cluster_id)
 
     async def _config_entry_updated(self, entry_id):
-        """Load new data upon changes of config_entry."""
+        """Load new data upon changes of configuration."""
         LOGGER.info(
-            "Configuration for unit %s changed, loading new data...",
+            "Configuration for unit '%s' changed, reloading data",
             self.cluster_name,
         )
-        self.cluster_data.update(
-            self.hass.config_entries.async_get_entry(entry_id).data.get(
-                "user_cluster_relations", {}
-            )
-        )
-        await self.initialize_data()
+        # self.cluster_data.update(
+        #     self.hass.config_entries.async_get_entry(entry_id).data.get(
+        #         "user_cluster_relations", {}
+        #     )
+        # )
+        # await self.initialize_data()
 
-        await self.async_request_refresh()
+        # await self.async_request_refresh()

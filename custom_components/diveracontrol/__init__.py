@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .api import DiveraAPI
-from .const import D_UCR, DOMAIN, MINOR_VERSION, VERSION, D_API_KEY, D_CLUSTER_ID
+from .const import DOMAIN, D_API_KEY, D_CLUSTER_ID
 from .coordinator import DiveraCoordinator
 from .service import async_register_services
 
@@ -20,6 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     """Set up DiveraControl from a config entry."""
     cluster = config_entry.data
     cluster_id = cluster.get(D_CLUSTER_ID)
+    api_key = cluster.get(D_API_KEY)
 
     if not cluster_id:
         LOGGER.error("Missing cluster ID in config entry: %s", config_entry)
@@ -29,20 +30,18 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "Setting up cluster: %s (%s)", cluster.get("name", "Unknown"), cluster_id
     )
 
-    api = DiveraAPI(hass, cluster_id)
-    coordinator = DiveraCoordinator(
-        hass, api, cluster, cluster_id, config_entry.entry_id
-    )
+    api = DiveraAPI(hass, cluster_id, api_key)
+    coordinator = DiveraCoordinator(hass, api, cluster, cluster_id)
 
     hass.data.setdefault(DOMAIN, {})[cluster_id] = {
         "coordinator": coordinator,
         "api": api,
         "sensors": {},
-        # "device_trackers": {},
+        "device_trackers": {},
     }
 
     try:
-        await coordinator.initialize_data()
+        await coordinator.init_cluster_data()
     except Exception:
         LOGGER.exception(
             "Failed to initialize data for cluster %s (%s)",
@@ -83,7 +82,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         LOGGER.error("Missing cluster ID during unload: %s", config_entry)
         return False
 
-    LOGGER.info("Unloading cluster: %s (%s)", cluster.get("name", "Unknown"), hub_id)
+    LOGGER.debug(
+        "Unloading cluster: %s (%s)", cluster.get("cluster_name", "Unknown"), hub_id
+    )
 
     api: DiveraAPI = hass.data[DOMAIN].pop(config_entry.entry_id, None)
     if api:
@@ -100,8 +101,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
         hass.data[DOMAIN].pop(hub_id, None)
         LOGGER.info(
-            "Removed coordinator for cluster: %s (%s)",
-            cluster.get("name", "Unknown"),
+            "Removed unit: %s (%s)",
+            cluster.get("cluster_name", "Unknown"),
             hub_id,
         )
 
