@@ -48,11 +48,6 @@ def permission_request(coordinator_data, perm_key):
     return sucess
 
 
-def sanitize_entity_id(name):
-    """Replace not allowed symbols within entity ids."""
-    return re.sub(r"[^a-z0-9_]", "_", name.lower())
-
-
 class BaseDiveraEntity:
     """Gemeinsame Basisklasse für Sensoren und Tracker."""
 
