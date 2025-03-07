@@ -188,7 +188,7 @@ async def update_operational_data(api, data) -> None:
                 raw_vehicle_property = await api.get_vehicle_property(key)
 
                 # if user is not allowed to access these data, expect None
-                if raw_vehicle_property:
+                if raw_vehicle_property is not False:
                     vehicle_property = raw_vehicle_property.get(D_DATA, {})
                     if isinstance(vehicle_property, dict):
                         data[D_VEHICLE][key].update(vehicle_property)

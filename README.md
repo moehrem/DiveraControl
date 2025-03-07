@@ -129,3 +129,7 @@ Die Intervalle werden immer je Einheit eingestellt.
 - **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme zur Aktualisierung der Daten genutzt wird
 
 > Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, dürfen keine Werte niedriger als 30s eingestellt werden.
+
+### 🔍 **Fehleranalyse**
+Zu jeder Einheit, abgebildet als Dienst in der Integration, können über das Kontextmenü (3 Punkte) Diagnosedaten heruntergeladen werden. Darin enthalten sind sämtliche von Divera abgefragten Daten. Die Daten können auf Vollständigkeit und Inhalt herangezogen werden.
+> Hinweis: In den Ausgabe werden lediglich die API-Shlüssel maskiert. Weitere Daten inkl personenbezogener Daten von Personal oder Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten!

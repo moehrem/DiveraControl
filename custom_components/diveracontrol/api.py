@@ -126,7 +126,8 @@ class DiveraAPI:
         )
         if coordinator_data is not None and perm_key is not None:
             success = permission_request(coordinator_data, perm_key)
-            return success
+            if success is not True:
+                return success
 
         # init headers, if None
         headers = headers or {
