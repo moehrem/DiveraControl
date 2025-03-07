@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 import homeassistant.helpers.entity_registry as er
 
-from .utils import BaseDiveraEntity, sanitize_entity_id, get_device_info
+from .utils import BaseDiveraEntity, get_device_info
 from .const import (
     D_ALARM,
     D_COORDINATOR,

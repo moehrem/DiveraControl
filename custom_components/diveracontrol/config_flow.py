@@ -249,7 +249,8 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
             for entry in self._async_current_entries():
                 existing_cluster_id = entry.data.get(D_CLUSTER_ID)
-                if existing_cluster_id == cluster_id:
+
+                if existing_cluster_id == cluster_id or entry.title == cluster_name:
                     LOGGER.debug(
                         "Skipping duplicate hub creation for '%s' (ID: %s)",
                         cluster_name,
