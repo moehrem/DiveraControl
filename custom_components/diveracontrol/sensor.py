@@ -50,7 +50,7 @@ from .const import (
     MINOR_VERSION,
     PATCH_VERSION,
 )
-from .utils import BaseDiveraEntity, sanitize_entity_id, get_device_info
+from .utils import BaseDiveraEntity, get_device_info
 
 LOGGER = logging.getLogger(__name__)
 
