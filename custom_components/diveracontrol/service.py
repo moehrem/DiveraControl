@@ -15,7 +15,7 @@ from .utils import DiveraPermissionDenied
 LOGGER = logging.getLogger(__name__)
 
 
-def prep_api_instance(hass: HomeAssistant, cluster_id: str):
+def get_api_instance(hass: HomeAssistant, cluster_id: str):
     """Holt die API-Instanz für die gegebene cluster_id oder wirft eine Exception."""
     try:
         api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
@@ -46,9 +46,11 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
     cluster_id = call.data.get("cluster_id")
     vehicle_id = call.data.get("vehicle_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
-    payload = {k: v for k, v in call.data.items() if v is not None}
+    payload = {
+        k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+    }
 
     try:
         success = await api_instance.post_vehicle_status(vehicle_id, payload)
@@ -69,10 +71,12 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
     user_cluster_relation = call.data.get("user_cluster_relation")
     notification_type = 4 if user_cluster_relation else 3 if group else 2
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
     payload = {
-        "Alarm": {k: v for k, v in call.data.items() if v is not None},
+        "Alarm": {
+            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        },
         "notification_type": notification_type,
     }
 
@@ -93,9 +97,13 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
     cluster_id = call.data.get("cluster_id")
     alarm_id = call.data.get("alarm_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
-    payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
+    payload = {
+        "Alarm": {
+            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        }
+    }
 
     try:
         success = await api_instance.put_alarms(payload, alarm_id)
@@ -114,9 +122,13 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
     cluster_id = call.data.get("cluster_id")
     alarm_id = call.data.get("alarm_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
-    payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
+    payload = {
+        "Alarm": {
+            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        }
+    }
 
     try:
         success = await api_instance.post_close_alarm(payload, alarm_id)
@@ -138,7 +150,7 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
 
     coordinator_data = get_coordinator_data(hass, cluster_id)
     message_channel_items = coordinator_data.get(D_MESSAGE_CHANNEL, {}).get("items", {})
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
     # If neither message_channel_id nor alarm_id is provided, abort early
     if not message_channel_id and not alarm_id:
@@ -192,9 +204,11 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
     cluster_id = call.data.get("cluster_id")
     vehicle_id = call.data.get("vehicle_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
-    payload = {k: v for k, v in call.data.items() if v is not None}
+    payload = {
+        k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+    }
 
     try:
         success = await api_instance.post_using_vehicle_property(payload, vehicle_id)
