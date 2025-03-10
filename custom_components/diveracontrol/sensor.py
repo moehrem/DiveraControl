@@ -22,22 +22,25 @@ from homeassistant.helpers.entity import Entity
 import homeassistant.helpers.entity_registry as er
 
 from .const import (
-    D_ACTIVE_ALARM_COUNT,
+    # general
+    DOMAIN,
+    MANUFACTURER,
+    VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
+    # data
     D_ALARM,
-    # D_ALARMS,
-    # D_VEHICLE_STATUS,
-    D_CLUSTER_ADDRESS,
+    D_OPEN_ALARMS,
     D_COORDINATOR,
     D_DATA,
     D_CLUSTER_ID,
-    # new structure
     D_STATUS,
-    D_STATUS_CONF,
     D_UCR,
+    D_CLUSTER,
     D_VEHICLE,
     D_UCR_ID,
     D_USER,
-    DOMAIN,
+    # icons
     I_CLOSED_ALARM,
     I_COUNTER_ACTIVE_ALARMS,
     I_FIRESTATION,
@@ -45,10 +48,6 @@ from .const import (
     I_OPEN_ALARM_NOPRIO,
     I_STATUS,
     I_VEHICLE,
-    MANUFACTURER,
-    VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
 )
 from .utils import BaseDiveraEntity, get_device_info
 
@@ -71,11 +70,11 @@ async def async_setup_entry(
         current_sensors = hass.data[DOMAIN][cluster_id].setdefault("sensors", {})
         new_sensors = []
 
-        new_alarm_data = cluster_data.get(D_ALARM, {})
-        new_vehicle_data = cluster_data.get(D_VEHICLE, {})
+        new_alarm_data = cluster_data.get(D_ALARM, {}).get("items")
+        new_vehicle_data = cluster_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
         new_static_sensors_data = {
-            D_ACTIVE_ALARM_COUNT,
-            D_CLUSTER_ADDRESS,
+            D_OPEN_ALARMS,
+            D_CLUSTER,
             D_STATUS,
         }
 
@@ -91,10 +90,10 @@ async def async_setup_entry(
 
         # adding static sensors
         static_sensor_map = {
-            D_ACTIVE_ALARM_COUNT: DiveraOpenAlarmsSensor(
+            D_OPEN_ALARMS: DiveraOpenAlarmsSensor(
                 coordinator, cluster_data, cluster_id
             ),
-            D_CLUSTER_ADDRESS: DiveraUnitSensor(coordinator, cluster_data, cluster_id),
+            D_CLUSTER: DiveraUnitSensor(coordinator, cluster_data, cluster_id),
         }
 
         for sensor_name, sensor_instance in static_sensor_map.items():
@@ -109,7 +108,7 @@ async def async_setup_entry(
             new_sensors.append(sensor)
             current_sensors[alarm_id] = sensor
 
-        # adding behicle sensors
+        # adding vehicle sensors
         new_vehicles = new_vehicle_data - current_sensors.keys()
         for vehicle_id in new_vehicles:
             sensor = DiveraVehicleSensor(
@@ -158,9 +157,7 @@ class BaseDiveraSensor(Entity, BaseDiveraEntity):
         BaseDiveraEntity.__init__(self, coordinator, cluster_data, cluster_id)
 
         self.ucr_id = cluster_data.get(D_UCR_ID, "")
-        self.cluster_name = (
-            cluster_data.get(D_UCR, {}).get(self.ucr_id, {}).get("name", "Unit Unknown")
-        )
+        self.cluster_name = cluster_data.get(D_CLUSTER, {}).get("name", "No name found")
 
     @property
     def device_info(self):
@@ -177,7 +174,9 @@ class DiveraAlarmSensor(BaseDiveraSensor):
         """Init class DiveraAlarmSensor."""
         super().__init__(coordinator, cluster_data, cluster_id)
         self.alarm_id = alarm_id
-        self.alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        self.alarm_data = (
+            self.cluster_data.get(D_ALARM, {}).get("items", {}).get(self.alarm_id, {})
+        )
 
     @property
     def entity_id(self) -> str:
@@ -233,6 +232,11 @@ class DiveraVehicleSensor(BaseDiveraSensor):
         """Init class DiveraVehicleSensor."""
         super().__init__(coordinator, cluster_data, cluster_id)
         self._vehicle_id = vehicle_id
+        self._vehicle_data = (
+            self.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(self._vehicle_id, {})
+        )
 
     @property
     def entity_id(self) -> str:
@@ -252,16 +256,14 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def name(self) -> str:
         """Name of sensor."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        shortname = vehicle_data.get("shortname", "Unknown")
-        veh_name = vehicle_data.get("name", "Unknown")
+        shortname = self._vehicle_data.get("shortname", "Unknown")
+        veh_name = self._vehicle_data.get("name", "Unknown")
         return f"{shortname} / {veh_name} "
 
     @property
     def state(self) -> str:
         """State of sensor."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        return vehicle_data.get("fmsstatus_id", "Unknown")
+        return self._vehicle_data.get("fmsstatus_id", "Unknown")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -269,7 +271,9 @@ class DiveraVehicleSensor(BaseDiveraSensor):
         extra_state_attributes = {}
         extra_state_attributes["Vehicle-ID"] = self._vehicle_id
         extra_state_attributes.update(
-            self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
+            self.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(self._vehicle_id, {})
         )
         return extra_state_attributes
 
@@ -285,9 +289,6 @@ class DiveraUnitSensor(BaseDiveraSensor):
     def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Init class DiveraUnitSensor."""
         super().__init__(coordinator, cluster_data, cluster_id)
-        self.fs_name = next(
-            iter(cluster_data.get(D_CLUSTER_ADDRESS, {}).keys()), "Unknown"
-        )
 
     @property
     def entity_id(self) -> str:
@@ -306,11 +307,8 @@ class DiveraUnitSensor(BaseDiveraSensor):
 
     @property
     def name(self) -> str:
-        """Name of sensor.."""
-        return next(
-            iter(self.cluster_data.get(D_CLUSTER_ADDRESS, {}).keys()),
-            "Unknown",
-        )
+        """Name of sensor."""
+        return self.cluster_name
 
     @property
     def state(self) -> str:
@@ -320,20 +318,20 @@ class DiveraUnitSensor(BaseDiveraSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Additional attributes of sensor."""
-        firestation_data = self.cluster_data.get(D_CLUSTER_ADDRESS, {}).get(
-            self.fs_name, {}
+        cluster_shortname = self.cluster_data.get(D_CLUSTER, {}).get(
+            "shortname", "Unknown"
         )
-        address = firestation_data.get("address", {})
+        cluster_address = self.cluster_data.get(D_CLUSTER, {}).get("address", "Unknown")
         return {
             "cluster_id": self.cluster_id,
-            "shortname": firestation_data.get("shortname", "Unknown"),
-            "latitude": address.get("lat"),
-            "longitude": address.get("lng"),
-            "street": address.get("street"),
-            "zip": address.get("zip"),
-            "city": address.get("city"),
-            "country": address.get("country"),
-            "ags": address.get("ags"),
+            "shortname": cluster_shortname,
+            "latitude": cluster_address.get("lat"),
+            "longitude": cluster_address.get("lng"),
+            "street": cluster_address.get("street"),
+            "zip": cluster_address.get("zip"),
+            "city": cluster_address.get("city"),
+            "country": cluster_address.get("country"),
+            "ags": cluster_address.get("ags"),
         }
 
     @property
@@ -373,10 +371,11 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     @property
     def state(self) -> int:
         """State of sensor."""
-        try:
-            return int(self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0))
-        except (ValueError, TypeError):
-            return 0
+        # try:
+        #     return int(self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0))
+        # except (ValueError, TypeError):
+        #     return 0
+        return self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
 
     @property
     def icon(self) -> str:

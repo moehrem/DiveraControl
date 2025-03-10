@@ -14,10 +14,11 @@ from .const import (
     VERSION,
     MINOR_VERSION,
     PATCH_VERSION,
+    D_ACCESS,
     D_CLUSTER_NAME,
     D_USER,
     D_ACCESS,
-    D_HUB_ID,
+    # D_HUB_ID,
     D_UCR,
     PERM_MANAGEMENT,
 )
@@ -29,8 +30,14 @@ def permission_request(coordinator_data, perm_key):
     """Return permission to access data."""
 
     cluster_name = coordinator_data.cluster_name
-    management = coordinator_data.cluster_data.get("access", {}).get(PERM_MANAGEMENT)
-    permission = coordinator_data.cluster_data.get("access", {}).get(perm_key)
+    management = (
+        coordinator_data.cluster_data.get(D_USER, {})
+        .get(D_ACCESS, {})
+        .get(PERM_MANAGEMENT)
+    )
+    permission = (
+        coordinator_data.cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(perm_key)
+    )
 
     if management:
         sucess = management
@@ -61,7 +68,7 @@ class BaseDiveraEntity:
     @property
     def device_info(self):
         """Gibt Geräteinformationen zurück."""
-        unit_name = self.cluster_name
+        unit_name = self.coordinator.cluster_name
         # firstname = self.cluster_data.get(D_USER, {}).get("firstname", "")
         # lastname = self.cluster_data.get(D_USER, {}).get("lastname", "")
         return {

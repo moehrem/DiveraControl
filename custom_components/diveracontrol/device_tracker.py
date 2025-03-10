@@ -11,8 +11,8 @@ from .utils import BaseDiveraEntity, get_device_info
 from .const import (
     D_ALARM,
     D_COORDINATOR,
-    D_CLUSTER_ADDRESS,
     D_CLUSTER_ID,
+    D_CLUSTER,
     D_VEHICLE,
     D_UCR,
     D_UCR_ID,
@@ -49,8 +49,8 @@ async def async_setup_entry(
         )
         new_trackers = []
 
-        new_alarm_data = cluster_data.get(D_ALARM, {})
-        new_vehicle_data = cluster_data.get(D_VEHICLE, {})
+        new_alarm_data = cluster_data.get(D_ALARM, {}).get("items", {})
+        new_vehicle_data = cluster_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
 
         if isinstance(new_alarm_data, dict):
             new_alarm_data = set(new_alarm_data.keys())
@@ -108,9 +108,7 @@ class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
         BaseDiveraEntity.__init__(self, coordinator, cluster_data, cluster_id)
 
         self.ucr_id = cluster_data.get(D_UCR_ID, "")
-        self.cluster_name = (
-            cluster_data.get(D_UCR, {}).get(self.ucr_id, {}).get("name", "Unit Unknown")
-        )
+        self.cluster_name = cluster_data.get(D_CLUSTER, {}).get("name", "No name found")
 
     @property
     def device_info(self):
@@ -125,6 +123,9 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         """Initialize an alarm tracker."""
         super().__init__(coordinator, cluster_data, cluster_id)
         self.alarm_id = alarm_id
+        self._alarm_data = (
+            self.cluster_data.get(D_CLUSTER, {}).get(D_ALARM, {}).get(self.alarm_id, {})
+        )
 
     @property
     def entity_id(self) -> str:
@@ -149,21 +150,18 @@ class DiveraAlarmTracker(BaseDiveraTracker):
     @property
     def latitude(self):
         """Latitude of the tracker."""
-        alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
-        return alarm_data.get("lat", 0)
+        return self._alarm_data.get("lat", 0)
 
     @property
     def longitude(self):
         """Longitude of the tracker."""
-        alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
-        return alarm_data.get("lng", 0)
+        return self._alarm_data.get("lng", 0)
 
     @property
     def icon(self):
         """Return an icon for the tracker."""
-        alarm_data = self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
-        closed = alarm_data.get("closed", False)
-        priority = alarm_data.get("priority", False)
+        closed = self._alarm_data.get("closed", False)
+        priority = self._alarm_data.get("priority", False)
         if closed:
             return I_CLOSED_ALARM
         elif priority:
@@ -178,6 +176,11 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     def __init__(self, coordinator, cluster_data, vehicle_id: str, cluster_id: str):
         super().__init__(coordinator, cluster_data, cluster_id)
         self._vehicle_id = vehicle_id
+        self._vehicle_data = (
+            self.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(self._vehicle_id, {})
+        )
 
     @property
     def entity_id(self) -> str:
@@ -199,67 +202,20 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def name(self):
         """Return the name of the device tracker."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        shortname = vehicle_data.get("shortname", "Unknown")
-        veh_name = vehicle_data.get("name", "Unknown")
+        shortname = self._vehicle_data.get("shortname", "Unknown")
+        veh_name = self._vehicle_data.get("name", "Unknown")
         return f"{shortname} / {veh_name}"
 
     @property
     def latitude(self):
         """Latitude of the tracker."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        return vehicle_data.get("lat", 0)
+
+        return self._vehicle_data.get("lat", 0)
 
     @property
     def longitude(self):
         """Longitude of the tracker."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        return vehicle_data.get("lng", 0)
-
-    @property
-    def gps_accuracy(self):
-        # no standard value from divera
-        return 100
-
-    @gps_accuracy.setter
-    def gps_accuracy(self, value):
-        self._gps_accuracy = value
-
-    @property
-    def altitude(self):
-        # no standard value from divera
-        return 33
-
-    @altitude.setter
-    def altitude(self, value):
-        self._altitude = value
-
-    @property
-    def course(self):
-        # no standard value from divera
-        return "Unknown"
-
-    @course.setter
-    def course(self, value):
-        self._course = value
-
-    @property
-    def speed(self):
-        # no standard value from divera
-        return 0
-
-    @speed.setter
-    def speed(self, value):
-        self._speed = value
-
-    @property
-    def vertical_accuracy(self):
-        # no standard value from divera
-        return 100
-
-    @vertical_accuracy.setter
-    def vertical_accuracy(self, value):
-        self._vertical_accuracy = value
+        return self._vehicle_data.get("lng", 0)
 
     # @property
     # def extra_state_attributes(self):
@@ -289,8 +245,7 @@ class DiveraVehicleTracker(BaseDiveraTracker):
     @property
     def icon(self):
         """Return an icon for the tracker."""
-        vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-        status = vehicle_data.get("fmsstatus_id", "unknown")
+        status = self._vehicle_data.get("fmsstatus_id", "unknown")
 
         if status == "unknown":
             return "mdi:help-box"

@@ -17,9 +17,8 @@ from aiohttp import ClientError
 
 from .const import (
     # data
-    D_API_KEY,
     D_DATA,
-    D_ACTIVE_ALARM_COUNT,
+    D_OPEN_ALARMS,
     D_UCR,
     D_UCR_DEFAULT,
     D_UCR_ACTIVE,
@@ -36,34 +35,8 @@ from .const import (
     D_MESSAGE,
     D_LOCALMONITOR,
     D_STATUSPLAN,
-    D_ACCESS,
-    D_CLUSTER_ADDRESS,
     D_VEHICLE,
     D_UCR_ID,
-    D_STATUS_SORT,
-    D_STATUS_CONF,
-    # permissions
-    PERM_MESSAGES,
-    PERM_ALARM,
-    PERM_NEWS,
-    PERM_EVENT,
-    PERM_MESSAGE_CHANNEL,
-    PERM_REPORT,
-    PERM_STATUS,
-    PERM_STATUS_MANUAL,
-    PERM_STATUS_PLANER,
-    PERM_STATUS_GEOFENCE,
-    PERM_STATUS_VEHICLE,
-    PERM_MONITOR,
-    PERM_MONITOR_SHOW_NAMES,
-    PERM_PERSONNEL_PHONENUMBERS,
-    PERM_LOCALMANAGEMENT,
-    PERM_MANAGEMENT,
-    PERM_DASHBOARD,
-    PERM_CROSS_UNIT,
-    PERM_LOCALMONITOR,
-    PERM_LOCALMONITOR_SHOW_NAMES,
-    PERM_FMS_EDITOR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -90,15 +63,25 @@ async def update_operational_data(api, data) -> None:
         Sets alarm and vehicle data to empty if any issues occur.
 
     Returns:
-        None: Updates the `data` dictionary in place.
+        data (dict): A dictionary to store and update alarm and vehicle data.
 
     """
+
+    def check_timestamp(old_data, new_data):
+        """Check if new data has a more recent timestamp than old data."""
+        try:
+            old_ts = old_data.get("ts", 0)  # Fallback auf 0, falls ts nicht existiert
+            new_ts = new_data.get("ts", 0)
+            return new_ts > old_ts
+        except AttributeError as e:
+            _LOGGER.debug("Timestamp check failed due to missing attributes: %s", e)
+            return True  # Falls ein Fehler auftritt, lieber aktualisieren
+
+    # request divera data
     try:
         ucr_id = data[D_UCR_ID]
-        # api.set_api_key(data.get(D_API_KEY, ""))
         raw_ucr_data = await api.get_ucr_data(ucr_id)
 
-        # check for successful API response data
         if not raw_ucr_data.get("success", False):
             _LOGGER.error(
                 "Unexpected data format or API request failed: %s",
@@ -106,176 +89,154 @@ async def update_operational_data(api, data) -> None:
             )
             return data
 
-        # set data
-        ucr = raw_ucr_data.get(D_DATA, {}).get(D_UCR, {})
-        ucr_default = raw_ucr_data.get(D_DATA, {}).get(D_UCR_DEFAULT, {})
-        ucr_active = raw_ucr_data.get(D_DATA, {}).get(D_UCR_ACTIVE, {})
-        ts = raw_ucr_data.get(D_DATA, {}).get(D_TS, {})
-        user = raw_ucr_data.get(D_DATA, {}).get(D_USER, {})
-        status = raw_ucr_data.get(D_DATA, {}).get(D_STATUS, {})
-        cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
-        monitor = raw_ucr_data.get(D_DATA, {}).get(D_MONITOR, {})
-        alarm = raw_ucr_data.get(D_DATA, {}).get(D_ALARM, {})
-        news = raw_ucr_data.get(D_DATA, {}).get(D_NEWS, {})
-        events = raw_ucr_data.get(D_DATA, {}).get(D_EVENTS, {})
-        dm = raw_ucr_data.get(D_DATA, {}).get(D_DM, {})
-        message_channel = raw_ucr_data.get(D_DATA, {}).get(D_MESSAGE_CHANNEL, {})
-        message = raw_ucr_data.get(D_DATA, {}).get(D_MESSAGE, {})
-        localmonitor = raw_ucr_data.get(D_DATA, {}).get(D_LOCALMONITOR, {})
-        statusplan = raw_ucr_data.get(D_DATA, {}).get(D_STATUSPLAN, {})
-
-        #####################
-        ###  MASTER DATA  ###
-        #####################
-
-        # updating permission data
-        try:
-            access = user.get(D_ACCESS, {})
-
-            for key in access:
-                data[D_ACCESS][key] = access.get(key, False)
-
-            _LOGGER.debug("Access permissions data updated: %s", data)
-        except KeyError as e:
-            _LOGGER.error("Error handling access permissions: %s", e)
-
-        # handling status master data
-        try:
-            status_conf = cluster.get("status", {})
-            status_sort = cluster.get("statussorting_statusgeber", {})
-            data[D_STATUS_CONF] = status_conf
-            data[D_STATUS_SORT] = status_sort
-
-            _LOGGER.debug(
-                "Status configuration updated: %s, sorting: %s",
-                status_conf,
-                status_sort,
-            )
-
-        except KeyError as e:
-            _LOGGER.error("Error updating status configuration: %s", e)
-
-        # handling cluster address data
-        try:
-            name = cluster.get("name", "Unknown")
-            shortname = cluster.get("shortname", "Unknown")
-            address = cluster.get("address", {})
-
-            cluster_address_data = {
-                str(name): {
-                    "shortname": shortname,
-                    "address": address,
-                }
-            }
-            data[D_CLUSTER_ADDRESS] = cluster_address_data
-            _LOGGER.debug("Fire station data updated: %s", cluster_address_data)
-        except KeyError as e:
-            _LOGGER.error("Error updating firestation data: %s", e)
-            data[D_CLUSTER_ADDRESS] = {"name": "Unknown"}
-
-        #########################
-        ###  OPERATIONAL DATA ###
-        #########################
-
-        # handle vehicle data
-        try:
-            vehicle_data = cluster.get(D_VEHICLE, {})
-            data[D_VEHICLE] = vehicle_data.copy()
-            _LOGGER.debug("Vehicle data updated: %s", vehicle_data)
-
-            # adding properties to vehicle
-            for key in vehicle_data.keys():
-                raw_vehicle_property = await api.get_vehicle_property(key)
-
-                # if user is not allowed to access these data, expect None
-                if raw_vehicle_property is not False:
-                    vehicle_property = raw_vehicle_property.get(D_DATA, {})
-                    if isinstance(vehicle_property, dict):
-                        data[D_VEHICLE][key].update(vehicle_property)
-                    else:
-                        _LOGGER.warning(
-                            "Unexpected vehicle property format for %s: %s",
-                            key,
-                            vehicle_property,
-                        )
-
-        except (ClientError, ValueError, KeyError) as e:
-            _LOGGER.error("Error updating vehicles: %s", e)
-
-        # handle status data
-        try:
-            data[D_STATUS] = status
-            _LOGGER.debug("Status data updated: %s", status)
-
-        except (ClientError, ValueError, KeyError) as e:
-            _LOGGER.error("Error updating status: %s", e)
-
-        # handle alarm data
-        try:
-            alarm_data = alarm.get("items", {}) if alarm.get("items") else {}
-            data[D_ALARM] = alarm_data
-
-            if not alarm_data:
-                active_alarm_count = 0
-
-            else:
-                active_alarm_count = sum(
-                    1
-                    for alarm_details in alarm_data.values()
-                    if not alarm_details.get("closed", True)
-                )
-                if not active_alarm_count:
-                    active_alarm_count = 0
-
-            data[D_ACTIVE_ALARM_COUNT] = active_alarm_count
-            _LOGGER.debug("Alarm count updated: %s", active_alarm_count)
-
-        except (ClientError, ValueError, KeyError) as e:
-            _LOGGER.error("Error updating alarms: %s", e)
-
-        # handle ucr data
-        data[D_UCR] = ucr
-
-        # handle ucr_default data
-        data[D_UCR_DEFAULT] = ucr_default
-
-        # handle active ucr data
-        data[D_UCR_ACTIVE] = ucr_active
-
-        # handle ts data
-        data[D_TS] = ts
-
-        # handle user data
-        data[D_USER] = user
-
-        # handle cluster data
-        data[D_CLUSTER] = cluster
-
-        # handle monitor data
-        data[D_MONITOR] = monitor
-
-        # handle news data
-        data[D_NEWS] = news
-
-        # handle events data
-        data[D_EVENTS] = events
-
-        # handle dm data
-        data[D_DM] = dm
-
-        # handle message channel data
-        data[D_MESSAGE_CHANNEL] = message_channel
-
-        # handle message data
-        data[D_MESSAGE] = message
-
-        # handle monitor data
-        data[D_LOCALMONITOR] = localmonitor
-
-        # handle statusplan data
-        data[D_STATUSPLAN] = statusplan
-
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
+        return data
+
+    # set local data
+    ucr = raw_ucr_data.get(D_DATA, {}).get(D_UCR, {})
+    ucr_default = raw_ucr_data.get(D_DATA, {}).get(D_UCR_DEFAULT, {})
+    ucr_active = raw_ucr_data.get(D_DATA, {}).get(D_UCR_ACTIVE, {})
+    ts = raw_ucr_data.get(D_DATA, {}).get(D_TS, {})
+    user = raw_ucr_data.get(D_DATA, {}).get(D_USER, {})
+    status = raw_ucr_data.get(D_DATA, {}).get(D_STATUS, {})
+    cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
+    monitor = raw_ucr_data.get(D_DATA, {}).get(D_MONITOR, {})
+    alarm = raw_ucr_data.get(D_DATA, {}).get(D_ALARM, {})
+    news = raw_ucr_data.get(D_DATA, {}).get(D_NEWS, {})
+    events = raw_ucr_data.get(D_DATA, {}).get(D_EVENTS, {})
+    dm = raw_ucr_data.get(D_DATA, {}).get(D_DM, {})
+    message_channel = raw_ucr_data.get(D_DATA, {}).get(D_MESSAGE_CHANNEL, {})
+    message = raw_ucr_data.get(D_DATA, {}).get(D_MESSAGE, {})
+    localmonitor = raw_ucr_data.get(D_DATA, {}).get(D_LOCALMONITOR, {})
+    statusplan = raw_ucr_data.get(D_DATA, {}).get(D_STATUSPLAN, {})
+
+    #####################
+    ###  MASTER DATA  ###
+    #####################
+
+    # updating user data including permission/access
+    # mandatory to update persmissions forst, as this is needed for later api calls!
+    if check_timestamp(data.get(D_USER), user):
+        data[D_USER] = user
+        _LOGGER.debug("User data updated: %s", user)
+
+    # updating cluster data
+    if check_timestamp(data.get(D_CLUSTER), cluster):
+        data[D_CLUSTER] = cluster
+        _LOGGER.debug("Cluster data updated: %s", cluster)
+
+    #########################
+    ###  OPERATIONAL DATA ###
+    #########################
+
+    # handle vehicle properties
+    try:
+        vehicle_data = cluster.get(D_VEHICLE, {})
+
+        # adding properties to vehicle
+        for key in vehicle_data.keys():
+            raw_vehicle_property = await api.get_vehicle_property(key)
+
+            # if user is not allowed to access these data, expect None
+            if raw_vehicle_property is not False:
+                vehicle_property = raw_vehicle_property.get(D_DATA, {})
+                if isinstance(vehicle_property, dict):
+                    if D_CLUSTER in data and D_VEHICLE in data[D_CLUSTER]:
+                        data[D_CLUSTER][D_VEHICLE].setdefault(key, {}).update(
+                            vehicle_property
+                        )
+
+                else:
+                    _LOGGER.warning(
+                        "Unexpected vehicle property format for '%s': %s",
+                        key,
+                        vehicle_property,
+                    )
+
+                _LOGGER.debug(
+                    "Vehicle properties updated for '%s', properties: %s",
+                    key,
+                    vehicle_property,
+                )
+
+    except (ClientError, ValueError, KeyError) as e:
+        _LOGGER.error("Error updating vehicles: %s", e)
+
+    # handle status data
+    if check_timestamp(data.get(D_STATUS), status):
+        data[D_STATUS] = status
+        _LOGGER.debug("Status data updated: %s", status)
+
+    # handle alarm data
+    if check_timestamp(data.get(D_ALARM), alarm):
+        data[D_ALARM] = alarm
+        _LOGGER.debug("Alarm data updated: %s", alarm)
+
+        open_alarms = sum(
+            1
+            for alarm_details in alarm.get("items", {}).values()
+            if not alarm_details.get("closed", True)
+        )
+        data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+        _LOGGER.debug("Open alarms updated: %s", open_alarms)
+
+    # handle ucr data
+    if check_timestamp(data.get(D_UCR), ucr):
+        data[D_UCR] = ucr
+        _LOGGER.debug("UCR data updated: %s", ucr)
+
+    # handle ucr_default data
+    if check_timestamp(data.get(D_UCR_DEFAULT), ucr_default):
+        data[D_UCR_DEFAULT] = ucr_default
+        _LOGGER.debug("UCR default data updated: %s", ucr_default)
+
+    # handle active ucr data
+    if check_timestamp(data.get(D_UCR_ACTIVE), ucr_active):
+        data[D_UCR_ACTIVE] = ucr_active
+        _LOGGER.debug("UCR active data updated: %s", ucr_active)
+
+    # handle ts data
+    data[D_TS] = ts
+
+    # handle monitor data
+    if check_timestamp(data.get(D_MONITOR), monitor):
+        data[D_MONITOR] = monitor
+        _LOGGER.debug("Monitor data updated: %s", monitor)
+
+    # handle news data
+    if check_timestamp(data.get(D_NEWS), news):
+        data[D_NEWS] = news
+        _LOGGER.debug("News data updated: %s", news)
+
+    # handle events data
+    if check_timestamp(data.get(D_EVENTS), events):
+        data[D_EVENTS] = events
+        _LOGGER.debug("Event data updated: %s", events)
+
+    # handle dm data
+    if check_timestamp(data.get(D_DM), dm):
+        data[D_DM] = dm
+        _LOGGER.debug("DM data updated: %s", dm)
+
+    # handle message channel data
+    if check_timestamp(data.get(D_MESSAGE_CHANNEL), message_channel):
+        data[D_MESSAGE_CHANNEL] = message_channel
+        _LOGGER.debug("Message channel data updated: %s", message_channel)
+
+    # handle message data
+    if check_timestamp(data.get(D_MESSAGE), message):
+        data[D_MESSAGE] = message
+        _LOGGER.debug("Message data updated: %s", message)
+
+    # handle monitor data
+    if check_timestamp(data.get(D_LOCALMONITOR), localmonitor):
+        data[D_LOCALMONITOR] = localmonitor
+        _LOGGER.debug("Local monitor data updated: %s", localmonitor)
+
+    # handle statusplan data
+    if check_timestamp(data.get(D_STATUSPLAN), statusplan):
+        data[D_STATUSPLAN] = statusplan
+        _LOGGER.debug("Statusplan data updated: %s", statusplan)
 
     return data

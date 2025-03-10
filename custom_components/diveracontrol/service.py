@@ -9,8 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, D_STATUS_SORT, DOMAIN
-from .utils import DiveraPermissionDenied
+from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, DOMAIN
 
 LOGGER = logging.getLogger(__name__)
 
