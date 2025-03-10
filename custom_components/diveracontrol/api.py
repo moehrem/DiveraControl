@@ -146,7 +146,7 @@ class DiveraAPI:
             url = f"{url}?{param_string}"
 
         # create URL for logging
-        log_url = url.replace(self.api_key, "**********")
+        log_url = url.replace(self.api_key, "**REDACTED**")
 
         try:
             async with self.session.request(

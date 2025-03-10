@@ -60,6 +60,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self.ucr_id = cluster.get(D_UCR_ID, "")
         self.cluster_name = cluster.get(D_CLUSTER_NAME, "")
         self.cluster_data = {}
+        self.admin_data = {}
 
         # **Listener for changes to ConfigEntry**
         async_dispatcher_connect(
@@ -76,10 +77,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self._listeners = {}
 
     def init_cluster_data_structure(self):
+        """Define main data structures for divera data and admin data."""
         self.cluster_data = {
-            D_UCR_ID: self.ucr_id,
-            D_LAST_UPDATE_ALARM: "",
-            D_LAST_UPDATE_DATA: "",
             D_UCR: {},
             D_UCR_DEFAULT: {},
             D_UCR_ACTIVE: {},
@@ -96,7 +95,11 @@ class DiveraCoordinator(DataUpdateCoordinator):
             D_MESSAGE: {},
             D_LOCALMONITOR: {},
             D_STATUSPLAN: {},
-            D_VEHICLE: {},
+        }
+        self.admin_data = {
+            D_UCR_ID: self.ucr_id,
+            D_LAST_UPDATE_ALARM: "",
+            D_LAST_UPDATE_DATA: "",
         }
 
     @log_execution_time
@@ -104,12 +107,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """Initialize data at start one time only."""
         now = asyncio.get_running_loop().time()
 
-        if not self.cluster_data:
+        if not self.cluster_data or not self.admin_data:
             self.init_cluster_data_structure()
 
         try:
             changing_data = self.cluster_data
-            changing_data = await update_operational_data(self.api, changing_data)
+            changing_data = await update_operational_data(
+                self.api, changing_data, self.admin_data
+            )
 
             LOGGER.debug(
                 "Successfully initialized data for unit '%s'",
@@ -117,8 +122,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
             )
 
             # set last update times
-            changing_data[D_LAST_UPDATE_ALARM] = now
-            changing_data[D_LAST_UPDATE_DATA] = now
+            self.admin_data[D_LAST_UPDATE_ALARM] = now
+            self.admin_data[D_LAST_UPDATE_DATA] = now
 
             self.cluster_data = changing_data
 
@@ -160,9 +165,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         # Wähle den passenden Zeitstempel
         last_update = (
-            self.cluster_data[D_LAST_UPDATE_ALARM]
+            self.admin_data[D_LAST_UPDATE_ALARM]
             if open_alarms > 0
-            else self.cluster_data[D_LAST_UPDATE_DATA]
+            else self.admin_data[D_LAST_UPDATE_DATA]
         )
 
         # Prüfe, ob ein Update nötig ist
@@ -172,7 +177,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 self.cluster_name,
             )
 
-            changing_data = await update_operational_data(self.api, self.cluster_data)
+            changing_data = await update_operational_data(
+                self.api, self.cluster_data, self.admin_data
+            )
 
             LOGGER.debug(
                 "Successfully updated data for unit '%s' ",
