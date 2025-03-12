@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
@@ -169,6 +170,20 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         else:
             return I_OPEN_ALARM_NOPRIO
 
+    async def async_update_state(self, key: str, new_data: Any):
+        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
+        if key == "lat":
+            key = "latitude"
+        if key == "lng":
+            key = "longitude"
+
+        if self._vehicle_data.get(key) != new_data:
+            self._vehicle_data[key] = new_data
+            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
+                key
+            ] = new_data
+            self.async_write_ha_state()
+
 
 class DiveraVehicleTracker(BaseDiveraTracker):
     """A device tracker for vehicles."""
@@ -251,3 +266,17 @@ class DiveraVehicleTracker(BaseDiveraTracker):
             return "mdi:help-box"
 
         return f"mdi:numeric-{status}-box"
+
+    async def async_update_state(self, key: str, new_data: Any):
+        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
+        if key == "lat":
+            key = "latitude"
+        if key == "lng":
+            key = "longitude"
+
+        if self._vehicle_data.get(key) != new_data:
+            self._vehicle_data[key] = new_data
+            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
+                key
+            ] = new_data
+            self.async_write_ha_state()

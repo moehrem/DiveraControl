@@ -231,3 +231,21 @@ class DiveraCoordinator(DataUpdateCoordinator):
         # await self.initialize_data()
 
         # await self.async_request_refresh()
+
+    # @log_execution_time
+    # async def send_update_to_divera(self, entity_id, new_data, api_method: str):
+    #     """Sendet eine Änderung von HA an Divera."""
+
+    #     # Methode anhand des Strings aus self holen
+    #     method = getattr(self, api_method, None)
+
+    #     if method and callable(method):  # Prüfen, ob die Methode existiert
+    #         success = await method(entity_id, new_data)
+    #         if success:
+    #             self.cluster_data["entities"][entity_id] = (
+    #                 new_data  # Divera-Daten lokal anpassen
+    #             )
+    #     else:
+    #         raise ValueError(
+    #             f"API-Methode '{api_method}' existiert nicht oder ist nicht aufrufbar."
+    #         )

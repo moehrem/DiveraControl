@@ -1,12 +1,12 @@
 """Handles permission requests."""
 
 import logging
-import re
 import time
 import asyncio
 from functools import wraps
 
 import homeassistant.helpers.entity_registry as er
+from homeassistant.core import HomeAssistant
 
 from .const import (
     DOMAIN,
@@ -210,3 +210,45 @@ class DiveraPermissionDenied(Exception):
         """Initialisiert den Fehler."""
         super().__init__(error)
         LOGGER.warning("Zugriff auf Divera-API verweigert: %s", str(error))
+
+
+async def handle_entity(hass: HomeAssistant, call: dict, service: str):
+    """Update entity data based on given method."""
+    cluster_id = call.data.get("cluster_id")
+
+    match service:
+        case "put_alarm" | "post_close_alarm":
+            alarm_id = call.data.get("alarm_id")
+            sensor_entity_id = f"sensor.{cluster_id}_alarm_{alarm_id}"
+            tracker_entity_id = f"sensor.{cluster_id}_alarmtracker_{alarm_id}"
+
+            for entity in hass.data[DOMAIN][str(cluster_id)]["sensors"].values():
+                if entity.entity_id == sensor_entity_id:
+                    for key, value in call.data.items():
+                        await entity.async_update_state(key, value)
+                    break
+
+            for entity in hass.data[DOMAIN][str(cluster_id)]["device_tracker"].values():
+                if entity.entity_id == tracker_entity_id:
+                    for key, value in call.data.items():
+                        await entity.async_update_state(key, value)
+                    break
+
+        case "post_vehicle_status" | "post_using_vehicle_property":
+            vehicle_id = call.data.get("vehicle_id")
+            sensor_entity_id = f"sensor.{cluster_id}_vehicle_{vehicle_id}"
+            tracker_entity_id = (
+                f"device_tracker.{cluster_id}_vehicletracker_{vehicle_id}"
+            )
+
+            for entity in hass.data[DOMAIN][str(cluster_id)]["sensors"].values():
+                if entity.entity_id == sensor_entity_id:
+                    for key, value in call.data.items():
+                        await entity.async_update_state(key, value)
+                    break
+
+            for entity in hass.data[DOMAIN][str(cluster_id)]["device_tracker"].values():
+                if entity.entity_id == tracker_entity_id:
+                    for key, value in call.data.items():
+                        await entity.async_update_state(key, value)
+                    break

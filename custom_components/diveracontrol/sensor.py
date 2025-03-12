@@ -207,7 +207,7 @@ class DiveraAlarmSensor(BaseDiveraSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Additional attributes of sensor."""
-        return self.cluster_data.get(D_ALARM, {}).get(self.alarm_id, {})
+        return self.alarm_data
 
     @property
     def icon(self) -> str:
@@ -221,6 +221,15 @@ class DiveraAlarmSensor(BaseDiveraSensor):
             return I_OPEN_ALARM
 
         return I_OPEN_ALARM_NOPRIO
+
+    async def async_update_state(self, key: str, new_data: Any):
+        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
+        if self.alarm_data.get(key) != new_data:
+            self.alarm_data[key] = new_data
+            self.coordinator.cluster_data[D_ALARM]["items"][self.alarm_id][key] = (
+                new_data
+            )
+            self.async_write_ha_state()
 
 
 class DiveraVehicleSensor(BaseDiveraSensor):
@@ -269,7 +278,7 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Additional attributes of sensor."""
         extra_state_attributes = {}
-        extra_state_attributes["Vehicle-ID"] = self._vehicle_id
+        extra_state_attributes["vehicle_id"] = self._vehicle_id
         extra_state_attributes.update(
             self.cluster_data.get(D_CLUSTER, {})
             .get(D_VEHICLE, {})
@@ -281,6 +290,18 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     def icon(self) -> str:
         """Icon of sensor."""
         return I_VEHICLE
+
+    async def async_update_state(self, key: str, new_data: Any):
+        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
+        if key == "status":
+            key = "fmsstatus_id"
+
+        if self._vehicle_data.get(key) != new_data:
+            self._vehicle_data[key] = new_data
+            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
+                key
+            ] = new_data
+            self.async_write_ha_state()
 
 
 class DiveraUnitSensor(BaseDiveraSensor):
@@ -371,10 +392,6 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     @property
     def state(self) -> int:
         """State of sensor."""
-        # try:
-        #     return int(self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0))
-        # except (ValueError, TypeError):
-        #     return 0
         return self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
 
     @property

@@ -10,6 +10,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, DOMAIN
+from .utils import handle_entity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +63,8 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    await handle_entity(hass, call, "post_vehicle_status")
+
 
 async def handle_post_alarm(hass: HomeAssistant, call: dict):
     """Erstellt einen Alarm."""
@@ -90,6 +93,8 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    # no handle_entity(), as data will update from Divera
+
 
 async def handle_put_alarm(hass: HomeAssistant, call: dict):
     """Change an existing alarm."""
@@ -100,7 +105,9 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
 
     payload = {
         "Alarm": {
-            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+            key: value
+            for key, value in call.data.items()
+            if key != "cluster_id" and value is not None
         }
     }
 
@@ -108,12 +115,14 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
         success = await api_instance.put_alarms(payload, alarm_id)
         if not success:
             raise HomeAssistantError(
-                f"Failed to change alarm {alarm_id}, check logs for details."
+                f"Failed to change alarm {alarm_id}, check logs for details"
             )
     except Exception as e:
         error_msg = f"Failed to change alarm {alarm_id}: {e}"
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
+
+    await handle_entity(hass, call, "put_alarm")
 
 
 async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
@@ -139,6 +148,8 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
         error_msg = f"Failed to close alarm {alarm_id}: {e}"
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
+
+    await handle_entity(hass, call, "post_close_alarm")
 
 
 async def handle_post_message(hass: HomeAssistant, call: dict):
@@ -221,6 +232,8 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
+    await handle_entity(hass, call, "post_using_vehicle_property")
+
 
 async def async_register_services(hass, domain):
     """Registriert alle Services für die Integration."""
@@ -242,26 +255,26 @@ async def async_register_services(hass, domain):
             {
                 vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
-                vol.Required("notification_type", default=2): cv.positive_int,
+                vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
-                vol.Optional("priority", default=False): cv.boolean,
+                vol.Optional("priority"): cv.boolean,
                 vol.Optional("text"): cv.string,
                 vol.Optional("address"): cv.string,
                 vol.Optional("lat"): cv.positive_float,
                 vol.Optional("lng"): cv.positive_float,
-                vol.Optional("response_time", default=3600): cv.positive_int,
-                vol.Optional("send_push", default=True): cv.boolean,
-                vol.Optional("send_sms", default=False): cv.boolean,
-                vol.Optional("send_call", default=False): cv.boolean,
-                vol.Optional("send_mail", default=False): cv.boolean,
-                vol.Optional("send_pager", default=False): cv.boolean,
-                vol.Optional("closed", default=False): cv.boolean,
-                vol.Optional("notification_filter_access", default=True): cv.boolean,
+                vol.Optional("response_time"): cv.positive_int,
+                vol.Optional("send_push"): cv.boolean,
+                vol.Optional("send_sms"): cv.boolean,
+                vol.Optional("send_call"): cv.boolean,
+                vol.Optional("send_mail"): cv.boolean,
+                vol.Optional("send_pager"): cv.boolean,
+                vol.Optional("closed"): cv.boolean,
+                vol.Optional("notification_filter_access"): cv.boolean,
                 vol.Optional("group"): cv.string,
                 vol.Optional("user_cluster_relation"): cv.string,
-                vol.Optional("notification_filter_vehicle", default=False): cv.boolean,
+                vol.Optional("notification_filter_vehicle"): cv.boolean,
                 vol.Optional("vehicle"): cv.string,
-                vol.Optional("notification_filter_status", default=False): cv.boolean,
+                vol.Optional("notification_filter_status"): cv.boolean,
                 vol.Optional("status"): cv.string,
             },
         ),
@@ -271,30 +284,30 @@ async def async_register_services(hass, domain):
                 vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("alarm_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
-                vol.Required("notification_type", default=2): cv.positive_int,
+                vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
                 vol.Optional("alarmcode_id"): cv.positive_int,
-                vol.Optional("priority", default=False): cv.boolean,
+                vol.Optional("priority"): cv.boolean,
                 vol.Optional("text"): cv.string,
                 vol.Optional("address"): cv.string,
                 vol.Optional("lat"): cv.positive_float,
                 vol.Optional("lng"): cv.positive_float,
                 vol.Optional("report"): cv.string,
-                vol.Optional("private_mode", default=False): cv.boolean,
-                vol.Optional("send_push", default=True): cv.boolean,
-                vol.Optional("send_sms", default=False): cv.boolean,
-                vol.Optional("send_call", default=False): cv.boolean,
-                vol.Optional("send_mail", default=False): cv.boolean,
-                vol.Optional("send_pager", default=False): cv.boolean,
-                vol.Optional("response_time", default=3600): cv.positive_int,
-                vol.Optional("closed", default=False): cv.boolean,
+                vol.Optional("private_mode"): cv.boolean,
+                vol.Optional("send_push"): cv.boolean,
+                vol.Optional("send_sms"): cv.boolean,
+                vol.Optional("send_call"): cv.boolean,
+                vol.Optional("send_mail"): cv.boolean,
+                vol.Optional("send_pager"): cv.boolean,
+                vol.Optional("response_time"): cv.positive_int,
+                vol.Optional("closed"): cv.boolean,
                 vol.Optional("ts_publish"): cv.positive_int,
-                vol.Optional("notification_filter_access", default=True): cv.boolean,
+                vol.Optional("notification_filter_access"): cv.boolean,
                 vol.Optional("group"): cv.string,
                 vol.Optional("user_cluster_relation"): cv.string,
-                vol.Optional("notification_filter_vehicle", default=False): cv.boolean,
+                vol.Optional("notification_filter_vehicle"): cv.boolean,
                 vol.Optional("vehicle"): cv.string,
-                vol.Optional("notification_filter_status", default=False): cv.boolean,
+                vol.Optional("notification_filter_status"): cv.boolean,
                 vol.Optional("status"): cv.string,
             },
         ),
@@ -311,10 +324,8 @@ async def async_register_services(hass, domain):
             handle_post_message,
             {
                 vol.Required("cluster_id"): cv.positive_int,
-                vol.Optional("message_channel_id", default=None): vol.Any(
-                    None, cv.positive_int
-                ),
-                vol.Optional("alarm_id", default=None): vol.Any(None, cv.positive_int),
+                vol.Optional("message_channel_id"): vol.Any(None, cv.positive_int),
+                vol.Optional("alarm_id"): vol.Any(None, cv.positive_int),
                 vol.Optional("text"): cv.string,
             },
         ),

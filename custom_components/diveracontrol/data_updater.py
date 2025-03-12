@@ -111,8 +111,8 @@ async def update_operational_data(
     try:
         for key in changing_data:
             new_data = raw_ucr_data.get(D_DATA, {}).get(key, {})
-            if check_timestamp(changing_data.get(key, {}), new_data):
-                changing_data.setdefault(key, {}).update(new_data)
+            if check_timestamp(changing_data.get(key), new_data):
+                changing_data[key] = new_data
                 _LOGGER.debug("%s data updated: %s", key, new_data)
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error updating Divera data for key '%s', error: '%s'", key, e)
