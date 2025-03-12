@@ -61,6 +61,7 @@ Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von Home
 ---
 
 ## ✅ Funktionsumfang
+Die Kommunikation zu Divera basiert vollständig auf der APIv2.
 
 ### 📥 **Datenabfrage**
 - Alarmdaten
@@ -76,6 +77,8 @@ Verschiedene Divera-Endpunkte sind als Services in HomeAssistant umgesetzt und e
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
 - Nachrichtenversand
+
+> Hinweis: Mit dem Aufruf eines Services zur Änderung von Daten werden auch die lokalen Daten geändert, sodass HA immer aktuell ist und nicht auf eine Aktualisierung von Divera warten muss. Dies gilt nicht für die Neuanlage von Daten, z.B. einem Alarm! Neue Datensätze werden immer bei Divera angelegt und anschließend mit HA synchronoisiert.
 
 ---
 
@@ -95,7 +98,7 @@ Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung gepla
 - Verwaltung von Terminen (Erstellen, Ändern, Löschen)
 - Anhänge hinzufügen
 - Leitstellen-Funktionen
-- PRO-Version-Features (einheitenübergreifende Alarmierung)
+- PRO-Version-Features (einheitenübergreifende Alarmierung und Verwaltung)
 
 ---
 
@@ -130,6 +133,25 @@ Die Intervalle werden immer je Einheit eingestellt.
 
 > Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, dürfen keine Werte niedriger als 30s eingestellt werden.
 
-### 🔍 **Fehleranalyse**
-Zu jeder Einheit, abgebildet als Dienst in der Integration, können über das Kontextmenü (3 Punkte) Diagnosedaten heruntergeladen werden. Darin enthalten sind sämtliche von Divera abgefragten Daten. Die Daten können auf Vollständigkeit und Inhalt herangezogen werden.
-> Hinweis: In den Ausgabe werden lediglich die API-Shlüssel maskiert. Weitere Daten inkl personenbezogener Daten von Personal oder Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten!
+
+## Benutzung
+
+### Services
+Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen oder eigenen Entwicklungen aufgerufen werden. Umgesetzte Services sind:
+- Alarm erstellen
+- Alarm schließen/öffnen
+- Alarm ändern
+- Fahrzeugstatus und -daten ändern
+- Fahrzeugeigenschaften ändern
+- Nachrichten senden
+
+Weitere Details zu den Services, insbesondere zu obligatorischen und optionalen Parametern, sind in den Entwicklerwerkzeugen des HomeAssistant zu finden.
+
+Services, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
+
+
+## 🔍 **Fehleranalyse**
+Bei Fehler ist eine Aktivierung des Debug-Logs und eine Auswertung der Ergebnisse hilfreich.
+
+Außerdem können über das Kontextmenü (3 Punkte) der Integration zu jeder Einheit Diagnosedaten heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
+> Hinweis: In den Ausgabe werden lediglich die API-Shlüssel maskiert. Weitere Daten inkl personenbezogener Daten oder Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten!

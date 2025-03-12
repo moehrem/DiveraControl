@@ -1,5 +1,5 @@
 post_vehicle_status:
-  name: Fahrzeugstatus und -daten setzen
+  name: Fahrzeugstatus und -daten ändern
   description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
   fields:
     cluster_id:
@@ -161,7 +161,7 @@ post_alarm:
 
 
 put_alarm:
-  name: Alarm ändern/aktualisieren
+  name: Alarm ändern
   description: Ändert einen bestehenden Alarm in Divera 24/7. Es ist ausreichend, die zu ändernden Parameter mitzugeben.
   fields:
     cluster_id:
@@ -307,7 +307,7 @@ put_alarm:
 
 
 post_close_alarm:
-  name: Alarm schließen
+  name: Alarm öffnen/schließen
   description: Schließt einen offenen Alarm (je nach Setup um den Einsatz im Monitor zu verbergen und die Rückmeldung einzuschränken).
   fields:
     cluster_id:
@@ -333,7 +333,7 @@ post_close_alarm:
 
 
 post_message:
-  name: Sende Nachricht
+  name: Nachricht senden
   description: Ermöglicht das Senden einer Nachricht in einen bestimmten Kanal.
   fields:
     cluster_id:
@@ -359,7 +359,7 @@ post_message:
 
 
 post_using_vehicle_property:
-  name: Fahrzeugeigenschaften aktualisieren
+  name: Fahrzeugeigenschaften ändern
   description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein!
   fields:
     cluster_id:

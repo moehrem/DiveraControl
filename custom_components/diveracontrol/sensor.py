@@ -46,7 +46,7 @@ from .const import (
     I_FIRESTATION,
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
-    I_STATUS,
+    I_AVAILABILITY,
     I_VEHICLE,
 )
 from .utils import BaseDiveraEntity, get_device_info
@@ -398,3 +398,48 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     def icon(self) -> str:
         """Icon of sensor."""
         return I_COUNTER_ACTIVE_ALARMS
+
+
+# class DiveraAvailabilitySensor(BaseDiveraSensor):
+#     """Sensor to return personal status."""
+
+#     def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
+#         """Init class DiveraAvailabilitySensor."""
+#         super().__init__(coordinator, cluster_data, cluster_id)
+
+#     @property
+#     def entity_id(self) -> str:
+#         """Entity-ID of sensor."""
+#         return f"sensor.{f'{self.cluster_id}_availability'}"
+
+#     @entity_id.setter
+#     def entity_id(self, value: str) -> None:
+#         """Set entity-id of sensor."""
+#         self._entity_id = value
+
+#     @property
+#     def unique_id(self) -> str:
+#         """Unique-ID of sensor."""
+#         return f"{self.cluster_id}_availability"
+
+#     @property
+#     def name(self) -> str:
+#         """Name of sensor."""
+#         return "Availability"
+
+#     @property
+#     def state(self) -> int:
+#         """State of sensor."""
+#         total_consumer = len(self.cluster_data.get(D_CLUSTER, {}).get("consumer", {}))
+#         return total_consumer
+
+#     @property
+#     def extra_state_attributes(self) -> dict[str, Any]:
+#         """Additional attributes of sensor."""
+#         status_config = self.cluster_data.get(D_CLUSTER, {}).get(D_STATUS, {})
+
+
+#     @property
+#     def icon(self) -> str:
+#         """Icon of sensor."""
+#         return I_AVAILABILITY
