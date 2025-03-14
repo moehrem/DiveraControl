@@ -15,6 +15,7 @@ from .const import (
     MINOR_VERSION,
     PATCH_VERSION,
     D_ACCESS,
+    D_COORDINATOR,
     D_CLUSTER_NAME,
     D_USER,
     D_ACCESS,
@@ -26,31 +27,52 @@ from .const import (
 LOGGER = logging.getLogger(__name__)
 
 
-def permission_request(coordinator_data, perm_key):
-    """Return permission to access data."""
+def permission_check(hass: HomeAssistant, cluster_id, perm_key):
+    """Check permission and return success.
 
-    cluster_name = coordinator_data.cluster_name
-    management = (
-        coordinator_data.cluster_data.get(D_USER, {})
-        .get(D_ACCESS, {})
-        .get(PERM_MANAGEMENT)
+    Args:
+        hass: HomeAssistant
+        cluster_id: str
+        perm_key: str
+
+    Returns:
+        bool: True if permission granted, False if denied
+
+    """
+
+    sucess = False
+
+    coordinator_data = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
     )
-    permission = (
-        coordinator_data.cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(perm_key)
-    )
 
-    if management:
-        sucess = management
-    elif permission:
-        sucess = permission
-    else:
-        sucess = False
+    if coordinator_data is not None and perm_key is not None:
+        cluster_name = coordinator_data.cluster_name
+        management = (
+            coordinator_data.cluster_data.get(D_USER, {})
+            .get(D_ACCESS, {})
+            .get(PERM_MANAGEMENT)
+        )
+        permission = (
+            coordinator_data.cluster_data.get(D_USER, {})
+            .get(D_ACCESS, {})
+            .get(perm_key)
+        )
 
-    if not sucess:
-        # raise DiveraPermissionDenied(
-        #     f"Permission denied for {perm_key} in cluster {cluster_name}"
-        # )
-        LOGGER.warning("Permission denied for %s in cluster %s", perm_key, cluster_name)
+        if management:
+            sucess = management
+        elif permission:
+            sucess = permission
+        else:
+            sucess = False
+
+        if not sucess:
+            # raise DiveraPermissionDenied(
+            #     f"Permission denied for {perm_key} in cluster {cluster_name}"
+            # )
+            LOGGER.warning(
+                "Permission denied for %s in cluster %s", perm_key, cluster_name
+            )
 
     return sucess
 
@@ -61,7 +83,6 @@ class BaseDiveraEntity:
     def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
         """Initialisiert die gemeinsame Basisklasse."""
         self.coordinator = coordinator
-        # self.cluster_id = coordinator.cluster_id
         self.cluster_id = cluster_id
         self.cluster_data = cluster_data
 
@@ -69,8 +90,6 @@ class BaseDiveraEntity:
     def device_info(self):
         """Gibt Geräteinformationen zurück."""
         unit_name = self.coordinator.cluster_name
-        # firstname = self.cluster_data.get(D_USER, {}).get("firstname", "")
-        # lastname = self.cluster_data.get(D_USER, {}).get("lastname", "")
         return {
             "identifiers": {(DOMAIN, unit_name)},
             "name": unit_name,
