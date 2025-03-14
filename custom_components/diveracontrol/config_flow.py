@@ -8,6 +8,11 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.translation import async_get_translations
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -167,9 +172,15 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Display the login input form."""
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_USERNAME): TextSelector(
+                    TextSelectorConfig(
+                        type=TextSelectorType.EMAIL, autocomplete="username"
+                    )
+                ),
                 vol.Required(CONF_PASSWORD): TextSelector(
-                    TextSelectorConfig(type="password")
+                    TextSelectorConfig(
+                        type=TextSelectorType.PASSWORD, autocomplete="current-password"
+                    )
                 ),
                 vol.Required(
                     D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
