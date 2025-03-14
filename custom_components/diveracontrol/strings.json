@@ -1,7 +1,7 @@
 {
     "title": "DiveraControl",
     "common": {
-        "usergroup_message": "Unit '{cluster_name}' (ID '{ucr_id}') created successfully.",
+        "usergroup_message": "Unit {cluster_name} (ID {ucr_id}) created successfully.",
         "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera permissions, so some data may not be available.",
         "usergroup_8": "The logged-in user is an admin user and has access to all data.",
         "usergroup_19": "The logged-in user is a system user and therefore will not have access to:\n- Alarm data\n- News\n- Events",
