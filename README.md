@@ -23,6 +23,8 @@
 
 ![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations)
 [![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg)](https://github.com/hacs/integration)
+[![HASS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml)
+[![HACS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml)
 
 ---
 
@@ -82,7 +84,7 @@ Verschiedene Divera-Endpunkte sind als Services in HomeAssistant umgesetzt und e
 
 ---
 
-## 💡 Geplante Funktionen
+## 💡 Weitere geplante Funktionen
 Folgende Funktionen sollen noch integriert werden:
 - Hinzufügen von Besatzung zu Fahrzeugen
 - Datenabfrage nur bei offenen Alarmen
@@ -98,7 +100,7 @@ Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung gepla
 - Verwaltung von Terminen (Erstellen, Ändern, Löschen)
 - Anhänge hinzufügen
 - Leitstellen-Funktionen
-- PRO-Version-Features (einheitenübergreifende Alarmierung und Verwaltung)
+- Funktionen der PRO-Version (einheitenübergreifende Alarmierung und Verwaltung)
 
 ---
 
@@ -120,23 +122,23 @@ DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber bereits manuel
 ## ⚙️ Einrichtung
 
 ### 🔑 **Authentifizierung**
-Zur Einrichtung benötigt man **Benutzername & Passwort** oder direkt den **API-Schlüssel**. Die Anmeldung erfolgt initial immer mit den **persönlichen Zugangsdaten**. Diese Daten werden nicht gespeichert, es wird damit nur der API-Schlüssel des Nutzers abgefragt.
+Zur Einrichtung werden entweder **Benutzername & Passwort** oder der **API-Schlüssel** benötigt. Die entsprechende Einrichtungsform kann vom Nutzer gewählt werden.
 
 Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **System-, Schnittstellen-, Monitor- oder Fahrzeugbenutzer** handelt, fragt die Integration direkt nach dem API-Schlüssel.
 
-> Hinweis: Divera bietet verschiedene API-Schlüssel zur Nutzung an. Neben dem persönlichen Schlüssel unter **Profil -> Einstellungen -> Debug**, gibt es außerdem einen allgemeinen Schnittstellenschlüssel unter **Verwaltung -> Schnittstellen**. Empfohlen wird jedoch die Einrichtung und Nutzung eines Schnittstellennutzers unter **Verwaltung -> Schnittstellen -> System-Benutzer**. Nur zu diesem lassen sich sinnvoll Berechtigungen einrichten.
+> Hinweis: Divera bietet verschiedene API-Schlüssel zur Nutzung an. Neben dem persönlichen Schlüssel unter **Profil -> Einstellungen -> Debug**, gibt es außerdem einen allgemeinen Schnittstellenschlüssel unter **Verwaltung -> Schnittstellen**. Dessen Berechtigungen sind jedoch nicht änderbar, weswegen von Divera die Einrichtung und Nutzung eines Schnittstellennutzers unter **Verwaltung -> Schnittstellen -> System-Benutzer** empfohlen wird.
 
 ### ⏳ **Abfrageintervalle**
-Die Intervalle werden immer je Einheit eingestellt.
-- **Außerhalb von Einsätzen**: längeres Intervall
-- **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme zur Aktualisierung der Daten genutzt wird
+Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval wird zur Datenabfrage und -aktualisierung genutzt.
+- **Außerhalb von Einsätzen**: längeres Intervall, das außerhalb aktiver Alarme genutzt wird
+- **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme genutzt wird
 
-> Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, dürfen keine Werte niedriger als 30s eingestellt werden.
+> Hinweis: Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 30s nicht möglich.
 
 
 ## Benutzung
 
-### Services
+### **Services**
 Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen oder eigenen Entwicklungen aufgerufen werden. Umgesetzte Services sind:
 - Alarm erstellen
 - Alarm schließen/öffnen
@@ -153,5 +155,5 @@ Services, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auc
 ## 🔍 **Fehleranalyse**
 Bei Fehler ist eine Aktivierung des Debug-Logs und eine Auswertung der Ergebnisse hilfreich.
 
-Außerdem können über das Kontextmenü (3 Punkte) der Integration zu jeder Einheit Diagnosedaten heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
-> Hinweis: In den Ausgabe werden lediglich die API-Shlüssel maskiert. Weitere Daten inkl personenbezogener Daten oder Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten!
+Außerdem können über das Kontextmenü der Integration sowie im Dienst selbst Diagnosedaten heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
+> Hinweis: In den Ausgabe werden lediglich die API-Schlüssel maskiert. Weitere Daten inkl personenbezogener Daten oder Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!

@@ -34,7 +34,6 @@ from .const import (
     D_COORDINATOR,
     D_DATA,
     D_CLUSTER_ID,
-    D_STATUS,
     D_UCR,
     D_CLUSTER,
     D_VEHICLE,
@@ -75,7 +74,6 @@ async def async_setup_entry(
         new_static_sensors_data = {
             D_OPEN_ALARMS,
             D_CLUSTER,
-            D_STATUS,
         }
 
         if isinstance(new_alarm_data, dict):

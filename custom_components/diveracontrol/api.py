@@ -178,9 +178,9 @@ class DiveraAPI:
         LOGGER.debug("Fetching all data for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        params = {"ucr": ucr_id}
+        # params = {"ucr": ucr_id}
         perm_key = None
-        return await self.api_request(url, method, perm_key, parameters=params)
+        return await self.api_request(url, method, perm_key)  # parameters=params
 
     async def post_vehicle_status(self, vehicle_id, payload) -> dict:
         """POST vehicle status and data to Divera API."""
@@ -271,12 +271,17 @@ class DiveraCredentials:
 
                 # cluster_id = data_ucr_data.get(ucr_id, {}).get("cluster_id", "")
                 cluster_name = data_ucr_data.get(ucr_id, {}).get("name", "")
+                usergroup_id = data_ucr_data.get(ucr_id, {}).get("usergroup_id", "")
 
-                return {
-                    D_CLUSTER_NAME: cluster_name,
-                    D_UCR_ID: ucr_id,
-                    D_API_KEY: api_key,
-                }, None
+                return (
+                    {
+                        D_CLUSTER_NAME: cluster_name,
+                        D_UCR_ID: ucr_id,
+                        D_API_KEY: api_key,
+                    },
+                    None,
+                    usergroup_id,
+                )
 
         except (ClientError, TimeoutError):
             return None, "cannot_connect"
@@ -305,6 +310,7 @@ class DiveraCredentials:
 
         clusters = {}
         api_key = ""
+        usergroup_id = ""
         data_ucr = {}
 
         # Login-Request
@@ -326,7 +332,7 @@ class DiveraCredentials:
                     else:
                         formatted_errors["base"] = str(raw_errors)
 
-                    return formatted_errors, clusters
+                    return formatted_errors, clusters, usergroup_id
 
                 data_user = data_auth.get("data", {}).get("user", {})
                 api_key = data_user.get("access_token", "")
@@ -334,13 +340,13 @@ class DiveraCredentials:
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
-            return errors, clusters
+            return errors, clusters, usergroup_id
         except (TypeError, AttributeError):
             errors["base"] = "no_data"
-            return errors, clusters
+            return errors, clusters, usergroup_id
         except Exception:
             errors["base"] = "unknown"
-            return errors, clusters
+            return errors, clusters, usergroup_id
 
         # prallel requests for cluster data
         raw_url_ucr = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
@@ -360,13 +366,14 @@ class DiveraCredentials:
         results = await asyncio.gather(*tasks)
 
         # process results
-        for i, (cluster_data, error) in enumerate(results):
+        for i, (cluster_data, error, usergroup_id) in enumerate(results):
             if error:
                 errors[f"ucr_{i}"] = error
             elif cluster_data:
                 clusters[cluster_data[D_UCR_ID]] = cluster_data
+                usergroup_id = usergroup_id
 
-        return errors, clusters
+        return errors, clusters, usergroup_id
 
     @staticmethod
     async def validate_api_key(
@@ -389,6 +396,7 @@ class DiveraCredentials:
         """
         clusters = {}
         errors = {}
+        usergroup_id = ""
         api_key = user_input.get("api_key", "")
         url = (
             f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
@@ -400,7 +408,7 @@ class DiveraCredentials:
 
                 if response.status not in [200, 201]:
                     errors["base"] = data.get("message", {})
-                    return errors, clusters
+                    return errors, clusters, usergroup_id
 
                 data_ucr = data.get(D_DATA, {}).get(D_UCR, {})
 
@@ -412,6 +420,7 @@ class DiveraCredentials:
                         D_UCR_ID: ucr_id,
                         D_API_KEY: api_key,
                     }
+                    usergroup_id = ucr_data.get("usergroup_id", "")
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
@@ -420,4 +429,4 @@ class DiveraCredentials:
         except Exception:
             errors["base"] = "unknown"
 
-        return errors, clusters
+        return errors, clusters, usergroup_id

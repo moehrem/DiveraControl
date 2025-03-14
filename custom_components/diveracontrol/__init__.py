@@ -37,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         "coordinator": coordinator,
         "api": api,
         "sensors": {},
-        "device_trackers": {},
+        "device_tracker": {},
     }
 
     try:

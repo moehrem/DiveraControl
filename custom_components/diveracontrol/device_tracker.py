@@ -125,7 +125,7 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         super().__init__(coordinator, cluster_data, cluster_id)
         self.alarm_id = alarm_id
         self._alarm_data = (
-            self.cluster_data.get(D_CLUSTER, {}).get(D_ALARM, {}).get(self.alarm_id, {})
+            self.cluster_data.get(D_ALARM, {}).get("items", {}).get(self.alarm_id, {})
         )
 
     @property

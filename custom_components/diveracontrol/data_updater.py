@@ -152,17 +152,22 @@ async def update_operational_data(
             "Error fetching vehicle properties for vehicle '%s', error: '%s'", key, e
         )
     except Exception:
-        _LOGGER.exception("Unexpected error while processing vehicle püroperties")
+        _LOGGER.exception("Unexpected error while processing vehicle properties")
 
     # handle open alarms
     try:
-        open_alarms = sum(
-            1
-            for alarm_details in alarm.get("items", {}).values()
-            if not alarm_details.get("closed", True)
-        )
-        changing_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+        if alarm:
+            open_alarms = sum(
+                1
+                for alarm_details in alarm.get("items", {}).values()
+                if not alarm_details.get("closed", True)
+            )
+            changing_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+        else:
+            open_alarms = 0
+
         _LOGGER.debug("Open alarms updated: %s", open_alarms)
+
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error processing alarm data: %s", e)
     except Exception:
