@@ -40,7 +40,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
 
     """
 
-    sucess = False
+    success = False
 
     coordinator_data = (
         hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
@@ -60,13 +60,13 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
         )
 
         if management:
-            sucess = management
+            success = management
         elif permission:
-            sucess = permission
+            success = permission
         else:
-            sucess = False
+            success = False
 
-        if not sucess:
+        if not success:
             # raise DiveraPermissionDenied(
             #     f"Permission denied for {perm_key} in cluster {cluster_name}"
             # )
@@ -74,7 +74,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
                 "Permission denied for %s in cluster %s", perm_key, cluster_name
             )
 
-    return sucess
+    return success
 
 
 class BaseDiveraEntity:
