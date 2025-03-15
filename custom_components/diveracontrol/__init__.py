@@ -12,7 +12,7 @@ from .const import DOMAIN, D_API_KEY, D_CLUSTER_ID
 from .coordinator import DiveraCoordinator
 from .service import async_register_services
 
-PLATFORMS = [Platform.DEVICE_TRACKER, Platform.SENSOR]
+PLATFORMS = [Platform.DEVICE_TRACKER, Platform.SENSOR, Platform.CALENDAR]
 LOGGER = logging.getLogger(__name__)
 
 
