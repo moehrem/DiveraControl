@@ -132,6 +132,20 @@ async def async_setup_entry(
                 new_sensors.append(sensor_instance)
                 current_sensors[sensor_name] = sensor_instance
 
+        #####
+        # register new sensors
+        if new_sensors:
+            async_add_entities(new_sensors, update_before_add=True)
+
+        #####
+        # updating existing sensors
+        for sensor in current_sensors.values():
+            if isinstance(sensor, BaseDiveraSensor):
+                new_data = get_new_sensor_data(sensor)
+                if new_data:
+                    asyncio.create_task(sensor.async_update_state(new_data))
+
+        #####
         # remove outdated sensors
         active_ids = (
             new_alarm_data
@@ -145,10 +159,6 @@ async def async_setup_entry(
             if sensor:
                 await sensor.remove_from_hass()
                 LOGGER.debug("Removed sensor: %s", sensor_id)
-
-        # register new sensors
-        if new_sensors:
-            async_add_entities(new_sensors, update_before_add=True)
 
     await sync_sensors()
 
@@ -166,6 +176,32 @@ async def async_remove_sensors(hass: HomeAssistant, cluster_id: str) -> None:
 
         # remove sensor list
         hass.data[DOMAIN][cluster_id].pop("sensors", None)
+
+
+def get_new_sensor_data(sensor) -> dict[str, Any]:
+    """Gibt die aktuellen Daten für den Sensor aus coordinator.data zurück."""
+    if isinstance(sensor, DiveraAlarmSensor):
+        return (
+            sensor.coordinator.cluster_data.get(D_ALARM, {})
+            .get("items", {})
+            .get(sensor.alarm_id, {})
+        )
+
+    if isinstance(sensor, DiveraVehicleSensor):
+        return (
+            sensor.coordinator.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(sensor._vehicle_id, {})
+        )
+
+    if isinstance(sensor, DiveraAvailabilitySensor):
+        return (
+            sensor.coordinator.cluster_data.get(D_MONITOR, {})
+            .get("1", {})
+            .get(sensor.status_id, {})
+        )
+
+    return {}
 
 
 class BaseDiveraSensor(Entity, BaseDiveraEntity):
@@ -242,13 +278,15 @@ class DiveraAlarmSensor(BaseDiveraSensor):
 
         return I_OPEN_ALARM_NOPRIO
 
-    async def async_update_state(self, key: str, new_data: Any):
+    async def async_update_state(self, new_data: dict[str, Any]):
         """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
-        if self.alarm_data.get(key) != new_data:
-            self.alarm_data[key] = new_data
-            self.coordinator.cluster_data[D_ALARM]["items"][self.alarm_id][key] = (
-                new_data
-            )
+        updated = False
+        for key, value in new_data.items():
+            if self.alarm_data.get(key) != value:
+                self.alarm_data[key] = value
+                updated = True
+
+        if updated:
             self.async_write_ha_state()
 
 
@@ -311,16 +349,18 @@ class DiveraVehicleSensor(BaseDiveraSensor):
         """Icon of sensor."""
         return I_VEHICLE
 
-    async def async_update_state(self, key: str, new_data: Any):
-        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
-        if key == "status":
-            key = "fmsstatus_id"
+    async def async_update_state(self, new_data: dict[str, Any]):
+        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
+        updated = False
+        for key, value in new_data.items():
+            if key == "status":
+                key = "fmsstatus_id"
 
-        if self._vehicle_data.get(key) != new_data:
-            self._vehicle_data[key] = new_data
-            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
-                key
-            ] = new_data
+            if self._vehicle_data.get(key) != value:
+                self._vehicle_data[key] = value
+                updated = True
+
+        if updated:
             self.async_write_ha_state()
 
 
@@ -380,6 +420,10 @@ class DiveraUnitSensor(BaseDiveraSensor):
         """Icon of sensor."""
         return I_FIRESTATION
 
+    async def async_update_state(self, new_data: dict[str, Any]):
+        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
+        # wip
+
 
 class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     """Sensor to count active alarms."""
@@ -418,6 +462,10 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     def icon(self) -> str:
         """Icon of sensor."""
         return I_COUNTER_ACTIVE_ALARMS
+
+    async def async_update_state(self, new_data: dict[str, Any]):
+        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
+        # wip
 
 
 class DiveraAvailabilitySensor(BaseDiveraSensor):
@@ -488,3 +536,7 @@ class DiveraAvailabilitySensor(BaseDiveraSensor):
     def icon(self) -> str:
         """Icon of sensor."""
         return I_AVAILABILITY
+
+    async def async_update_state(self, new_data: dict[str, Any]):
+        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
+        # wip

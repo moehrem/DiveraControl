@@ -10,52 +10,9 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, DOMAIN
-from .utils import handle_entity
+from .utils import handle_entity, get_api_instance, get_coordinator_data
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_api_instance(hass: HomeAssistant, sensor_id: str):
-    """Fetch api-instance of hub based on sensor_id or cluster_id. Raises exception if not found."""
-    try:
-        # try finding cluster_id with given sensor_id
-        for cluster_id, cluster_data in hass.data[DOMAIN].items():
-            for sensor in cluster_data["sensors"]:
-                if sensor == str(sensor_id):
-                    api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
-
-        # if nothing found, try sensor_id as cluster_id
-        for cluster_id in hass.data[DOMAIN]():
-            if cluster_id == sensor_id:
-                api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
-
-        return api_instance
-
-    except KeyError:
-        error_message = f"API-instance not found for Sensor-ID {sensor_id}"
-        LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
-
-
-def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
-    """Holt die Koordinatordaten für die gegebene cluster_id oder wirft eine Exception."""
-    try:
-        # try finding cluster_id with given sensor_id
-        for cluster_id, cluster_data in hass.data[DOMAIN].items():
-            for sensor in cluster_data["sensors"]:
-                if sensor == str(sensor_id):
-                    coordinator_data = (
-                        hass.data.get(DOMAIN, {})
-                        .get(str(cluster_id), "")
-                        .get(D_COORDINATOR)
-                    )
-
-        return coordinator_data
-
-    except KeyError:
-        error_message = f"Coordinator data not found for Sensor-ID {sensor_id}"
-        LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
 
 
 async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
