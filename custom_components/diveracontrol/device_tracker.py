@@ -41,7 +41,7 @@ async def async_setup_entry(
     cluster_id = cluster[D_CLUSTER_ID]
     coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
 
-    async def sync_sensors():
+    async def sync_trackers():
         """Synchronize all trackers with the current data from coordinator."""
 
         cluster_data = coordinator.cluster_data
@@ -81,7 +81,21 @@ async def async_setup_entry(
             new_trackers.append(tracker)
             current_trackers[vehicle_id] = tracker
 
-        # remove outdated sensors
+        #####
+        # register new tracker
+        if new_trackers:
+            async_add_entities(new_trackers, update_before_add=True)
+
+        #####
+        # update existing trackers
+        for tracker in current_trackers.values():
+            if isinstance(tracker, BaseDiveraTracker):
+                new_data = get_new_tracker_data(tracker)
+                if new_data:
+                    asyncio.create_task(tracker.async_update_state(new_data))
+
+        #####
+        # remove outdated trackers
         active_ids = new_alarm_data | new_vehicle_data
         removable_trackers = set(current_trackers.keys() - active_ids)
         for tracker_id in removable_trackers:
@@ -90,14 +104,29 @@ async def async_setup_entry(
                 await sensor.remove_from_hass()
                 LOGGER.debug("Removed trackers: %s", tracker_id)
 
-        # Add new trackers to Home Assistant
-        if new_trackers:
-            async_add_entities(new_trackers, update_before_add=True)
-
-    await sync_sensors()
+    await sync_trackers()
 
     # Add listener for updates
-    coordinator.async_add_listener(lambda: asyncio.create_task(sync_sensors()))
+    coordinator.async_add_listener(lambda: asyncio.create_task(sync_trackers()))
+
+
+def get_new_tracker_data(sensor) -> dict[str, Any]:
+    """Gibt die aktuellen Daten für den Tracker aus coordinator.data zurück."""
+    if isinstance(sensor, DiveraAlarmTracker):
+        return (
+            sensor.coordinator.cluster_data.get(D_ALARM, {})
+            .get("items", {})
+            .get(sensor.alarm_id, {})
+        )
+
+    if isinstance(sensor, DiveraVehicleTracker):
+        return (
+            sensor.coordinator.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(sensor._vehicle_id, {})
+        )
+
+    return {}
 
 
 class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
@@ -170,18 +199,31 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         else:
             return I_OPEN_ALARM_NOPRIO
 
-    async def async_update_state(self, key: str, new_data: Any):
-        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
-        if key == "lat":
-            key = "latitude"
-        if key == "lng":
-            key = "longitude"
+    async def async_update_state(self, new_data: dict[str, Any]) -> None:
+        """Aktualisiert den Zustand des Trackers, wenn sich die Alarmdaten geändert haben."""
+        updated = False
 
-        if self._vehicle_data.get(key) != new_data:
-            self._vehicle_data[key] = new_data
-            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
-                key
-            ] = new_data
+        # Korrektes Mapping der Schlüssel für Koordinaten
+        key_mapping = {"lat": "latitude", "lng": "longitude"}
+
+        # Kopiere die Daten, um Änderungen während der Iteration zu vermeiden
+        new_data_copy = dict(new_data)
+
+        # Iteriere über die Kopie der neuen Daten und aktualisiere die internen Werte
+        for key, value in new_data_copy.items():
+            mapped_key = key_mapping.get(
+                key, key
+            )  # Mapping anwenden, falls erforderlich
+
+            if self._alarm_data.get(mapped_key) != value:
+                self._alarm_data[mapped_key] = value
+                self.coordinator.cluster_data[D_ALARM]["items"][self.alarm_id][
+                    mapped_key
+                ] = value
+                updated = True
+
+        # Falls sich etwas geändert hat, die UI in Home Assistant aktualisieren
+        if updated:
             self.async_write_ha_state()
 
 
@@ -267,16 +309,25 @@ class DiveraVehicleTracker(BaseDiveraTracker):
 
         return f"mdi:numeric-{status}-box"
 
-    async def async_update_state(self, key: str, new_data: Any):
-        """Wird aufgerufen, wenn sich der Zustand des Sensors ändert."""
-        if key == "lat":
-            key = "latitude"
-        if key == "lng":
-            key = "longitude"
+    async def async_update_state(self, new_data: dict) -> None:
+        """Aktualisiert den Zustand des Trackers, wenn sich Fahrzeugdaten geändert haben."""
+        updated = False
 
-        if self._vehicle_data.get(key) != new_data:
-            self._vehicle_data[key] = new_data
-            self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
-                key
-            ] = new_data
+        # Kopiere die Daten, um Änderungen während der Iteration zu vermeiden
+        new_data_copy = dict(new_data)
+
+        # Key-Mapping für Koordinaten
+        key_mapping = {"lat": "latitude", "lng": "longitude"}
+
+        for key, value in new_data_copy.items():
+            mapped_key = key_mapping.get(key, key)  # Falls lat/lng, dann umwandeln
+
+            if self._vehicle_data.get(mapped_key) != value:
+                self._vehicle_data[mapped_key] = value
+                self.coordinator.cluster_data[D_CLUSTER][D_VEHICLE][self._vehicle_id][
+                    mapped_key
+                ] = value
+                updated = True
+
+        if updated:
             self.async_write_ha_state()

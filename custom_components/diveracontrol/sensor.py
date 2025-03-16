@@ -422,7 +422,26 @@ class DiveraUnitSensor(BaseDiveraSensor):
 
     async def async_update_state(self, new_data: dict[str, Any]):
         """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
-        # wip
+        updated = False
+
+        # Aktualisieren des cluster_shortname
+        cluster_shortname = new_data.get("shortname", "Unknown")
+        if self.cluster_data.get(D_CLUSTER, {}).get("shortname") != cluster_shortname:
+            self.cluster_data[D_CLUSTER]["shortname"] = cluster_shortname
+            updated = True
+
+        # Aktualisieren der Adresse
+        cluster_address = new_data.get("address", {})
+        current_address = self.cluster_data.get(D_CLUSTER, {}).get("address", {})
+
+        for key in ["lat", "lng", "street", "zip", "city", "country", "ags"]:
+            if cluster_address.get(key) != current_address.get(key):
+                self.cluster_data[D_CLUSTER]["address"][key] = cluster_address.get(key)
+                updated = True
+
+        # Falls sich etwas geändert hat, UI-Update in Home Assistant auslösen
+        if updated:
+            self.async_write_ha_state()
 
 
 class DiveraOpenAlarmsSensor(BaseDiveraSensor):
@@ -464,8 +483,20 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
         return I_COUNTER_ACTIVE_ALARMS
 
     async def async_update_state(self, new_data: dict[str, Any]):
-        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
-        # wip
+        """Aktualisiert den Sensor-Zustand, wenn sich die Anzahl offener Alarme geändert hat."""
+        updated = False
+
+        # Extrahiere die neue Anzahl offener Alarme aus new_data
+        new_open_alarms = new_data.get(D_OPEN_ALARMS, 0)
+
+        # Prüfe, ob sich der Wert geändert hat
+        if self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0) != new_open_alarms:
+            self.cluster_data[D_ALARM][D_OPEN_ALARMS] = new_open_alarms
+            updated = True
+
+        # Falls sich der Wert geändert hat, die UI in Home Assistant aktualisieren
+        if updated:
+            self.async_write_ha_state()
 
 
 class DiveraAvailabilitySensor(BaseDiveraSensor):
@@ -538,5 +569,37 @@ class DiveraAvailabilitySensor(BaseDiveraSensor):
         return I_AVAILABILITY
 
     async def async_update_state(self, new_data: dict[str, Any]):
-        """Aktualisiert den Sensor-Zustand, wenn sich Daten geändert haben."""
-        # wip
+        """Aktualisiert den Sensor-Zustand, wenn sich die Verfügbarkeitsdaten geändert haben."""
+        updated = False
+
+        # Extrahiere den neuen Verfügbarkeitswert
+        new_state = new_data.get("all", 0)
+        current_state = (
+            self.cluster_data.get(D_MONITOR, {})
+            .get("1", {})
+            .get(self.status_id, {})
+            .get("all", 0)
+        )
+
+        if new_state != current_state:
+            self.cluster_data[D_MONITOR]["1"][self.status_id]["all"] = new_state
+            updated = True
+
+        # Aktualisieren der zusätzlichen Attribute
+        new_qualification_data = new_data.get("qualification", {})
+        current_qualification_data = (
+            self.cluster_data.get(D_MONITOR, {})
+            .get("1", {})
+            .get(self.status_id, {})
+            .get("qualification", {})
+        )
+
+        if new_qualification_data != current_qualification_data:
+            self.cluster_data[D_MONITOR]["1"][self.status_id]["qualification"] = (
+                new_qualification_data
+            )
+            updated = True
+
+        # Falls sich Daten geändert haben, die UI in Home Assistant aktualisieren
+        if updated:
+            self.async_write_ha_state()
