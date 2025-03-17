@@ -6,7 +6,13 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.const import (
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -52,6 +58,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         self.session = None
         self.errors: dict[str, str] = {}
         self.clusters = {}
+        self.usergroup_id = ""
         self.update_interval_data = ""
         self.update_interval_alarm = ""
 
@@ -62,7 +69,16 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         self.session = async_get_clientsession(self.hass)
 
         if user_input is None:
-            return self._show_user_form()
+            return self.async_show_menu(menu_options=["login", "api_key"])
+
+        return self.async_abort(reason="unknown_step")
+
+    async def async_step_login(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle user login step."""
+        if user_input is None:
+            return self._show_login_form()
 
         return await self._validate_and_proceed(dc.validate_login, user_input)
 
@@ -134,7 +150,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate user input and decide next steps."""
         self.errors.clear()
 
-        self.errors, self.clusters = await validation_method(
+        self.errors, self.clusters, self.usergroup_id = await validation_method(
             self.errors, self.session, user_input
         )
 
@@ -152,13 +168,19 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self._process_clusters()
 
-    def _show_user_form(self):
-        """Display the user input form."""
+    def _show_login_form(self):
+        """Display the login input form."""
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_USERNAME): TextSelector(
+                    TextSelectorConfig(
+                        type=TextSelectorType.EMAIL, autocomplete="username"
+                    )
+                ),
                 vol.Required(CONF_PASSWORD): TextSelector(
-                    TextSelectorConfig(type="password")
+                    TextSelectorConfig(
+                        type=TextSelectorType.PASSWORD, autocomplete="current-password"
+                    )
                 ),
                 vol.Required(
                     D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
@@ -170,7 +192,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         return self.async_show_form(
-            step_id="user",
+            step_id="login",
             data_schema=data_schema,
             errors=self.errors,
         )
@@ -263,8 +285,51 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         for cluster_id in clusters_to_remove:
             del self.clusters[cluster_id]
 
+    async def _async_show_usergroup_message(self, cluster_name: str, ucr_id: int):
+        """Show persistant message based on usergroup_id and related issues and permissions."""
+        translation = await async_get_translations(
+            self.hass,
+            self.hass.config.language,
+            category="common",
+            integrations=[DOMAIN],
+        )
+
+        message = translation.get(
+            "component.diveracontrol.common.usergroup_message"
+        ).format(cluster_name=cluster_name, ucr_id=ucr_id)
+
+        match self.usergroup_id:
+            case 4:  # standard user, no admin
+                message += translation.get("component.diveracontrol.common.usergroup_4")
+            case 5:  # monitor user
+                message += translation.get("component.diveracontrol.common.usergroup_5")
+            case 8:  # admin user, owner?
+                message += translation.get("component.diveracontrol.common.usergroup_8")
+            case 14:  # standard API-user
+                message += translation.get(
+                    "component.diveracontrol.common.usergroup_14"
+                )
+            case 19:  # system user
+                message += translation.get(
+                    "component.diveracontrol.common.usergroup_19"
+                )
+            case _:  # all other usergroup_ids
+                message += translation.get(
+                    "component.diveracontrol.common.usergroup_unknown"
+                ).format(usergroup_id=self.usergroup_id)
+
+        await self.hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": "DiveraControl",
+                "message": message,
+                "notification_id": "diveracontrol_success_permissions",
+            },
+        )
+
     async def _process_clusters(self):
-        """Process hub creation or identify existing hubs."""
+        """Process device creation."""
 
         if self.clusters:
             for cluster_id, cluster_data in self.clusters.items():
@@ -281,6 +346,8 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
                 }
 
-            return self.async_create_entry(title=cluster_name, data=new_hub)
+                await self._async_show_usergroup_message(cluster_name, ucr_id)
+
+                return self.async_create_entry(title=cluster_name, data=new_hub)
 
         return self.async_abort(reason="no_new_hubs_found")

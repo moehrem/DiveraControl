@@ -1,12 +1,7 @@
 post_vehicle_status:
-  name: Fahrzeugstatus und -daten setzen
+  name: Fahrzeugstatus und -daten ändern
   description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     vehicle_id:
       name: Fahrzeug-ID
       description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
@@ -161,14 +156,9 @@ post_alarm:
 
 
 put_alarm:
-  name: Alarm ändern/aktualisieren
+  name: Alarm ändern
   description: Ändert einen bestehenden Alarm in Divera 24/7. Es ist ausreichend, die zu ändernden Parameter mitzugeben.
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     alarm_id:
       name: Alarm-ID
       description: Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
@@ -307,14 +297,9 @@ put_alarm:
 
 
 post_close_alarm:
-  name: Alarm schließen
+  name: Alarm öffnen/schließen
   description: Schließt einen offenen Alarm (je nach Setup um den Einsatz im Monitor zu verbergen und die Rückmeldung einzuschränken).
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     alarm_id:
       name: Alarm-ID
       description: Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
@@ -333,14 +318,9 @@ post_close_alarm:
 
 
 post_message:
-  name: Sende Nachricht
+  name: Nachricht senden
   description: Ermöglicht das Senden einer Nachricht in einen bestimmten Kanal.
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     message_channel_id:
       name: Nachrichtenkanal-ID
       description: Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
@@ -359,14 +339,9 @@ post_message:
 
 
 post_using_vehicle_property:
-  name: Fahrzeugeigenschaften aktualisieren
+  name: Fahrzeugeigenschaften ändern
   description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein!
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     vehicle_id:
       name: Fahrzeug-ID
       description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
@@ -377,3 +352,25 @@ post_using_vehicle_property:
       description: Schlüssel und Wert der Eigenschaft, deren Wert gesetzt werden soll. Eigenschaft muss in Divera existieren!
       required: false
       example: 654
+
+
+post_using_vehicle_crew:
+  name: Fahrzeugbesatzung ändern
+  description: Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
+  fields:
+    vehicle_id:
+      name: Fahrzeug-ID
+      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
+      required: true
+      example: 654321
+    mode:
+      name: Modus
+      description: Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
+      required: true
+      example: add
+    crew:
+      name: Fahrzeugbesatzung
+      description: Liste der Benutzer-IDs, die hinzugefügt oder entfernt werden sollen. Muss eine Liste von Benutzer-IDs sein und darf nur für Modus 'Zurücksetzen'(reset) leer sein.
+      required: false
+      example: 123, 456, 789
+

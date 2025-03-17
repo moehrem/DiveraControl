@@ -10,12 +10,11 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     DOMAIN,
-    D_ACTIVE_ALARM_COUNT,
     D_LAST_UPDATE_ALARM,
     D_LAST_UPDATE_DATA,
-    D_API_KEY,
+    # D_API_KEY,
     D_CLUSTER_NAME,
-    D_HUB_ID,
+    # D_HUB_ID,
     D_UCR,
     D_UCR_ID,
     D_UCR_DEFAULT,
@@ -33,14 +32,13 @@ from .const import (
     D_MESSAGE,
     D_LOCALMONITOR,
     D_STATUSPLAN,
-    D_ACCESS,
-    D_STATUS_CONF,
-    D_STATUS_SORT,
-    D_CLUSTER_ADDRESS,
+    # D_ACCESS,
+    # D_STATUS_CONF,
+    # D_STATUS_SORT,
     D_VEHICLE,
     D_UPDATE_INTERVAL_DATA,
     D_UPDATE_INTERVAL_ALARM,
-    D_CLUSTER_ID,
+    D_OPEN_ALARMS,
 )
 from .data_updater import update_operational_data
 from .utils import log_execution_time
@@ -50,7 +48,7 @@ LOGGER = logging.getLogger(__name__)
 
 class DiveraCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api, cluster, cluster_id):
-        """Initialize the coordinator."""
+        """Initialize DiveraControl coordinator."""
         super().__init__(
             hass,
             LOGGER,
@@ -62,6 +60,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self.ucr_id = cluster.get(D_UCR_ID, "")
         self.cluster_name = cluster.get(D_CLUSTER_NAME, "")
         self.cluster_data = {}
+        self.admin_data = {}
 
         # **Listener for changes to ConfigEntry**
         async_dispatcher_connect(
@@ -78,11 +77,10 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self._listeners = {}
 
     def init_cluster_data_structure(self):
+        """Define main data structures for divera data and admin data."""
+        now = asyncio.get_running_loop().time()
+
         self.cluster_data = {
-            D_UCR_ID: self.ucr_id,
-            D_ACTIVE_ALARM_COUNT: "",
-            D_LAST_UPDATE_ALARM: "",
-            D_LAST_UPDATE_DATA: "",
             D_UCR: {},
             D_UCR_DEFAULT: {},
             D_UCR_ACTIVE: {},
@@ -99,11 +97,11 @@ class DiveraCoordinator(DataUpdateCoordinator):
             D_MESSAGE: {},
             D_LOCALMONITOR: {},
             D_STATUSPLAN: {},
-            D_ACCESS: {},
-            D_STATUS_CONF: {},
-            D_STATUS_SORT: {},
-            D_CLUSTER_ADDRESS: {},
-            D_VEHICLE: {},
+        }
+        self.admin_data = {
+            D_UCR_ID: self.ucr_id,
+            D_LAST_UPDATE_ALARM: now,
+            D_LAST_UPDATE_DATA: now,
         }
 
     @log_execution_time
@@ -111,12 +109,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """Initialize data at start one time only."""
         now = asyncio.get_running_loop().time()
 
-        if not self.cluster_data:
+        if not self.cluster_data or not self.admin_data:
             self.init_cluster_data_structure()
 
         try:
             changing_data = self.cluster_data
-            changing_data = await update_operational_data(self.api, changing_data)
+            changing_data = await update_operational_data(
+                self.api, changing_data, self.admin_data
+            )
 
             LOGGER.debug(
                 "Successfully initialized data for unit '%s'",
@@ -124,8 +124,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
             )
 
             # set last update times
-            changing_data[D_LAST_UPDATE_ALARM] = now
-            changing_data[D_LAST_UPDATE_DATA] = now
+            self.admin_data[D_LAST_UPDATE_ALARM] = now
+            self.admin_data[D_LAST_UPDATE_DATA] = now
 
             self.cluster_data = changing_data
 
@@ -144,6 +144,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Divera API and update cache on a regular basis."""
         now = asyncio.get_running_loop().time()
+        open_alarms = self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
 
         # Helper function für eine Toleranz bei der Update-Ausführung
         def should_update(last_update, interval, tolerance=0.5):
@@ -154,11 +155,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             )
 
         # Wähle das richtige Intervall basierend auf der Alarmanzahl
-        new_interval = (
-            self.interval_alarm
-            if self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
-            else self.interval_data
-        )
+        new_interval = self.interval_alarm if open_alarms > 0 else self.interval_data
 
         # Falls das Intervall geändert werden muss
         if self.update_interval != new_interval:
@@ -170,9 +167,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         # Wähle den passenden Zeitstempel
         last_update = (
-            self.cluster_data[D_LAST_UPDATE_ALARM]
-            if self.cluster_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0
-            else self.cluster_data[D_LAST_UPDATE_DATA]
+            self.admin_data[D_LAST_UPDATE_ALARM]
+            if open_alarms > 0
+            else self.admin_data[D_LAST_UPDATE_DATA]
         )
 
         # Prüfe, ob ein Update nötig ist
@@ -182,7 +179,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 self.cluster_name,
             )
 
-            changing_data = await update_operational_data(self.api, self.cluster_data)
+            changing_data = await update_operational_data(
+                self.api, self.cluster_data, self.admin_data
+            )
 
             LOGGER.debug(
                 "Successfully updated data for unit '%s' ",
@@ -190,7 +189,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             )
 
             # set update times
-            if changing_data.get(D_ACTIVE_ALARM_COUNT, 0) > 0:
+            if changing_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0) > 0:
                 changing_data[D_LAST_UPDATE_ALARM] = now
             else:
                 changing_data[D_LAST_UPDATE_DATA] = now
@@ -234,3 +233,21 @@ class DiveraCoordinator(DataUpdateCoordinator):
         # await self.initialize_data()
 
         # await self.async_request_refresh()
+
+    # @log_execution_time
+    # async def send_update_to_divera(self, entity_id, new_data, api_method: str):
+    #     """Sendet eine Änderung von HA an Divera."""
+
+    #     # Methode anhand des Strings aus self holen
+    #     method = getattr(self, api_method, None)
+
+    #     if method and callable(method):  # Prüfen, ob die Methode existiert
+    #         success = await method(entity_id, new_data)
+    #         if success:
+    #             self.cluster_data["entities"][entity_id] = (
+    #                 new_data  # Divera-Daten lokal anpassen
+    #             )
+    #     else:
+    #         raise ValueError(
+    #             f"API-Methode '{api_method}' existiert nicht oder ist nicht aufrufbar."
+    #         )

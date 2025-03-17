@@ -9,46 +9,21 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, D_STATUS_SORT, DOMAIN
-from .utils import DiveraPermissionDenied
+from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, DOMAIN
+from .utils import handle_entity, get_api_instance, get_coordinator_data
 
 LOGGER = logging.getLogger(__name__)
 
 
-def prep_api_instance(hass: HomeAssistant, cluster_id: str):
-    """Holt die API-Instanz für die gegebene cluster_id oder wirft eine Exception."""
-    try:
-        api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
-        return api_instance
-
-    except KeyError:
-        error_message = f"API-instance or API-key not found for cluster-ID {cluster_id}"
-        LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
-
-
-def get_coordinator_data(hass: HomeAssistant, cluster_id: str) -> dict[str, any]:
-    """Holt die Koordinatordaten für die gegebene cluster_id oder wirft eine Exception."""
-    coordinator_data = (
-        hass.data.get(DOMAIN, {}).get(str(cluster_id), "").get(D_COORDINATOR)
-    )
-
-    if not coordinator_data:
-        error_msg = f"DiveraCoordinator for cluster {cluster_id} not found."
-        LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
-
-    return coordinator_data
-
-
 async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
-    """Setzt den Fahrzeugstatus."""
-    cluster_id = call.data.get("cluster_id")
+    """POST set vehicle fms-status."""
     vehicle_id = call.data.get("vehicle_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, vehicle_id)
 
-    payload = {k: v for k, v in call.data.items() if v is not None}
+    payload = {
+        k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+    }
 
     try:
         success = await api_instance.post_vehicle_status(vehicle_id, payload)
@@ -61,18 +36,22 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    await handle_entity(hass, call, "post_vehicle_status")
+
 
 async def handle_post_alarm(hass: HomeAssistant, call: dict):
-    """Erstellt einen Alarm."""
+    """POST create an alarm."""
     cluster_id = call.data.get("cluster_id")
     group = call.data.get("group")
     user_cluster_relation = call.data.get("user_cluster_relation")
     notification_type = 4 if user_cluster_relation else 3 if group else 2
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
     payload = {
-        "Alarm": {k: v for k, v in call.data.items() if v is not None},
+        "Alarm": {
+            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        },
         "notification_type": notification_type,
     }
 
@@ -87,36 +66,48 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    # no handle_entity(), as data will update from Divera
+
 
 async def handle_put_alarm(hass: HomeAssistant, call: dict):
-    """Change an existing alarm."""
-    cluster_id = call.data.get("cluster_id")
+    """PUT change an existing alarm."""
     alarm_id = call.data.get("alarm_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, alarm_id)
 
-    payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
+    payload = {
+        "Alarm": {
+            key: value
+            for key, value in call.data.items()
+            if key != "cluster_id" and value is not None
+        }
+    }
 
     try:
         success = await api_instance.put_alarms(payload, alarm_id)
         if not success:
             raise HomeAssistantError(
-                f"Failed to change alarm {alarm_id}, check logs for details."
+                f"Failed to change alarm {alarm_id}, check logs for details"
             )
     except Exception as e:
         error_msg = f"Failed to change alarm {alarm_id}: {e}"
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    await handle_entity(hass, call, "put_alarm")
+
 
 async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
-    """Close an existing alarm."""
-    cluster_id = call.data.get("cluster_id")
+    """POST close an existing alarm."""
     alarm_id = call.data.get("alarm_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, alarm_id)
 
-    payload = {"Alarm": {k: v for k, v in call.data.items() if v is not None}}
+    payload = {
+        "Alarm": {
+            k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        }
+    }
 
     try:
         success = await api_instance.post_close_alarm(payload, alarm_id)
@@ -129,18 +120,19 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg)
 
+    await handle_entity(hass, call, "post_close_alarm")
+
 
 async def handle_post_message(hass: HomeAssistant, call: dict):
     """Post message for alarm messenger."""
-    cluster_id = call.data.get("cluster_id")
     message_channel_id = call.data.get("message_channel_id")
     alarm_id = call.data.get("alarm_id")
 
-    coordinator_data = get_coordinator_data(hass, cluster_id)
+    coordinator_data = get_coordinator_data(hass, alarm_id)
     message_channel_items = coordinator_data.get(D_MESSAGE_CHANNEL, {}).get("items", {})
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, alarm_id)
 
-    # If neither message_channel_id nor alarm_id is provided, abort early
+    # If neither message_channel_id nor alarm_id is provided, abort
     if not message_channel_id and not alarm_id:
         error_msg = "Either 'message_channel_id' or 'alarm_id' must be provided, but neither was given."
         LOGGER.error(error_msg)
@@ -189,12 +181,13 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
 
 async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
     """Set individual properties of a specific vehicle."""
-    cluster_id = call.data.get("cluster_id")
     vehicle_id = call.data.get("vehicle_id")
 
-    api_instance = prep_api_instance(hass, cluster_id)
+    api_instance = get_api_instance(hass, vehicle_id)
 
-    payload = {k: v for k, v in call.data.items() if v is not None}
+    payload = {
+        k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+    }
 
     try:
         success = await api_instance.post_using_vehicle_property(payload, vehicle_id)
@@ -208,6 +201,53 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
+    await handle_entity(hass, call, "post_using_vehicle_property")
+
+
+async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
+    """Add, remove, reset the crew of a specific vehicle."""
+    vehicle_id = call.data.get("vehicle_id")
+    mode = call.data.get("mode")
+
+    api_instance = get_api_instance(hass, vehicle_id)
+
+    if mode == "add" and not call.data.get("crew"):
+        error_msg = "No crew provided for mode 'add'."
+        LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from None
+
+    if mode == "remove" and not call.data.get("crew"):
+        error_msg = "No crew provided for mode 'remove'."
+        LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from None
+
+    match mode:
+        case "add":
+            payload = {"Crew": {"add": call.data.get("crew")}}
+
+        case "remove":
+            payload = {"Crew": {"remove": call.data.get("crew")}}
+
+        case "reset":
+            payload = {}
+
+        case _:
+            error_msg = f"Invalid mode '{mode}' for setting vehicle crew, must be 'add', 'remove' or 'reset'."
+            LOGGER.error(error_msg)
+            raise HomeAssistantError(error_msg) from None
+
+    try:
+        success = await api_instance.post_using_vehicle_crew(payload, vehicle_id, mode)
+        if not success:
+            error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
+            raise HomeAssistantError(error_msg) from None
+    except Exception as e:
+        error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}: {e}"
+        LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from None
+
+    await handle_entity(hass, call, "post_using_vehicle_crew")
+
 
 async def async_register_services(hass, domain):
     """Registriert alle Services für die Integration."""
@@ -215,7 +255,6 @@ async def async_register_services(hass, domain):
         "post_vehicle_status": (
             handle_post_vehicle_status,
             {
-                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("vehicle_id"): cv.positive_int,
                 vol.Optional("status"): cv.positive_int,
                 vol.Optional("status_id"): cv.positive_int,
@@ -227,68 +266,65 @@ async def async_register_services(hass, domain):
         "post_alarm": (
             handle_post_alarm,
             {
-                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
-                vol.Required("notification_type", default=2): cv.positive_int,
+                vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
-                vol.Optional("priority", default=False): cv.boolean,
+                vol.Optional("priority"): cv.boolean,
                 vol.Optional("text"): cv.string,
                 vol.Optional("address"): cv.string,
                 vol.Optional("lat"): cv.positive_float,
                 vol.Optional("lng"): cv.positive_float,
-                vol.Optional("response_time", default=3600): cv.positive_int,
-                vol.Optional("send_push", default=True): cv.boolean,
-                vol.Optional("send_sms", default=False): cv.boolean,
-                vol.Optional("send_call", default=False): cv.boolean,
-                vol.Optional("send_mail", default=False): cv.boolean,
-                vol.Optional("send_pager", default=False): cv.boolean,
-                vol.Optional("closed", default=False): cv.boolean,
-                vol.Optional("notification_filter_access", default=True): cv.boolean,
+                vol.Optional("response_time"): cv.positive_int,
+                vol.Optional("send_push"): cv.boolean,
+                vol.Optional("send_sms"): cv.boolean,
+                vol.Optional("send_call"): cv.boolean,
+                vol.Optional("send_mail"): cv.boolean,
+                vol.Optional("send_pager"): cv.boolean,
+                vol.Optional("closed"): cv.boolean,
+                vol.Optional("notification_filter_access"): cv.boolean,
                 vol.Optional("group"): cv.string,
                 vol.Optional("user_cluster_relation"): cv.string,
-                vol.Optional("notification_filter_vehicle", default=False): cv.boolean,
+                vol.Optional("notification_filter_vehicle"): cv.boolean,
                 vol.Optional("vehicle"): cv.string,
-                vol.Optional("notification_filter_status", default=False): cv.boolean,
+                vol.Optional("notification_filter_status"): cv.boolean,
                 vol.Optional("status"): cv.string,
             },
         ),
         "put_alarm": (
             handle_put_alarm,
             {
-                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("alarm_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
-                vol.Required("notification_type", default=2): cv.positive_int,
+                vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
                 vol.Optional("alarmcode_id"): cv.positive_int,
-                vol.Optional("priority", default=False): cv.boolean,
+                vol.Optional("priority"): cv.boolean,
                 vol.Optional("text"): cv.string,
                 vol.Optional("address"): cv.string,
                 vol.Optional("lat"): cv.positive_float,
                 vol.Optional("lng"): cv.positive_float,
                 vol.Optional("report"): cv.string,
-                vol.Optional("private_mode", default=False): cv.boolean,
-                vol.Optional("send_push", default=True): cv.boolean,
-                vol.Optional("send_sms", default=False): cv.boolean,
-                vol.Optional("send_call", default=False): cv.boolean,
-                vol.Optional("send_mail", default=False): cv.boolean,
-                vol.Optional("send_pager", default=False): cv.boolean,
-                vol.Optional("response_time", default=3600): cv.positive_int,
-                vol.Optional("closed", default=False): cv.boolean,
+                vol.Optional("private_mode"): cv.boolean,
+                vol.Optional("send_push"): cv.boolean,
+                vol.Optional("send_sms"): cv.boolean,
+                vol.Optional("send_call"): cv.boolean,
+                vol.Optional("send_mail"): cv.boolean,
+                vol.Optional("send_pager"): cv.boolean,
+                vol.Optional("response_time"): cv.positive_int,
+                vol.Optional("closed"): cv.boolean,
                 vol.Optional("ts_publish"): cv.positive_int,
-                vol.Optional("notification_filter_access", default=True): cv.boolean,
+                vol.Optional("notification_filter_access"): cv.boolean,
                 vol.Optional("group"): cv.string,
                 vol.Optional("user_cluster_relation"): cv.string,
-                vol.Optional("notification_filter_vehicle", default=False): cv.boolean,
+                vol.Optional("notification_filter_vehicle"): cv.boolean,
                 vol.Optional("vehicle"): cv.string,
-                vol.Optional("notification_filter_status", default=False): cv.boolean,
+                vol.Optional("notification_filter_status"): cv.boolean,
                 vol.Optional("status"): cv.string,
             },
         ),
         "post_close_alarm": (
             handle_post_close_alarm,
             {
-                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("alarm_id"): cv.positive_int,
                 vol.Optional("closed"): cv.boolean,
                 vol.Optional("report"): cv.string,
@@ -297,22 +333,26 @@ async def async_register_services(hass, domain):
         "post_message": (
             handle_post_message,
             {
-                vol.Required("cluster_id"): cv.positive_int,
-                vol.Optional("message_channel_id", default=None): vol.Any(
-                    None, cv.positive_int
-                ),
-                vol.Optional("alarm_id", default=None): vol.Any(None, cv.positive_int),
+                vol.Optional("message_channel_id"): vol.Any(None, cv.positive_int),
+                vol.Optional("alarm_id"): vol.Any(None, cv.positive_int),
                 vol.Optional("text"): cv.string,
             },
         ),
         "post_using_vehicle_property": (
             handle_post_using_vehicle_property,
             {
-                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("vehicle_id"): cv.positive_int,
                 vol.Extra: vol.Any(
                     vol.Coerce(str), vol.Coerce(int), vol.Coerce(float), None
                 ),
+            },
+        ),
+        "post_using_vehicle_crew": (
+            handle_post_using_vehicle_crew,
+            {
+                vol.Required("vehicle_id"): cv.positive_int,
+                vol.Required("mode"): cv.string,
+                vol.Optional("crew"): cv.ensure_list,
             },
         ),
     }
