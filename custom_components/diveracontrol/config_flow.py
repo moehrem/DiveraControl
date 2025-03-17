@@ -329,7 +329,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _process_clusters(self):
-        """Process hub creation or identify existing hubs."""
+        """Process device creation."""
 
         if self.clusters:
             for cluster_id, cluster_data in self.clusters.items():
@@ -348,8 +348,6 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 await self._async_show_usergroup_message(cluster_name, ucr_id)
 
-                return self.async_create_entry(
-                    title=cluster_name, data=new_hub, description="TEST TEST"
-                )
+                return self.async_create_entry(title=cluster_name, data=new_hub)
 
         return self.async_abort(reason="no_new_hubs_found")

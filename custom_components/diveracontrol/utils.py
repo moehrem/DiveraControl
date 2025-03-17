@@ -31,11 +31,11 @@ LOGGER = logging.getLogger(__name__)
 class BaseDiveraEntity:
     """Gemeinsame Basisklasse für Sensoren und Tracker."""
 
-    def __init__(self, coordinator, cluster_data, cluster_id: str) -> None:
+    def __init__(self, coordinator, cluster_id: str) -> None:
         """Initialisiert die gemeinsame Basisklasse."""
         self.coordinator = coordinator
         self.cluster_id = cluster_id
-        self.cluster_data = cluster_data
+        self.cluster_data = coordinator.cluster_data
 
     @property
     def device_info(self):

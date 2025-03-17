@@ -48,7 +48,7 @@ LOGGER = logging.getLogger(__name__)
 
 class DiveraCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api, cluster, cluster_id):
-        """Initialize the coordinator."""
+        """Initialize DiveraControl coordinator."""
         super().__init__(
             hass,
             LOGGER,
@@ -78,6 +78,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
     def init_cluster_data_structure(self):
         """Define main data structures for divera data and admin data."""
+        now = asyncio.get_running_loop().time()
+
         self.cluster_data = {
             D_UCR: {},
             D_UCR_DEFAULT: {},
@@ -98,8 +100,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
         }
         self.admin_data = {
             D_UCR_ID: self.ucr_id,
-            D_LAST_UPDATE_ALARM: "",
-            D_LAST_UPDATE_DATA: "",
+            D_LAST_UPDATE_ALARM: now,
+            D_LAST_UPDATE_DATA: now,
         }
 
     @log_execution_time

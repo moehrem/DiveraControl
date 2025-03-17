@@ -164,7 +164,8 @@ class DiveraAPI:
         LOGGER.debug("Fetching all data for cluster %s", self.cluster_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        return await self.api_request(url, method)
+        parameters = {"ucr": ucr_id}
+        return await self.api_request(url, method, parameters=parameters)
 
     async def post_vehicle_status(self, vehicle_id, payload) -> dict:
         """POST vehicle status and data to Divera API."""
@@ -355,6 +356,9 @@ class DiveraCredentials:
                 data_user = data_auth.get("data", {}).get("user", {})
                 api_key = data_user.get("access_token", "")
                 data_ucr = data_auth.get("data", {}).get("ucr", {})
+
+                # return multicluster_info if check if len(data_ucr) > 1
+                # no need to fire pull_all, if more than 1 ucr
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
