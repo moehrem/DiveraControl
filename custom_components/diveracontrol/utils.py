@@ -1,11 +1,10 @@
-"""Handles permission requests."""
+"""Contain different helper methods."""
 
 import logging
 import time
 import asyncio
 from functools import wraps
 
-import homeassistant.helpers.entity_registry as er
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
@@ -16,104 +15,22 @@ from .const import (
     MINOR_VERSION,
     PATCH_VERSION,
     D_ACCESS,
+    D_ALARM,
+    D_CLUSTER,
+    D_OPEN_ALARMS,
     D_COORDINATOR,
     D_CLUSTER_NAME,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
     D_USER,
     D_ACCESS,
+    D_VEHICLE,
     # D_HUB_ID,
     D_UCR,
     PERM_MANAGEMENT,
 )
 
-LOGGER = logging.getLogger(__name__)
-
-
-class BaseDiveraEntity:
-    """Gemeinsame Basisklasse für Sensoren und Tracker."""
-
-    def __init__(self, coordinator, cluster_id: str) -> None:
-        """Initialisiert die gemeinsame Basisklasse."""
-        self.coordinator = coordinator
-        self.cluster_id = cluster_id
-        self.cluster_data = coordinator.cluster_data
-
-    @property
-    def device_info(self):
-        """Gibt Geräteinformationen zurück."""
-        unit_name = self.coordinator.cluster_name
-        return {
-            "identifiers": {(DOMAIN, unit_name)},
-            "name": unit_name,
-            "manufacturer": MANUFACTURER,
-            "model": DOMAIN,
-            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-            "entry_type": "service",
-        }
-
-    @property
-    def should_poll(self) -> bool:
-        """Gibt an, dass die Entität nicht gepollt werden muss."""
-        return False
-
-    async def async_added_to_hass(self) -> None:
-        """Registriert die Entität im Koordinator."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
-
-    async def remove_from_hass(self) -> None:
-        """Entfernt die Entität vollständig aus Home Assistant."""
-        LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
-
-        # Entferne aus dem Entity-Registry
-        try:
-            registry = er.async_get(self.hass)
-            if registry.async_is_registered(self.entity_id):
-                registry.async_remove(self.entity_id)
-                LOGGER.debug("Removed entity from registry: %s", self.entity_id)
-            else:
-                LOGGER.debug("Entity not found in registry: %s", self.entity_id)
-        except Exception as e:
-            LOGGER.error(
-                "Failed to remove entity from registry: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        # Entferne aus der State-Machine
-        try:
-            self.hass.states.async_remove(self.entity_id)
-            LOGGER.debug("Removed entity from state machine: %s", self.entity_id)
-        except Exception as e:
-            LOGGER.error(
-                "Failed to remove entity from state machine: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        # Entferne aus internen Datenstrukturen
-        try:
-            entity_type = (
-                "sensors"
-                if self.__class__.__name__ == "BaseDiveraSensor"
-                else "trackers"
-            )
-
-            if DOMAIN in self.hass.data and self.cluster_id in self.hass.data[DOMAIN]:
-                entities = self.hass.data[DOMAIN][self.cluster_id].get(entity_type, {})
-                if self.entity_id in entities:
-                    del entities[self.entity_id]
-                    LOGGER.debug(
-                        "Removed entity from internal storage: %s", self.entity_id
-                    )
-        except Exception as e:
-            LOGGER.error(
-                "Failed to remove entity from internal storage: %s, Error: %s",
-                self.entity_id,
-                e,
-            )
-
-        LOGGER.info("Entity successfully removed: %s", self.entity_id)
+_LOGGER = logging.getLogger(__name__)
 
 
 def permission_check(hass: HomeAssistant, cluster_id, perm_key):
@@ -159,7 +76,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
             # raise DiveraPermissionDenied(
             #     f"Permission denied for {perm_key} in cluster {cluster_name}"
             # )
-            LOGGER.warning(
+            _LOGGER.warning(
                 "Permission denied for %s in cluster %s", perm_key, cluster_name
             )
 
@@ -190,7 +107,7 @@ def log_execution_time(func):
             result = await func(*args, **kwargs)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
             )
             return result
@@ -204,7 +121,7 @@ def log_execution_time(func):
             result = func(*args, **kwargs)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
             )
             return result
@@ -224,7 +141,7 @@ def get_cluster_id(hass: HomeAssistant, sensor_id: str):
                     return cluster_id
     except KeyError:
         error_message = f"Cluster-ID not found for Sensor-ID {sensor_id}"
-        LOGGER.error(error_message)
+        _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
 
@@ -246,7 +163,7 @@ def get_api_instance(hass: HomeAssistant, sensor_id: str):
 
     except KeyError:
         error_message = f"API-instance not found for Sensor-ID {sensor_id}"
-        LOGGER.error(error_message)
+        _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
 
@@ -267,7 +184,7 @@ def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
 
     except KeyError:
         error_message = f"Coordinator data not found for Sensor-ID {sensor_id}"
-        LOGGER.error(error_message)
+        _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
 
@@ -277,7 +194,7 @@ class DiveraAPIError(Exception):
     def __init__(self, error: str) -> None:
         """Initialisiert den Fehler."""
         super().__init__(error)
-        LOGGER.error("Authentifizierung bei Divera fehlgeschlagen: %s", str(error))
+        _LOGGER.error("Authentifizierung bei Divera fehlgeschlagen: %s", str(error))
 
 
 class DiveraPermissionDenied(Exception):
@@ -286,7 +203,7 @@ class DiveraPermissionDenied(Exception):
     def __init__(self, error: str) -> None:
         """Initialisiert den Fehler."""
         super().__init__(error)
-        LOGGER.warning("Zugriff auf Divera-API verweigert: %s", str(error))
+        _LOGGER.warning("Zugriff auf Divera-API verweigert: %s", str(error))
 
 
 async def handle_entity(hass: HomeAssistant, call: dict, service: str):
@@ -296,45 +213,86 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
         case "put_alarm" | "post_close_alarm":
             alarm_id = call.data.get("alarm_id")
             cluster_id = get_cluster_id(hass, alarm_id)
-            sensor_entity_id = f"sensor.{cluster_id}_alarm_{alarm_id}"
-            tracker_entity_id = f"sensor.{cluster_id}_alarmtracker_{alarm_id}"
+            coordinator = hass.data[DOMAIN].get(cluster_id, {}).get(D_COORDINATOR, None)
 
-            for entity in hass.data[DOMAIN][str(cluster_id)]["sensors"].values():
-                if entity.entity_id == sensor_entity_id:
-                    # for key, value in call.data.items():
-                    #     await entity.async_update_state(key, value)
-                    await entity.async_update_state(call.data)
-                    break
+            if not coordinator:
+                _LOGGER.error("Can't find coordinator for unit %s", cluster_id)
+                return
 
-            for entity in hass.data[DOMAIN][str(cluster_id)]["device_tracker"].values():
-                if entity.entity_id == tracker_entity_id:
-                    # for key, value in call.data.items():
-                    #     await entity.async_update_state(key, value)
-                    await entity.async_update_state(call.data)
-                    break
+            alarm_data = (
+                coordinator.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(str(alarm_id), {})
+            )
+
+            for key in call.data:
+                if key in alarm_data:
+                    alarm_data[key] = call.data[key]
+
+            # updating coordinator data
+            coordinator.async_set_updated_data(coordinator.cluster_data)
 
         case "post_vehicle_status" | "post_using_vehicle_property":
             vehicle_id = call.data.get("vehicle_id")
             cluster_id = get_cluster_id(hass, vehicle_id)
-            sensor_entity_id = f"sensor.{cluster_id}_vehicle_{vehicle_id}"
-            tracker_entity_id = (
-                f"device_tracker.{cluster_id}_vehicletracker_{vehicle_id}"
+            coordinator = hass.data[DOMAIN].get(cluster_id, {}).get(D_COORDINATOR, None)
+
+            if not coordinator:
+                _LOGGER.error("Can't find coordinator for unit %s", cluster_id)
+                return
+
+            vehicle_data = (
+                coordinator.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(str(vehicle_id), {})
             )
 
-            for entity in hass.data[DOMAIN][str(cluster_id)]["sensors"].values():
-                if entity.entity_id == sensor_entity_id:
-                    # for key, value in call.data.items():
-                    #     await entity.async_update_state(key, value)
-                    await entity.async_update_state(call.data)
-                    break
+            for key in call.data:
+                if key in ["status", "status_id"]:
+                    vehicle_data["fmsstatus_id"] = call.data[key]
+                    continue
+                if key in vehicle_data:
+                    vehicle_data[key] = call.data[key]
 
-            for entity in hass.data[DOMAIN][str(cluster_id)]["device_tracker"].values():
-                if entity.entity_id == tracker_entity_id:
-                    # for key, value in call.data.items():
-                    #     await entity.async_update_state(key, value)
-                    await entity.async_update_state(call.data)
-                    break
+            # updating coordinator data
+            coordinator.async_set_updated_data(coordinator.cluster_data)
 
         case _:  # default
-            LOGGER.error("Service not found: %s", service)
+            _LOGGER.error("Service not found: %s", service)
             raise HomeAssistantError(f"Service not found: {service}")
+
+
+def check_timestamp(old_data, new_data):
+    """Check if new data has a more recent timestamp than old data."""
+    try:
+        old_ts = old_data.get("ts", 0)
+        if old_ts == 0:
+            return True
+
+        new_ts = new_data.get("ts", 0)
+
+    except AttributeError as e:
+        _LOGGER.debug("Timestamp check failed due to missing attributes: %s", e)
+        return True
+
+    else:
+        return new_ts > old_ts
+
+
+def set_update_interval(old_interval, open_alarms, admin_data, cluster_name):
+    """Set update interval based on open alarms."""
+    # Wähle das richtige Intervall basierend auf der Alarmanzahl
+    interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
+    interval_alarm = admin_data[D_UPDATE_INTERVAL_ALARM]
+
+    new_interval = interval_alarm if open_alarms > 0 else interval_data
+
+    if old_interval != new_interval:
+        _LOGGER.debug(
+            "Update interval changed to %s seconds for unit '%s'",
+            new_interval,
+            cluster_name,
+        )
+        return new_interval
+
+    return old_interval

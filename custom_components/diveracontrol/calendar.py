@@ -1,8 +1,7 @@
 from datetime import datetime, timezone
 import asyncio
 import logging
-import re
-from typing import Set, Any
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
