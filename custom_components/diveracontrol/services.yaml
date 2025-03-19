@@ -4,7 +4,7 @@ post_vehicle_status:
   fields:
     vehicle_id:
       name: Fahrzeug-ID
-      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
+      description: (Erforderlich) Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
       example: 123456
     status:
@@ -40,17 +40,17 @@ post_alarm:
   fields:
     cluster_id:
       name: Cluster-ID
-      description: Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      description: (Erforderlich) Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
       required: true
       example: 794613
     title:
       name: Stichwort
-      description: Alarmstichwort
+      description: (Erforderlich) Alarmstichwort
       required: true
       example: FEU
     notification_type:
       name: Empfänger
-      description: Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
+      description: (Erforderlich) Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
       required: true
       example: 2
     foreign_id:
@@ -161,17 +161,17 @@ put_alarm:
   fields:
     alarm_id:
       name: Alarm-ID
-      description: Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
+      description: (Erforderlich) Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
       required: true
       example: 54321
     title:
       name: Stichwort
-      description: Alarmstichwort
+      description: (Erforderlich) Alarmstichwort
       required: true
       example: FEU G
     notification_type:
       name: Empfänger
-      description: Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
+      description: (Erforderlich) Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
       required: true
       example: 2
     foreign_id:
@@ -302,17 +302,17 @@ post_close_alarm:
   fields:
     alarm_id:
       name: Alarm-ID
-      description: Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
+      description: (Erforderlich) Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
       required: true
       example: 54321
     closed:
       name: Geschlossen
-      description: Status des Alarms; offen=false, geschlossen=true
+      description: (Optional) Status des Alarms; offen=false, geschlossen=true
       required: true
       example: true
     report:
       name: Einsatzbericht
-      description: Einsatzbericht
+      description: (Optional) Einsatzbericht
       required: false
       example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
 
@@ -323,17 +323,17 @@ post_message:
   fields:
     message_channel_id:
       name: Nachrichtenkanal-ID
-      description: Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
+      description: (Erforderlich) Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
       required: false
       example: 54321
     alarm_id:
       name: Alarm-ID
-      description: Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
+      description: (Erforderlich) Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
       required: false
       example: 54321
     text:
       name: Nachricht
-      description: Text der Nachricht.
+      description: (Optional) Text der Nachricht.
       required: false
       example: 'Dies ist eine Testnachricht.'
 
@@ -344,19 +344,19 @@ post_using_vehicle_property:
   fields:
     vehicle_id:
       name: Fahrzeug-ID
-      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
+      description: (Erforderlich) Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
       example: 654321
     key:
       name: Eigenschaftsschlüssel
-      description: Schlüssel und Wert der Eigenschaft, deren Wert gesetzt werden soll. Eigenschaft muss in Divera existieren!
+      description: (Optional) Schlüssel und Wert der Eigenschaft, deren Wert gesetzt werden soll. Eigenschaft muss in Divera existieren!
       required: false
       example: 654
 
 
 post_using_vehicle_crew:
   name: Fahrzeugbesatzung ändern
-  description: Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
+  description: (Erforderlich) Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
   fields:
     vehicle_id:
       name: Fahrzeug-ID
@@ -365,12 +365,12 @@ post_using_vehicle_crew:
       example: 654321
     mode:
       name: Modus
-      description: Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
+      description: (Erforderlich) Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
       required: true
       example: add
     crew:
       name: Fahrzeugbesatzung
-      description: Liste der Benutzer-IDs, die hinzugefügt oder entfernt werden sollen. Muss eine Liste von Benutzer-IDs sein und darf nur für Modus 'Zurücksetzen'(reset) leer sein.
+      description: (Optional) Liste der Benutzer-IDs, die hinzugefügt oder entfernt werden sollen. Muss eine Liste von Benutzer-IDs sein und darf nur für Modus 'Zurücksetzen'(reset) leer sein.
       required: false
       example: 123, 456, 789
 

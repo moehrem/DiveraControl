@@ -333,8 +333,8 @@ async def async_register_services(hass, domain):
         "post_message": (
             handle_post_message,
             {
-                vol.Optional("message_channel_id"): vol.Any(None, cv.positive_int),
-                vol.Optional("alarm_id"): vol.Any(None, cv.positive_int),
+                vol.Required("message_channel_id"): vol.Any(None, cv.positive_int),
+                vol.Required("alarm_id"): vol.Any(None, cv.positive_int),
                 vol.Optional("text"): cv.string,
             },
         ),

@@ -17,6 +17,8 @@ from .api import DiveraAPI
 
 from aiohttp import ClientError
 
+from .utils import check_timestamp
+
 from .const import (
     # data
     D_DATA,
@@ -38,7 +40,7 @@ from .const import (
     D_LOCALMONITOR,
     D_STATUSPLAN,
     D_VEHICLE,
-    D_UCR_ID,
+    D_CLUSTER_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -71,25 +73,9 @@ async def update_operational_data(
 
     """
 
-    def check_timestamp(old_data, new_data):
-        """Check if new data has a more recent timestamp than old data."""
-        try:
-            old_ts = old_data.get("ts", 0)
-            if old_ts == 0:
-                return True
-
-            new_ts = new_data.get("ts", 0)
-
-        except AttributeError as e:
-            _LOGGER.debug("Timestamp check failed due to missing attributes: %s", e)
-            return True
-
-        else:
-            return new_ts > old_ts
-
     # request divera data
     try:
-        ucr_id = admin_data[D_UCR_ID]
+        ucr_id = admin_data[D_CLUSTER_ID]
         raw_ucr_data = await api.get_ucr_data(ucr_id)
 
         if not raw_ucr_data.get("success", False):
@@ -113,7 +99,7 @@ async def update_operational_data(
             new_data = raw_ucr_data.get(D_DATA, {}).get(key, {})
             if check_timestamp(changing_data.get(key), new_data):
                 changing_data[key] = new_data
-                _LOGGER.debug("%s data updated: %s", key, new_data)
+                _LOGGER.debug("Sucessfully updated %s with new data: %s", key, new_data)
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error updating Divera data for key '%s', error: '%s'", key, e)
     except Exception:
