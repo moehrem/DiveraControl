@@ -9,12 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
-    DOMAIN,
-    D_LAST_UPDATE_ALARM,
-    D_LAST_UPDATE_DATA,
-    # D_API_KEY,
     D_CLUSTER_NAME,
-    # D_HUB_ID,
     D_UCR,
     D_CLUSTER_ID,
     D_UCR_DEFAULT,
@@ -32,15 +27,11 @@ from .const import (
     D_MESSAGE,
     D_LOCALMONITOR,
     D_STATUSPLAN,
-    # D_ACCESS,
-    # D_STATUS_CONF,
-    # D_STATUS_SORT,
-    D_VEHICLE,
     D_UPDATE_INTERVAL_DATA,
     D_UPDATE_INTERVAL_ALARM,
     D_OPEN_ALARMS,
 )
-from .data_updater import update_operational_data
+from .data_updater import update_data
 from .utils import log_execution_time, set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
@@ -57,61 +48,78 @@ class DiveraCoordinator(DataUpdateCoordinator):
             name=f"DiveraCoordinator_{cluster_id}",
         )
         self.api = api
-        self.cluster_id = cluster_id
-        self.cluster_name = config_entry.get(D_CLUSTER_NAME, "")
+        # self.cluster_id = cluster_id
+        # self.cluster_name = config_entry.get(D_CLUSTER_NAME, "")
         self.cluster_data = {}
-        self.admin_data = {}
+        self.admin_data = {
+            D_CLUSTER_NAME: config_entry.get(D_CLUSTER_NAME, "Unknown"),
+            D_CLUSTER_ID: cluster_id,
+            D_UPDATE_INTERVAL_ALARM: timedelta(
+                seconds=config_entry[D_UPDATE_INTERVAL_ALARM]
+            ),
+            D_UPDATE_INTERVAL_DATA: timedelta(
+                seconds=config_entry[D_UPDATE_INTERVAL_DATA]
+            ),
+        }
 
-        self._interval_data = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_DATA])
-        self._interval_alarm = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_ALARM])
+        # self._interval_data = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_DATA])
+        # self._interval_alarm = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_ALARM])
 
         self._listeners = {}
 
-    def init_cluster_data_structure(self):
+    def init_cluster_data_structure(self) -> None:
         """Define main data structures for divera data and admin data."""
-        self.cluster_data = {
-            D_UCR: {},
-            D_UCR_DEFAULT: {},
-            D_UCR_ACTIVE: {},
-            D_TS: {},
-            D_USER: {},
-            D_STATUS: {},
-            D_CLUSTER: {},
-            D_MONITOR: {},
-            D_ALARM: {},
-            D_NEWS: {},
-            D_EVENTS: {},
-            D_DM: {},
-            D_MESSAGE_CHANNEL: {},
-            D_MESSAGE: {},
-            D_LOCALMONITOR: {},
-            D_STATUSPLAN: {},
-        }
-        self.admin_data = {
-            D_CLUSTER_ID: self.cluster_id,
-            D_UPDATE_INTERVAL_ALARM: self._interval_alarm,
-            D_UPDATE_INTERVAL_DATA: self._interval_data,
-        }
+        if not self.cluster_data:
+            self.cluster_data = {
+                D_UCR: {},
+                D_UCR_DEFAULT: {},
+                D_UCR_ACTIVE: {},
+                D_TS: {},
+                D_USER: {},
+                D_STATUS: {},
+                D_CLUSTER: {},
+                D_MONITOR: {},
+                D_ALARM: {},
+                D_NEWS: {},
+                D_EVENTS: {},
+                D_DM: {},
+                D_MESSAGE_CHANNEL: {},
+                D_MESSAGE: {},
+                D_LOCALMONITOR: {},
+                D_STATUSPLAN: {},
+            }
+
+        if not self.admin_data:
+            self.admin_data = {
+                D_CLUSTER_NAME: "Unknown",
+                D_CLUSTER_ID: "Unknown",
+                D_UPDATE_INTERVAL_ALARM: 0,
+                D_UPDATE_INTERVAL_DATA: 0,
+            }
 
     @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from Divera API and update cache on a regular basis."""
+        """Fetch data from Divera API and update cache on a regular basis.
+
+        Returns:
+            self.cluster_data (dict): all new data, freshly requested from Divera.
+
+        """
         if not self.cluster_data or not self.admin_data:
             self.init_cluster_data_structure()
 
         try:
-            await update_operational_data(self.api, self.cluster_data, self.admin_data)
+            await update_data(self.api, self.cluster_data, self.admin_data)
 
             self.update_interval = set_update_interval(
                 self.update_interval,
                 self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0),
                 self.admin_data,
-                self.cluster_name,
             )
 
             _LOGGER.debug(
                 "Successfully updated data for unit '%s' ",
-                self.cluster_name,
+                self.admin_data[D_CLUSTER_NAME],
             )
 
         except Exception as err:
@@ -141,4 +149,6 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
             self._listeners.pop(listener, None)
 
-        _LOGGER.debug("Removed update listeners for HUB: %s", self.cluster_id)
+        _LOGGER.debug(
+            "Removed update listeners for HUB: %s", self.admin_data[D_CLUSTER_ID]
+        )

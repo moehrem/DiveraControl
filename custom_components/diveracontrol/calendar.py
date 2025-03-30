@@ -8,7 +8,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 
 from homeassistant.util.dt import parse_datetime
 
-from .const import DOMAIN, D_CLUSTER_ID, D_COORDINATOR, D_EVENTS
+from .const import DOMAIN, D_CLUSTER_ID, D_COORDINATOR, D_EVENTS, D_CLUSTER_NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class DiveraCalendar(CalendarEntity):
         """Initialize the calendar entity."""
         self.coordinator = coordinator
         self.cluster_id = cluster_id
-        self._name = coordinator.cluster_name
+        self._name = coordinator.admin_data.get(D_CLUSTER_NAME)
         self._event_list = []
         self.entity_id = f"calendar.{self.cluster_id}_calendar"
         self.unique_id = f"{self.cluster_id}_calendar"

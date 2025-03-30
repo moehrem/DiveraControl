@@ -46,23 +46,18 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def update_operational_data(
-    api: DiveraAPI, changing_data: dict[str, Any], admin_data: dict[str, Any]
-) -> dict[str, Any]:
+async def update_data(
+    api: DiveraAPI, cluster_data: dict[str, Any], admin_data: dict[str, Any]
+) -> None:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates
-    the given data dictionary accordingly. The data includes alarm details,
-    vehicle positions and statuses, availability status.
-
-    Steps:
-    1. Retrieve alarm data and filter by cluster ID.
-    2. Update alarm details and count of active alarms.
-    3. Fetch and process vehicle status data.
+    the given data dictionary accordingly.
 
     Args:
         api (DiveraAPI): The API instance used to communicate with Divera.
-        data (dict): A dictionary to store and update alarm and vehicle data.
+        cluster_data (dict): A dictionary to store and update Divera operational data.
+        admin_data (dict): A dictionary to store and update Divera admin data.
 
     Exceptions:
         Logs errors for network issues, invalid data, or missing keys in API responses.
@@ -83,11 +78,11 @@ async def update_operational_data(
                 "Unexpected data format or API request failed: %s",
                 raw_ucr_data,
             )
-            return changing_data
+            return cluster_data
 
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
-        return changing_data
+        return cluster_data
 
     # set local data
     cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
@@ -95,10 +90,10 @@ async def update_operational_data(
 
     # update data if new data available
     try:
-        for key in changing_data:
+        for key in cluster_data:
             new_data = raw_ucr_data.get(D_DATA, {}).get(key, {})
-            if check_timestamp(changing_data.get(key), new_data):
-                changing_data[key] = new_data
+            if check_timestamp(cluster_data.get(key), new_data):
+                cluster_data[key] = new_data
                 _LOGGER.debug("Sucessfully updated %s with new data: %s", key, new_data)
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error updating Divera data for key '%s', error: '%s'", key, e)
@@ -114,10 +109,10 @@ async def update_operational_data(
                 vehicle_property = raw_vehicle_property.get(D_DATA, {})
                 if isinstance(vehicle_property, dict):
                     if (
-                        D_CLUSTER in changing_data
-                        and D_VEHICLE in changing_data[D_CLUSTER]
+                        D_CLUSTER in cluster_data
+                        and D_VEHICLE in cluster_data[D_CLUSTER]
                     ):
-                        changing_data[D_CLUSTER][D_VEHICLE].setdefault(key, {}).update(
+                        cluster_data[D_CLUSTER][D_VEHICLE].setdefault(key, {}).update(
                             vehicle_property
                         )
 
@@ -148,7 +143,7 @@ async def update_operational_data(
                 for alarm_details in alarm.get("items", {}).values()
                 if not alarm_details.get("closed", True)
             )
-            changing_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+            cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
         else:
             open_alarms = 0
 
@@ -159,4 +154,4 @@ async def update_operational_data(
     except Exception:
         _LOGGER.exception("Unexpected error while processing alarms")
 
-    return changing_data
+    # return cluster_data

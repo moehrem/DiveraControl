@@ -22,6 +22,7 @@ from .const import (
     D_DATA,
     D_CLUSTER_ID,
     D_UCR,
+    D_CLUSTER_NAME,
     D_CLUSTER,
     D_VEHICLE,
     D_UCR_ID,
@@ -50,9 +51,9 @@ class BaseDiveraEntity(CoordinatorEntity):
         """Initialisiert die gemeinsame Basisklasse."""
         super().__init__(coordinator)
         self.coordinator = coordinator
-        self.cluster_id = coordinator.cluster_id
         self.cluster_data = coordinator.cluster_data
-        self.cluster_name = coordinator.cluster_name
+        self.cluster_id = coordinator.admin_data[D_CLUSTER_ID]
+        self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
 
     @property
     def device_info(self):

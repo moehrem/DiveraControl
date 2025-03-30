@@ -53,7 +53,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
     )
 
     if coordinator_data is not None and perm_key is not None:
-        cluster_name = coordinator_data.cluster_name
+        cluster_name = coordinator_data.admin_data[D_CLUSTER_NAME]
         management = (
             coordinator_data.cluster_data.get(D_USER, {})
             .get(D_ACCESS, {})
@@ -85,10 +85,9 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
 
 def get_device_info(cluster_name):
     """Gibt Geräteinformationen für den Tracker zurück."""
-    unit_name = cluster_name
     return {
-        "identifiers": {(DOMAIN, unit_name)},
-        "name": unit_name,
+        "identifiers": {(DOMAIN, cluster_name)},
+        "name": cluster_name,
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
@@ -188,24 +187,6 @@ def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
         raise HomeAssistantError(error_message) from None
 
 
-class DiveraAPIError(Exception):
-    """Fehler für Authentifizierungsprobleme bei Divera."""
-
-    def __init__(self, error: str) -> None:
-        """Initialisiert den Fehler."""
-        super().__init__(error)
-        _LOGGER.error("Authentifizierung bei Divera fehlgeschlagen: %s", str(error))
-
-
-class DiveraPermissionDenied(Exception):
-    """Fehler für Authentifizierungsprobleme bei Divera."""
-
-    def __init__(self, error: str) -> None:
-        """Initialisiert den Fehler."""
-        super().__init__(error)
-        _LOGGER.warning("Zugriff auf Divera-API verweigert: %s", str(error))
-
-
 async def handle_entity(hass: HomeAssistant, call: dict, service: str):
     """Update entity data based on given method."""
 
@@ -279,11 +260,11 @@ def check_timestamp(old_data, new_data):
         return new_ts > old_ts
 
 
-def set_update_interval(old_interval, open_alarms, admin_data, cluster_name):
+def set_update_interval(old_interval, open_alarms, admin_data):
     """Set update interval based on open alarms."""
-    # Wähle das richtige Intervall basierend auf der Alarmanzahl
     interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
     interval_alarm = admin_data[D_UPDATE_INTERVAL_ALARM]
+    cluster_name = admin_data[D_CLUSTER_NAME]
 
     new_interval = interval_alarm if open_alarms > 0 else interval_data
 
