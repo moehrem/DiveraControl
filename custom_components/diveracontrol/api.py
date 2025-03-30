@@ -19,8 +19,8 @@ import asyncio
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .divera_error_handling import DiveraAPIError
 from .utils import (
-    DiveraAPIError,
     log_execution_time,
     permission_check,
 )

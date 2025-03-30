@@ -266,6 +266,7 @@ async def async_register_services(hass, domain):
         "post_alarm": (
             handle_post_alarm,
             {
+                vol.Required("cluster_id"): cv.string,
                 vol.Required("title"): cv.string,
                 vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
