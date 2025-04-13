@@ -31,7 +31,7 @@ from .const import (
     D_OPEN_ALARMS,
     D_COORDINATOR,
     D_DATA,
-    D_CLUSTER_ID,
+    D_UCR_ID,
     D_UCR,
     D_CLUSTER,
     D_VEHICLE,
@@ -39,17 +39,8 @@ from .const import (
     D_USER,
     D_STATUS,
     D_MONITOR,
-    # icons
-    I_CLOSED_ALARM,
-    I_COUNTER_ACTIVE_ALARMS,
-    I_FIRESTATION,
-    I_OPEN_ALARM,
-    I_OPEN_ALARM_NOPRIO,
-    I_AVAILABILITY,
-    I_VEHICLE,
 )
 from .divera_entity_handling import (
-    BaseDiveraSensor,
     DiveraAlarmSensor,
     DiveraVehicleSensor,
     DiveraVehicleSensor,
@@ -66,9 +57,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Divera sensors."""
 
-    cluster_id = config_entry.data[D_CLUSTER_ID]
-    coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
-    current_sensors = hass.data[DOMAIN][cluster_id].setdefault("sensors", {})
+    ucr_id = config_entry.data[D_UCR_ID]
+    coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
+    current_sensors = hass.data[DOMAIN][ucr_id].setdefault("sensors", {})
 
     async def async_add_sensor():
         """Fügt neue Sensoren hinzu."""

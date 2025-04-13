@@ -3,42 +3,27 @@
 import logging
 from typing import Any
 
-from homeassistant.helpers.entity import Entity
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    # general
-    DOMAIN,
-    MANUFACTURER,
-    VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    # data
     D_ALARM,
-    D_OPEN_ALARMS,
-    D_COORDINATOR,
-    D_DATA,
-    D_CLUSTER_ID,
-    D_UCR,
-    D_CLUSTER_NAME,
     D_CLUSTER,
-    D_VEHICLE,
     D_UCR_ID,
-    D_USER,
-    D_STATUS,
+    D_CLUSTER_NAME,
     D_MONITOR,
-    # icons
+    D_OPEN_ALARMS,
+    D_STATUS,
+    D_VEHICLE,
+    I_AVAILABILITY,
     I_CLOSED_ALARM,
     I_COUNTER_ACTIVE_ALARMS,
     I_FIRESTATION,
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
-    I_AVAILABILITY,
     I_VEHICLE,
 )
-
 from .utils import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,7 +37,7 @@ class BaseDiveraEntity(CoordinatorEntity):
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.cluster_data = coordinator.cluster_data
-        self.cluster_id = coordinator.admin_data[D_CLUSTER_ID]
+        self.ucr_id = coordinator.admin_data[D_UCR_ID]
         self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
 
     @property
@@ -72,7 +57,7 @@ class BaseDiveraEntity(CoordinatorEntity):
         )
 
     async def remove_from_hass(self) -> None:
-        """Entfernt die Entität vollständig aus Home Assistant."""
+        """Fully remove entity from HomeAssistant."""
         _LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
 
         # Entferne aus dem Entity-Registry
@@ -105,7 +90,7 @@ class BaseDiveraEntity(CoordinatorEntity):
 
 
 class BaseDiveraSensor(BaseDiveraEntity):
-    """Basisklasse für Divera-Sensoren."""
+    """Base class for Divera sensors."""
 
     def __init__(self, coordinator) -> None:
         """Initialisiert einen Sensor."""
@@ -124,12 +109,12 @@ class DiveraAlarmSensor(BaseDiveraSensor):
         """Init class DiveraAlarmSensor."""
         super().__init__(coordinator)
         self.alarm_id = alarm_id
-        self.entity_id = f"sensor.{self.cluster_id}_alarm_{self.alarm_id}"
+        self.entity_id = f"sensor.{self.ucr_id}_alarm_{self.alarm_id}"
 
     @property
     def unique_id(self) -> str:
         """Unique ID of sensor."""
-        return f"{self.cluster_id}_alarm_{self.alarm_id}"
+        return f"{self.ucr_id}_alarm_{self.alarm_id}"
 
     @property
     def name(self) -> str:
@@ -183,12 +168,12 @@ class DiveraVehicleSensor(BaseDiveraSensor):
         """Init class DiveraVehicleSensor."""
         super().__init__(coordinator)
         self.vehicle_id = vehicle_id
-        self.entity_id = f"sensor.{f'{self.cluster_id}_vehicle_{self.vehicle_id}'}"
+        self.entity_id = f"sensor.{f'{self.ucr_id}_vehicle_{self.vehicle_id}'}"
 
     @property
     def entity_id(self) -> str:
         """Entity-ID of sensor."""
-        return f"sensor.{f'{self.cluster_id}_vehicle_{self.vehicle_id}'}"
+        return f"sensor.{f'{self.ucr_id}_vehicle_{self.vehicle_id}'}"
 
     @entity_id.setter
     def entity_id(self, value: str) -> None:
@@ -198,7 +183,7 @@ class DiveraVehicleSensor(BaseDiveraSensor):
     @property
     def unique_id(self) -> str:
         """Unique if if sensor."""
-        return f"{self.cluster_id}_vehicle_{self.vehicle_id}"
+        return f"{self.ucr_id}_vehicle_{self.vehicle_id}"
 
     @property
     def name(self) -> str:
@@ -251,12 +236,12 @@ class DiveraUnitSensor(BaseDiveraSensor):
     def __init__(self, coordinator) -> None:
         """Init class DiveraUnitSensor."""
         super().__init__(coordinator)
-        self.entity_id = f"sensor.{self.cluster_id}_cluster_address"
+        self.entity_id = f"sensor.{self.ucr_id}_cluster_address"
 
     @property
     def unique_id(self) -> str:
         """Unique-ID of sensor."""
-        return f"{self.cluster_id}_cluster_address"
+        return f"{self.ucr_id}_cluster_address"
 
     @property
     def name(self) -> str:
@@ -266,7 +251,7 @@ class DiveraUnitSensor(BaseDiveraSensor):
     @property
     def state(self) -> str:
         """State of sensor."""
-        return self.cluster_id
+        return self.ucr_id
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -278,7 +263,7 @@ class DiveraUnitSensor(BaseDiveraSensor):
             "address", {"error": "no address data"}
         )
         return {
-            "cluster_id": self.cluster_id,
+            "ucr_id": self.ucr_id,
             "shortname": cluster_shortname,
             **cluster_address,
         }
@@ -295,12 +280,12 @@ class DiveraOpenAlarmsSensor(BaseDiveraSensor):
     def __init__(self, coordinator) -> None:
         """Init class DiveraOpenAlarmsSensor."""
         super().__init__(coordinator)
-        self.entity_id = f"sensor.{self.cluster_id}_open_alarms"
+        self.entity_id = f"sensor.{self.ucr_id}_open_alarms"
 
     @property
     def unique_id(self) -> str:
         """Unique-ID of sensor."""
-        return f"{self.cluster_id}_open_alarms"
+        return f"{self.ucr_id}_open_alarms"
 
     @property
     def name(self) -> str:
@@ -325,12 +310,12 @@ class DiveraAvailabilitySensor(BaseDiveraSensor):
         """Init class DiveraAvailabilitySensor."""
         super().__init__(coordinator)
         self.status_id = status_id
-        self.entity_id = f"sensor.{self.cluster_id}_status_{self.status_id}"
+        self.entity_id = f"sensor.{self.ucr_id}_status_{self.status_id}"
 
     @property
     def unique_id(self) -> str:
         """Unique-ID of sensor."""
-        return f"sensor.{self.cluster_id}_status_{self.status_id}"
+        return f"sensor.{self.ucr_id}_status_{self.status_id}"
 
     @property
     def name(self) -> str:
@@ -398,14 +383,12 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         """Initialize an alarm tracker."""
         super().__init__(coordinator)
         self.alarm_id = alarm_id
-        self.entity_id = (
-            f"device_tracker.{self.cluster_id}_alarmtracker_{self.alarm_id}"
-        )
+        self.entity_id = f"device_tracker.{self.ucr_id}_alarmtracker_{self.alarm_id}"
 
     @property
     def unique_id(self):
         """Return a unique ID for this tracker."""
-        return f"{self.cluster_id}_alarmtracker_{self.alarm_id}"
+        return f"{self.ucr_id}_alarmtracker_{self.alarm_id}"
 
     @property
     def name(self):
@@ -462,13 +445,13 @@ class DiveraVehicleTracker(BaseDiveraTracker):
         super().__init__(coordinator)
         self.vehicle_id = vehicle_id
         self.entity_id = (
-            f"device_tracker.{self.cluster_id}_vehicletracker_{self.vehicle_id}"
+            f"device_tracker.{self.ucr_id}_vehicletracker_{self.vehicle_id}"
         )
 
     @property
     def unique_id(self):
         """Return a unique ID for this tracker."""
-        return f"{self.cluster_id}_vehicletracker_{self.vehicle_id}"
+        return f"{self.ucr_id}_vehicletracker_{self.vehicle_id}"
 
     @property
     def name(self):
@@ -507,31 +490,6 @@ class DiveraVehicleTracker(BaseDiveraTracker):
             .get(self.vehicle_id, {})
             .get("lng", 0)
         )
-
-    # @property
-    # def extra_state_attributes(self):
-    #     """Return additional attributes, including icon color."""
-    #     vehicle_data = self.cluster_data.get(D_VEHICLE, {}).get(self._vehicle_id, {})
-    #     status = str(
-    #         vehicle_data.get("fmsstatus_id", "unknown")
-    #     )  # Sicherstellen, dass es ein String ist
-
-    #     color_map = {
-    #         "1": "#55B300",  # Grün
-    #         "2": "#198215",  # Dunkelgrün
-    #         "3": "#FF460C",  # Orange-Rot
-    #         "4": "#D60000",  # Rot
-    #         "5": "#EFB200",  # Gelb
-    #         "6": "#3E3E3E",  # Grau
-    #         "7": "#0087E6",  # Blau
-    #         "8": "#0038A9",  # Dunkelblau
-    #         "9": "#001A7A",  # Navy
-    #         "0": "#E400FF",  # Lila
-    #     }
-
-    #     return {
-    #         "icon_color": color_map.get(status, "#808080"),  # Standard: Grau
-    #     }
 
     @property
     def icon(self):

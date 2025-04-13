@@ -7,7 +7,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .api import DiveraAPI
-from .const import D_API_KEY, D_CLUSTER_ID, D_CLUSTER_NAME, D_COORDINATOR, DOMAIN
+from .const import D_API_KEY, D_CLUSTER_NAME, D_COORDINATOR, DOMAIN, D_UCR_ID
 from .coordinator import DiveraCoordinator
 from .service import async_register_services
 
@@ -27,17 +27,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     """
     cluster_config_data = config_entry.data
-    cluster_id = cluster_config_data.get(D_CLUSTER_ID)
+    ucr_id = cluster_config_data.get(D_UCR_ID)
     cluster_name = cluster_config_data.get(D_CLUSTER_NAME)
     cluster_api_key = cluster_config_data.get(D_API_KEY)
 
-    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
+    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
     try:
-        api = DiveraAPI(hass, cluster_id, cluster_api_key)
-        coordinator = DiveraCoordinator(hass, api, cluster_config_data, cluster_id)
+        api = DiveraAPI(hass, ucr_id, cluster_api_key)
+        coordinator = DiveraCoordinator(hass, api, cluster_config_data, ucr_id)
 
-        hass.data.setdefault(DOMAIN, {})[cluster_id] = {
+        hass.data.setdefault(DOMAIN, {})[ucr_id] = {
             "coordinator": coordinator,
             "api": api,
             "sensors": {},
@@ -48,15 +48,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
         await async_register_services(hass, DOMAIN)
 
-        _LOGGER.debug(
-            "Setting up cluster %s (%s) succesfully", cluster_name, cluster_id
-        )
+        _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
     except Exception as err:
         _LOGGER.exception(
             "Error setting up cluster %s (%s), error: %s",
             cluster_name,
-            cluster_id,
+            ucr_id,
             err,
         )
         return False
@@ -76,9 +74,9 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
     """
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
-    cluster_id = config_entry.data.get(D_CLUSTER_ID)
+    ucr_id = config_entry.data.get(D_UCR_ID)
 
-    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, cluster_id)
+    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
 
     try:
         api: DiveraAPI = hass.data[DOMAIN].pop(config_entry.entry_id, None)
@@ -90,26 +88,26 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         ):
             return False
 
-        if DOMAIN in hass.data and cluster_id in hass.data[DOMAIN]:
-            coordinator = hass.data[DOMAIN][cluster_id].get(D_COORDINATOR)
+        if DOMAIN in hass.data and ucr_id in hass.data[DOMAIN]:
+            coordinator = hass.data[DOMAIN][ucr_id].get(D_COORDINATOR)
             if coordinator:
                 await coordinator.remove_listeners()
 
-            hass.data[DOMAIN].pop(cluster_id, None)
+            hass.data[DOMAIN].pop(ucr_id, None)
             if not hass.data[DOMAIN]:
                 hass.data.pop(DOMAIN, None)
 
             _LOGGER.info(
                 "Successfully removed cluster %s (%s)",
                 cluster_name,
-                cluster_id,
+                ucr_id,
             )
 
     except Exception as err:
         _LOGGER.exception(
             "Error removing cluster %s (%s), error: %s",
             cluster_name,
-            cluster_id,
+            ucr_id,
             err,
         )
         return False

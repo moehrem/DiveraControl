@@ -6,30 +6,8 @@ from typing import Set
 
 from homeassistant.core import HomeAssistant
 
-from .const import (
-    D_ALARM,
-    D_CLUSTER,
-    D_CLUSTER_ID,
-    D_COORDINATOR,
-    D_UCR,
-    D_UCR_ID,
-    D_USER,
-    D_VEHICLE,
-    DOMAIN,
-    I_CLOSED_ALARM,
-    I_OPEN_ALARM,
-    I_OPEN_ALARM_NOPRIO,
-    I_VEHICLE,
-    MANUFACTURER,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    VERSION,
-)
-from .divera_entity_handling import (
-    BaseDiveraTracker,
-    DiveraAlarmTracker,
-    DiveraVehicleTracker,
-)
+from .const import D_ALARM, D_CLUSTER, D_UCR_ID, D_COORDINATOR, D_VEHICLE, DOMAIN
+from .divera_entity_handling import DiveraAlarmTracker, DiveraVehicleTracker
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,9 +17,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up Divera device trackers."""
 
-    cluster_id = config_entry.data[D_CLUSTER_ID]
-    coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
-    current_trackers = hass.data[DOMAIN][cluster_id].setdefault("device_tracker", {})
+    ucr_id = config_entry.data[D_UCR_ID]
+    coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
+    current_trackers = hass.data[DOMAIN][ucr_id].setdefault("device_tracker", {})
 
     async def async_add_trackers():
         """Fügt neue Tracker hinzu."""
@@ -100,5 +78,5 @@ async def async_setup_entry(
 
 
 def extract_keys(data) -> Set[str]:
-    """Extrahiert Schlüsselwerte aus Dictionaries."""
+    """Extract keys from dictionaries."""
     return set(data.keys()) if isinstance(data, dict) else set()

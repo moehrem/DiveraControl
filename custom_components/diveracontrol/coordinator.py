@@ -11,7 +11,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import (
     D_CLUSTER_NAME,
     D_UCR,
-    D_CLUSTER_ID,
+    D_UCR_ID,
+    D_UCR_ID,
     D_UCR_DEFAULT,
     D_UCR_ACTIVE,
     D_TS,
@@ -40,20 +41,18 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
-    def __init__(self, hass: HomeAssistant, api, config_entry, cluster_id) -> None:
+    def __init__(self, hass: HomeAssistant, api, config_entry, ucr_id) -> None:
         """Initialize DiveraControl coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DiveraCoordinator_{cluster_id}",
+            name=f"DiveraCoordinator_{ucr_id}",
         )
         self.api = api
-        # self.cluster_id = cluster_id
-        # self.cluster_name = config_entry.get(D_CLUSTER_NAME, "")
         self.cluster_data = {}
         self.admin_data = {
             D_CLUSTER_NAME: config_entry.get(D_CLUSTER_NAME, "Unknown"),
-            D_CLUSTER_ID: cluster_id,
+            D_UCR_ID: ucr_id,
             D_UPDATE_INTERVAL_ALARM: timedelta(
                 seconds=config_entry[D_UPDATE_INTERVAL_ALARM]
             ),
@@ -61,9 +60,6 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 seconds=config_entry[D_UPDATE_INTERVAL_DATA]
             ),
         }
-
-        # self._interval_data = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_DATA])
-        # self._interval_alarm = timedelta(seconds=config_entry[D_UPDATE_INTERVAL_ALARM])
 
         self._listeners = {}
 
@@ -92,7 +88,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         if not self.admin_data:
             self.admin_data = {
                 D_CLUSTER_NAME: "Unknown",
-                D_CLUSTER_ID: "Unknown",
+                D_UCR_ID: "Unknown",
                 D_UPDATE_INTERVAL_ALARM: 0,
                 D_UPDATE_INTERVAL_DATA: 0,
             }
@@ -149,6 +145,4 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
             self._listeners.pop(listener, None)
 
-        _LOGGER.debug(
-            "Removed update listeners for HUB: %s", self.admin_data[D_CLUSTER_ID]
-        )
+        _LOGGER.debug("Removed update listeners for HUB: %s", self.admin_data[D_UCR_ID])

@@ -6,41 +6,32 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.helpers.translation import async_get_translations
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.helpers.selector import (
-    TextSelector,
-    TextSelectorConfig,
-    TextSelectorType,
-)
-from homeassistant.const import (
-    CONF_PASSWORD,
-    CONF_USERNAME,
-)
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
     TextSelectorConfig,
+    TextSelectorType,
 )
-
+from homeassistant.helpers.translation import async_get_translations
 
 from .api import DiveraCredentials as dc
 from .const import (
-    D_UCR_ID,
-    D_CLUSTER_ID,
-    D_CLUSTER_NAME,
-    DOMAIN,
-    MINOR_VERSION,
-    UPDATE_INTERVAL_DATA,
-    UPDATE_INTERVAL_ALARM,
-    VERSION,
-    PATCH_VERSION,
     D_API_KEY,
+    D_UCR_ID,
+    D_CLUSTER_NAME,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USERGROUP_ID,
+    DOMAIN,
+    MINOR_VERSION,
+    PATCH_VERSION,
+    UPDATE_INTERVAL_ALARM,
+    UPDATE_INTERVAL_DATA,
+    VERSION,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -101,8 +92,8 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         selected_clusters = user_input["clusters"]
 
         self.clusters = {
-            cluster_id: cluster_data
-            for cluster_id, cluster_data in self.clusters.items()
+            ucr_id: cluster_data
+            for ucr_id, cluster_data in self.clusters.items()
             if cluster_data[D_CLUSTER_NAME] in selected_clusters
         }
 
@@ -150,12 +141,12 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate user input and decide next steps."""
         self.errors.clear()
 
-        self.errors, self.clusters, self.usergroup_id = await validation_method(
-            self.errors, self.session, user_input
-        )
-
         self.update_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
         self.update_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
+
+        self.errors, self.clusters = await validation_method(
+            self.errors, self.session, user_input
+        )
 
         if self.errors:
             return self._show_api_key_form()
@@ -266,26 +257,28 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         clusters_to_remove = []
 
         # checking for existing cluster and mark for removal if duplicate
-        for cluster_id, cluster_data in self.clusters.items():
+        for ucr_id, cluster_data in self.clusters.items():
             cluster_name = cluster_data[D_CLUSTER_NAME]
 
             for entry in self._async_current_entries():
-                existing_cluster_id = entry.data.get(D_CLUSTER_ID)
+                existing_ucr_id = entry.data.get(D_UCR_ID)
 
-                if existing_cluster_id == cluster_id or entry.title == cluster_name:
+                if existing_ucr_id == ucr_id or entry.title == cluster_name:
                     LOGGER.debug(
                         "Skipping duplicate hub creation for '%s' (ID: %s)",
                         cluster_name,
-                        cluster_id,
+                        ucr_id,
                     )
-                    clusters_to_remove.append(cluster_id)
+                    clusters_to_remove.append(ucr_id)
                     continue
 
         # remove duplicates
-        for cluster_id in clusters_to_remove:
-            del self.clusters[cluster_id]
+        for ucr_id in clusters_to_remove:
+            del self.clusters[ucr_id]
 
-    async def _async_show_usergroup_message(self, cluster_name: str, ucr_id: int):
+    async def _async_show_usergroup_message(
+        self, cluster_name: str, ucr_id: int, usergroup_id: int
+    ) -> None:
         """Show persistant message based on usergroup_id and related issues and permissions."""
         translation = await async_get_translations(
             self.hass,
@@ -298,7 +291,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
             "component.diveracontrol.common.usergroup_message"
         ).format(cluster_name=cluster_name, ucr_id=ucr_id)
 
-        match self.usergroup_id:
+        match usergroup_id:
             case 4:  # standard user, no admin
                 message += translation.get("component.diveracontrol.common.usergroup_4")
             case 5:  # monitor user
@@ -332,13 +325,13 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Process device creation."""
 
         if self.clusters:
-            for cluster_id, cluster_data in self.clusters.items():
+            for ucr_id, cluster_data in self.clusters.items():
                 cluster_name = cluster_data[D_CLUSTER_NAME]
                 api_key = cluster_data[D_API_KEY]
                 ucr_id = cluster_data[D_UCR_ID]
+                usergroup_id = cluster_data[D_USERGROUP_ID]
 
                 new_hub = {
-                    D_CLUSTER_ID: cluster_id,
                     D_UCR_ID: ucr_id,
                     D_CLUSTER_NAME: cluster_name,
                     D_API_KEY: api_key,
@@ -346,7 +339,9 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
                 }
 
-                await self._async_show_usergroup_message(cluster_name, ucr_id)
+                await self._async_show_usergroup_message(
+                    cluster_name, ucr_id, usergroup_id
+                )
 
                 return self.async_create_entry(title=cluster_name, data=new_hub)
 

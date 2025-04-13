@@ -8,18 +8,18 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 
 from homeassistant.util.dt import parse_datetime
 
-from .const import DOMAIN, D_CLUSTER_ID, D_COORDINATOR, D_EVENTS, D_CLUSTER_NAME
+from .const import DOMAIN, D_UCR_ID, D_COORDINATOR, D_EVENTS, D_CLUSTER_NAME
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up the Divera-Calendar entity."""
-    cluster_id = config_entry.data[D_CLUSTER_ID]
-    coordinator = hass.data[DOMAIN][cluster_id][D_COORDINATOR]
+    ucr_id = config_entry.data[D_UCR_ID]
+    coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
 
     # Stelle sicher, dass es nur eine Kalender-Entität gibt
-    calendar_entity = DiveraCalendar(coordinator, cluster_id)
+    calendar_entity = DiveraCalendar(coordinator, ucr_id)
     async_add_entities([calendar_entity], update_before_add=True)
 
     async def async_update_events():
@@ -38,14 +38,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 class DiveraCalendar(CalendarEntity):
     """A single calendar entity for all Divera events."""
 
-    def __init__(self, coordinator, cluster_id) -> None:
+    def __init__(self, coordinator, ucr_id) -> None:
         """Initialize the calendar entity."""
         self.coordinator = coordinator
-        self.cluster_id = cluster_id
+        self.ucr_id = ucr_id
         self._name = coordinator.admin_data.get(D_CLUSTER_NAME)
         self._event_list = []
-        self.entity_id = f"calendar.{self.cluster_id}_calendar"
-        self.unique_id = f"{self.cluster_id}_calendar"
+        self.entity_id = f"calendar.{self.ucr_id}_calendar"
+        self.unique_id = f"{self.ucr_id}_calendar"
 
     @property
     def name(self):
