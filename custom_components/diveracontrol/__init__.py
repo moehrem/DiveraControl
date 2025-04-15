@@ -7,7 +7,17 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .api import DiveraAPI
-from .const import D_API_KEY, D_CLUSTER_NAME, D_COORDINATOR, DOMAIN, D_UCR_ID
+from .const import (
+    D_API_KEY,
+    D_CLUSTER_NAME,
+    D_COORDINATOR,
+    D_UCR_ID,
+    DEFAULT_API,
+    DEFAULT_COORDINATOR,
+    DEFAULT_DEVICE_TRACKER,
+    DEFAULT_SENSORS,
+    DOMAIN,
+)
 from .coordinator import DiveraCoordinator
 from .service import async_register_services
 
@@ -26,22 +36,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         bool: True if setup succesfully, otherwise False.
 
     """
-    cluster_config_data = config_entry.data
-    ucr_id = cluster_config_data.get(D_UCR_ID)
-    cluster_name = cluster_config_data.get(D_CLUSTER_NAME)
-    cluster_api_key = cluster_config_data.get(D_API_KEY)
+    ucr_id = config_entry.data.get(D_UCR_ID)
+    cluster_name = config_entry.data.get(D_CLUSTER_NAME)
+    cluster_api_key = config_entry.data.get(D_API_KEY)
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
     try:
         api = DiveraAPI(hass, ucr_id, cluster_api_key)
-        coordinator = DiveraCoordinator(hass, api, cluster_config_data, ucr_id)
+        coordinator = DiveraCoordinator(hass, api, config_entry.data)
 
         hass.data.setdefault(DOMAIN, {})[ucr_id] = {
-            "coordinator": coordinator,
-            "api": api,
-            "sensors": {},
-            "device_tracker": {},
+            DEFAULT_COORDINATOR: coordinator,
+            DEFAULT_API: api,
+            DEFAULT_SENSORS: {},
+            DEFAULT_DEVICE_TRACKER: {},
         }
 
         await coordinator.async_config_entry_first_refresh()
@@ -50,12 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
         _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
-    except Exception as err:
+    except Exception:
         _LOGGER.exception(
-            "Error setting up cluster %s (%s), error: %s",
+            "Error setting up cluster %s (%s), error:",
             cluster_name,
             ucr_id,
-            err,
         )
         return False
 
@@ -103,12 +111,11 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
                 ucr_id,
             )
 
-    except Exception as err:
+    except Exception:
         _LOGGER.exception(
-            "Error removing cluster %s (%s), error: %s",
+            "Error removing cluster %s (%s), error:",
             cluster_name,
             ucr_id,
-            err,
         )
         return False
 

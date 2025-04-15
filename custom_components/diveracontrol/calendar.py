@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
+"""Manage calendar and event creation and updating based on Divera events."""
+
 import asyncio
+from datetime import UTC, datetime
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-
+from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import parse_datetime
 
-from .const import DOMAIN, D_UCR_ID, D_COORDINATOR, D_EVENTS, D_CLUSTER_NAME
+from .const import D_CLUSTER_NAME, D_COORDINATOR, D_EVENTS, D_UCR_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
     ucr_id = config_entry.data[D_UCR_ID]
     coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
 
-    # Stelle sicher, dass es nur eine Kalender-Entität gibt
+    # ensure only one calendar entity exist at a time
     calendar_entity = DiveraCalendar(coordinator, ucr_id)
     async_add_entities([calendar_entity], update_before_add=True)
 
@@ -40,15 +41,14 @@ class DiveraCalendar(CalendarEntity):
 
     def __init__(self, coordinator, ucr_id) -> None:
         """Initialize the calendar entity."""
-        self.coordinator = coordinator
-        self.ucr_id = ucr_id
         self._name = coordinator.admin_data.get(D_CLUSTER_NAME)
         self._event_list = []
-        self.entity_id = f"calendar.{self.ucr_id}_calendar"
-        self.unique_id = f"{self.ucr_id}_calendar"
+        self.entity_id = f"calendar.{ucr_id}_calendar"
+        self.unique_id = f"{ucr_id}_calendar"
 
     @property
     def name(self):
+        """Return the name of calendar."""
         return self._name
 
     @property
@@ -71,13 +71,10 @@ class DiveraCalendar(CalendarEntity):
     def update_events(self, new_events: dict[str, Any]):
         """Update the event list with new data."""
         self._event_list = []
-        for event_id, event_data in new_events.items():
-            start = datetime.utcfromtimestamp(event_data.get("start")).replace(
-                tzinfo=timezone.utc
-            )
-            end = datetime.utcfromtimestamp(event_data.get("end")).replace(
-                tzinfo=timezone.utc
-            )
+        for event_data in new_events.values():
+            start = datetime.fromtimestamp(event_data.get("start")).replace(tzinfo=UTC)
+            end = datetime.fromtimestamp(event_data.get("end")).replace(tzinfo=UTC)
+
             self._event_list.append(
                 {
                     "start": {"dateTime": start.isoformat()},
@@ -93,7 +90,7 @@ class DiveraCalendar(CalendarEntity):
         self, hass: HomeAssistant, start_date: datetime, end_date: datetime
     ):
         """Return a list of events within the given time range."""
-        _LOGGER.debug(f"Fetching events from {start_date} to {end_date}")
+        _LOGGER.debug("Fetching events from %s to %s", start_date, end_date)
         events = []
         for event in self._event_list:
             event_start = parse_datetime(event["start"]["dateTime"])

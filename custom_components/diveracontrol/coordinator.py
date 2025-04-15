@@ -1,6 +1,5 @@
 """Coordinator for myDivera integration."""
 
-import asyncio
 from datetime import timedelta
 import logging
 from typing import Any
@@ -8,29 +7,29 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .api import DiveraAPI
 from .const import (
-    D_CLUSTER_NAME,
-    D_UCR,
-    D_UCR_ID,
-    D_UCR_ID,
-    D_UCR_DEFAULT,
-    D_UCR_ACTIVE,
-    D_TS,
-    D_USER,
-    D_STATUS,
-    D_CLUSTER,
-    D_MONITOR,
     D_ALARM,
-    D_NEWS,
-    D_EVENTS,
+    D_CLUSTER,
+    D_CLUSTER_NAME,
     D_DM,
-    D_MESSAGE_CHANNEL,
-    D_MESSAGE,
+    D_EVENTS,
     D_LOCALMONITOR,
-    D_STATUSPLAN,
-    D_UPDATE_INTERVAL_DATA,
-    D_UPDATE_INTERVAL_ALARM,
+    D_MESSAGE,
+    D_MESSAGE_CHANNEL,
+    D_MONITOR,
+    D_NEWS,
     D_OPEN_ALARMS,
+    D_STATUS,
+    D_STATUSPLAN,
+    D_TS,
+    D_UCR,
+    D_UCR_ACTIVE,
+    D_UCR_DEFAULT,
+    D_UCR_ID,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
+    D_USER,
 )
 from .data_updater import update_data
 from .utils import log_execution_time, set_update_interval
@@ -41,18 +40,18 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
-    def __init__(self, hass: HomeAssistant, api, config_entry, ucr_id) -> None:
+    def __init__(self, hass: HomeAssistant, api: DiveraAPI, config_entry: dict) -> None:
         """Initialize DiveraControl coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DiveraCoordinator_{ucr_id}",
+            name=f"DiveraCoordinator_{config_entry.get(D_UCR_ID)}",
         )
         self.api = api
         self.cluster_data = {}
         self.admin_data = {
             D_CLUSTER_NAME: config_entry.get(D_CLUSTER_NAME, "Unknown"),
-            D_UCR_ID: ucr_id,
+            D_UCR_ID: config_entry.get(D_UCR_ID),
             D_UPDATE_INTERVAL_ALARM: timedelta(
                 seconds=config_entry[D_UPDATE_INTERVAL_ALARM]
             ),

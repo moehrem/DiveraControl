@@ -10,11 +10,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     D_ALARM,
     D_CLUSTER,
-    D_UCR_ID,
     D_CLUSTER_NAME,
     D_MONITOR,
     D_OPEN_ALARMS,
     D_STATUS,
+    D_UCR_ID,
     D_VEHICLE,
     I_AVAILABILITY,
     I_CLOSED_ALARM,
@@ -30,10 +30,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class BaseDiveraEntity(CoordinatorEntity):
-    """Gemeinsame Basisklasse für Sensoren und Tracker."""
+    """Common base class for sensors and tracker."""
 
     def __init__(self, coordinator) -> None:
-        """Initialisiert die gemeinsame Basisklasse."""
+        """Init base class."""
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.cluster_data = coordinator.cluster_data
@@ -47,11 +47,11 @@ class BaseDiveraEntity(CoordinatorEntity):
 
     @property
     def should_poll(self) -> bool:
-        """Gibt an, dass die Entität nicht gepollt werden muss."""
+        """Define polling."""
         return False
 
     async def async_added_to_hass(self) -> None:
-        """Registriert die Entität im Koordinator."""
+        """Register entity with coordinator."""
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
@@ -92,9 +92,9 @@ class BaseDiveraEntity(CoordinatorEntity):
 class BaseDiveraSensor(BaseDiveraEntity):
     """Base class for Divera sensors."""
 
-    def __init__(self, coordinator) -> None:
-        """Initialisiert einen Sensor."""
-        super().__init__(coordinator)
+    # def __init__(self, coordinator) -> None:
+    #     """Init sensor."""
+    #     super().__init__(coordinator)
 
     @property
     def device_info(self):
@@ -363,10 +363,10 @@ class DiveraAvailabilitySensor(BaseDiveraSensor):
 
 
 class BaseDiveraTracker(TrackerEntity, BaseDiveraEntity):
-    """Basisklasse für Divera-Tracker."""
+    """Baseclass for tracker."""
 
     def __init__(self, coordinator) -> None:
-        """Initialisiert einen Tracker."""
+        """Init a single tracker."""
         TrackerEntity.__init__(self)
         BaseDiveraEntity.__init__(self, coordinator)
 
@@ -432,16 +432,17 @@ class DiveraAlarmTracker(BaseDiveraTracker):
         )
         if closed:
             return I_CLOSED_ALARM
-        elif priority:
+        if priority:
             return I_OPEN_ALARM
-        else:
-            return I_OPEN_ALARM_NOPRIO
+
+        return I_OPEN_ALARM_NOPRIO
 
 
 class DiveraVehicleTracker(BaseDiveraTracker):
     """A device tracker for vehicles."""
 
     def __init__(self, coordinator, vehicle_id: str) -> None:
+        """Init device tracker class."""
         super().__init__(coordinator)
         self.vehicle_id = vehicle_id
         self.entity_id = (

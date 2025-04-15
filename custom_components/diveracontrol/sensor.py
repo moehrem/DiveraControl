@@ -15,39 +15,27 @@ Communication:
 
 import asyncio
 import logging
-from typing import Set, Any
 
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    # general
-    DOMAIN,
-    MANUFACTURER,
-    VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    # data
     D_ALARM,
-    D_OPEN_ALARMS,
-    D_COORDINATOR,
-    D_DATA,
-    D_UCR_ID,
-    D_UCR,
     D_CLUSTER,
-    D_VEHICLE,
-    D_UCR_ID,
-    D_USER,
+    D_COORDINATOR,
+    D_OPEN_ALARMS,
     D_STATUS,
-    D_MONITOR,
+    D_UCR_ID,
+    D_VEHICLE,
+    DOMAIN,
 )
 from .divera_entity_handling import (
     DiveraAlarmSensor,
-    DiveraVehicleSensor,
-    DiveraVehicleSensor,
-    DiveraOpenAlarmsSensor,
     DiveraAvailabilitySensor,
+    DiveraOpenAlarmsSensor,
     DiveraUnitSensor,
+    DiveraVehicleSensor,
 )
+from .utils import extract_keys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +59,7 @@ async def async_setup_entry(
         new_availability_data = extract_keys(
             cluster_data.get(D_CLUSTER, {}).get(D_STATUS)
         )
-        new_static_sensors_data = {D_OPEN_ALARMS, D_CLUSTER}
+        # new_static_sensors_data = {D_OPEN_ALARMS, D_CLUSTER}
 
         # Alarm-Sensoren hinzufügen
         for alarm_id in new_alarm_data - current_sensors.keys():
@@ -140,8 +128,3 @@ async def async_setup_entry(
     # Listener für automatische Updates registrieren
     coordinator.async_add_listener(lambda: asyncio.create_task(async_add_sensor()))
     coordinator.async_add_listener(lambda: asyncio.create_task(async_remove_sensor()))
-
-
-def extract_keys(data) -> Set[str]:
-    """Extrahiert Schlüsselwerte aus Dictionaries."""
-    return set(data.keys()) if isinstance(data, dict) else set()

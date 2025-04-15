@@ -1,4 +1,8 @@
-"""Create, handle and register all services."""
+"""Create, handle and register all services.
+
+Services still work with "cluster_id" instead of "ucr_id", as its less abstract and thus more user friendly.
+
+"""
 
 import functools
 import logging
@@ -9,8 +13,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .const import D_ALARM, D_COORDINATOR, D_MESSAGE_CHANNEL, DOMAIN
-from .utils import handle_entity, get_api_instance, get_coordinator_data
+from .const import D_ALARM, D_MESSAGE_CHANNEL
+from .utils import get_api_instance, get_coordinator_data, handle_entity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,16 +29,11 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
         k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
     }
 
-    try:
-        success = await api_instance.post_vehicle_status(vehicle_id, payload)
-        if not success:
-            raise HomeAssistantError(
-                f"Failed to set vehicle status for vehicle {vehicle_id}, check logs for details."
-            )
-    except Exception as e:
-        error_msg = f"Failed to set vehicle status for vehicle {vehicle_id}: {e}"
+    ok_status = await api_instance.post_vehicle_status(vehicle_id, payload)
+    if not ok_status:
+        error_msg = f"Failed to set vehicle status for vehicle {vehicle_id}, check logs for details."
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     await handle_entity(hass, call, "post_vehicle_status")
 
@@ -55,16 +54,11 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
         "notification_type": notification_type,
     }
 
-    try:
-        success = await api_instance.post_alarms(payload)
-        if not success:
-            raise HomeAssistantError(
-                "Failed to post alarm, please check logs for details."
-            )
-    except Exception as e:
-        error_msg = f"Failed to post alarm: {e}"
+    ok_status = await api_instance.post_alarms(payload)
+    if not ok_status:
+        error_msg = "Failed to post alarm, please check logs for details."
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     # no handle_entity(), as data will update from Divera
 
@@ -83,16 +77,11 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
         }
     }
 
-    try:
-        success = await api_instance.put_alarms(payload, alarm_id)
-        if not success:
-            raise HomeAssistantError(
-                f"Failed to change alarm {alarm_id}, check logs for details"
-            )
-    except Exception as e:
-        error_msg = f"Failed to change alarm {alarm_id}: {e}"
+    ok_status = await api_instance.put_alarms(payload, alarm_id)
+    if not ok_status:
+        error_msg = f"Failed to change alarm {alarm_id}, check logs for details"
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     await handle_entity(hass, call, "put_alarm")
 
@@ -109,16 +98,11 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
         }
     }
 
-    try:
-        success = await api_instance.post_close_alarm(payload, alarm_id)
-        if not success:
-            raise HomeAssistantError(
-                f"Failed to close alarm {alarm_id}, check logs for details."
-            )
-    except Exception as e:
-        error_msg = f"Failed to close alarm {alarm_id}: {e}"
+    ok_status = await api_instance.post_close_alarm(payload, alarm_id)
+    if not ok_status:
+        error_msg = f"Failed to close alarm {alarm_id}, check logs for details."
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     await handle_entity(hass, call, "post_close_alarm")
 
@@ -136,7 +120,7 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
     if not message_channel_id and not alarm_id:
         error_msg = "Either 'message_channel_id' or 'alarm_id' must be provided, but neither was given."
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     # Determine message_channel_id from alarm_id if not given
     if not message_channel_id and alarm_id:
@@ -150,7 +134,7 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
     if not message_channel_id:
         error_msg = f"No message channel found for alarm_id {alarm_id}."
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     # Validate message_channel_id
     if str(message_channel_id) not in message_channel_items:
@@ -158,7 +142,7 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
             f"Channel ID {message_channel_id} is invalid or you lack permissions."
         )
         LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg)
+        raise HomeAssistantError(error_msg) from None
 
     payload = {
         "Message": {
@@ -167,14 +151,9 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
         }
     }
 
-    try:
-        ok_status = await api_instance.post_message(payload)
-        if not ok_status:
-            raise HomeAssistantError(
-                "Failed to send message, please check logs."
-            ) from None
-    except Exception as e:
-        error_msg = f"Failed to send message: {e}"
+    ok_status = await api_instance.post_message(payload)
+    if not ok_status:
+        error_msg = "Failed to send message, please check logs."
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
@@ -189,15 +168,9 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
         k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
     }
 
-    try:
-        success = await api_instance.post_using_vehicle_property(payload, vehicle_id)
-        if not success:
-            error_msg = f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}, check logs for details."
-            raise HomeAssistantError(error_msg) from None
-    except Exception as e:
-        error_msg = (
-            f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}: {e}"
-        )
+    ok_status = await api_instance.post_using_vehicle_property(payload, vehicle_id)
+    if not ok_status:
+        error_msg = f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}, check logs for details."
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
@@ -236,20 +209,16 @@ async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
             LOGGER.error(error_msg)
             raise HomeAssistantError(error_msg) from None
 
-    try:
-        success = await api_instance.post_using_vehicle_crew(payload, vehicle_id, mode)
-        if not success:
-            error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
-            raise HomeAssistantError(error_msg) from None
-    except Exception as e:
-        error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}: {e}"
+    ok_status = await api_instance.post_using_vehicle_crew(payload, vehicle_id, mode)
+    if not ok_status:
+        error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
     await handle_entity(hass, call, "post_using_vehicle_crew")
 
 
-async def async_register_services(hass, domain):
+async def async_register_services(hass: HomeAssistant, domain):
     """Registriert alle Services für die Integration."""
     service_definitions = {
         "post_vehicle_status": (

@@ -4,6 +4,7 @@ import asyncio
 from functools import wraps
 import logging
 import time
+from typing import Set
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -271,3 +272,8 @@ def set_update_interval(old_interval, open_alarms, admin_data):
         return new_interval
 
     return old_interval
+
+
+def extract_keys(data) -> Set[str]:
+    """Extract keys from dictionaries."""
+    return set(data.keys()) if isinstance(data, dict) else set()

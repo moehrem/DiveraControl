@@ -1,23 +1,24 @@
 """Diagnostics for integration DiveraControl."""
 
+from pathlib import Path
+
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import D_API_KEY, D_UCR_ID, D_CLUSTER_NAME, D_COORDINATOR, DOMAIN
+from .const import D_API_KEY, D_CLUSTER_NAME, D_COORDINATOR, D_UCR_ID, DOMAIN, LOG_FILE
 
 TO_REDACT = [D_API_KEY, "accesskey"]
 
-from pathlib import Path
 
-
-def get_diveracontrol_logs(hass):
-    log_file = Path(hass.config.path("home-assistant.log"))
+def get_diveracontrol_logs(hass: HomeAssistant):
+    """Read logfile for entries related to DiveraControl, return the entries."""
+    log_file = Path(hass.config.path(LOG_FILE))
     if not log_file.exists():
-        return "Logdatei nicht gefunden."
+        return "Logfile not found."
 
     with log_file.open("r", encoding="utf-8") as file:
-        return [line for line in file if "custom_components.diveracontrol" in line]
+        return [line for line in file if "diveracontrol" in line]
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry):

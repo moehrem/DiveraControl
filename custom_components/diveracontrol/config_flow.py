@@ -21,8 +21,8 @@ from homeassistant.helpers.translation import async_get_translations
 from .api import DiveraCredentials as dc
 from .const import (
     D_API_KEY,
-    D_UCR_ID,
     D_CLUSTER_NAME,
+    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USERGROUP_ID,

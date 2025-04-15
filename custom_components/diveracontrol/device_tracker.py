@@ -2,12 +2,12 @@
 
 import asyncio
 import logging
-from typing import Set
 
 from homeassistant.core import HomeAssistant
 
-from .const import D_ALARM, D_CLUSTER, D_UCR_ID, D_COORDINATOR, D_VEHICLE, DOMAIN
+from .const import D_ALARM, D_CLUSTER, D_COORDINATOR, D_UCR_ID, D_VEHICLE, DOMAIN
 from .divera_entity_handling import DiveraAlarmTracker, DiveraVehicleTracker
+from .utils import extract_keys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ async def async_setup_entry(
     current_trackers = hass.data[DOMAIN][ucr_id].setdefault("device_tracker", {})
 
     async def async_add_trackers():
-        """Fügt neue Tracker hinzu."""
+        """Add new tracker."""
         cluster_data = coordinator.cluster_data
         new_trackers = []
 
@@ -47,7 +47,7 @@ async def async_setup_entry(
             async_add_entities(new_trackers, update_before_add=True)
 
     async def async_remove_trackers():
-        """Entfernt Tracker, die nicht mehr benötigt werden."""
+        """Remove unused tracker."""
         cluster_data = coordinator.cluster_data
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items", {}))
@@ -75,8 +75,3 @@ async def async_setup_entry(
     # Listener für automatische Updates registrieren
     coordinator.async_add_listener(lambda: asyncio.create_task(async_add_trackers()))
     coordinator.async_add_listener(lambda: asyncio.create_task(async_remove_trackers()))
-
-
-def extract_keys(data) -> Set[str]:
-    """Extract keys from dictionaries."""
-    return set(data.keys()) if isinstance(data, dict) else set()

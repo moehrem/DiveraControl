@@ -1,6 +1,5 @@
 """Communication with Divera 24/7 api."""
 
-import asyncio
 import logging
 
 from aiohttp import ClientError
@@ -22,6 +21,7 @@ from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
     D_DATA,
+    D_NAME,
     D_UCR,
     D_UCR_ID,
     D_USERGROUP_ID,
@@ -51,7 +51,6 @@ class DiveraAPI:
         self,
         url: str,
         method: str,
-        # perm_key: str,
         parameters: dict | None = None,
         payload: dict | None = None,
         headers: dict | None = None,
@@ -119,7 +118,7 @@ class DiveraAPI:
         LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        parameters = {"ucr": ucr_id}
+        parameters = {D_UCR: ucr_id}
         return await self.api_request(url, method, parameters=parameters)
 
     async def post_vehicle_status(self, vehicle_id, payload) -> dict:
@@ -239,8 +238,8 @@ class DiveraCredentials:
                     return None, data_ucr_response.get("message", {})
 
                 data_ucr_data = data_ucr_response.get(D_DATA, {}).get(D_UCR, {})
-                cluster_name = data_ucr_data.get(ucr_id, {}).get("name", "")
-                usergroup_id = data_ucr_data.get(ucr_id, {}).get("usergroup_id", "")
+                cluster_name = data_ucr_data.get(ucr_id, {}).get(D_NAME, "")
+                usergroup_id = data_ucr_data.get(ucr_id, {}).get(D_USERGROUP_ID, "")
 
                 return (
                     {
@@ -321,10 +320,10 @@ class DiveraCredentials:
                 for cluster in data_ucr:
                     ucr_id = cluster.get("id", "")
                     clusters[ucr_id] = {
-                        D_CLUSTER_NAME: cluster.get("name", ""),
+                        D_CLUSTER_NAME: cluster.get(D_NAME, ""),
                         D_UCR_ID: ucr_id,
                         D_API_KEY: api_key,
-                        D_USERGROUP_ID: cluster.get("usergroup_id", ""),
+                        D_USERGROUP_ID: cluster.get(D_USERGROUP_ID, ""),
                     }
 
                 return errors, clusters
@@ -377,10 +376,10 @@ class DiveraCredentials:
 
                 for ucr_id, ucr_data in data_ucr.items():
                     clusters[ucr_id] = {
-                        D_CLUSTER_NAME: ucr_data.get("name", ""),
+                        D_CLUSTER_NAME: ucr_data.get(D_NAME, ""),
                         D_UCR_ID: ucr_id,
                         D_API_KEY: api_key,
-                        D_USERGROUP_ID: ucr_data.get("usergroup_id", ""),
+                        D_USERGROUP_ID: ucr_data.get(D_USERGROUP_ID, ""),
                     }
 
         except (ClientError, TimeoutError):
