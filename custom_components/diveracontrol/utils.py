@@ -1,44 +1,41 @@
-"""Contain different helper methods."""
+"""Contain several helper methods."""
 
-import logging
-import time
 import asyncio
 from functools import wraps
+import logging
+import time
+from typing import Set
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    DOMAIN,
-    MANUFACTURER,
-    VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
     D_ACCESS,
     D_ALARM,
     D_CLUSTER,
-    D_OPEN_ALARMS,
-    D_COORDINATOR,
     D_CLUSTER_NAME,
+    D_COORDINATOR,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USER,
-    D_ACCESS,
     D_VEHICLE,
-    # D_HUB_ID,
-    D_UCR,
+    DOMAIN,
+    MANUFACTURER,
+    MINOR_VERSION,
+    PATCH_VERSION,
     PERM_MANAGEMENT,
+    VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def permission_check(hass: HomeAssistant, cluster_id, perm_key):
+def permission_check(hass: HomeAssistant, ucr_id, perm_key):
     """Check permission and return success.
 
     Args:
         hass: HomeAssistant
-        cluster_id: str
+        ucr_id: str
         perm_key: str
 
     Returns:
@@ -48,9 +45,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
 
     success = False
 
-    coordinator_data = (
-        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
-    )
+    coordinator_data = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {})
 
     if coordinator_data is not None and perm_key is not None:
         cluster_name = coordinator_data.admin_data[D_CLUSTER_NAME]
@@ -84,7 +79,7 @@ def permission_check(hass: HomeAssistant, cluster_id, perm_key):
 
 
 def get_device_info(cluster_name):
-    """Gibt Geräteinformationen für den Tracker zurück."""
+    """Return device information, used in sensor and tracker base classes."""
     return {
         "identifiers": {(DOMAIN, cluster_name)},
         "name": cluster_name,
@@ -96,7 +91,7 @@ def get_device_info(cluster_name):
 
 
 def log_execution_time(func):
-    """Decorator to log execution time of functions (sync & async)."""
+    """Log execution times of function."""
 
     if asyncio.iscoroutinefunction(func):
 
@@ -129,15 +124,15 @@ def log_execution_time(func):
 
 
 def get_cluster_id(hass: HomeAssistant, sensor_id: str):
-    """Fetch cluster_id based on sensor_id. Raises exception if not found."""
+    """Fetch ucr_id based on sensor_id. Raises exception if not found."""
     try:
-        for cluster_id, cluster_data in hass.data[DOMAIN].items():
+        for ucr_id, cluster_data in hass.data[DOMAIN].items():
             for sensor in cluster_data["sensors"]:
                 if sensor == str(sensor_id):
-                    return cluster_id
+                    return ucr_id
             for tracker in cluster_data["device_tracker"]:
                 if tracker == str(sensor_id):
-                    return cluster_id
+                    return ucr_id
     except KeyError:
         error_message = f"Cluster-ID not found for Sensor-ID {sensor_id}"
         _LOGGER.error(error_message)
@@ -145,18 +140,18 @@ def get_cluster_id(hass: HomeAssistant, sensor_id: str):
 
 
 def get_api_instance(hass: HomeAssistant, sensor_id: str):
-    """Fetch api-instance of hub based on sensor_id or cluster_id. Raises exception if not found."""
+    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
     try:
-        # try finding cluster_id with given sensor_id
-        for cluster_id, cluster_data in hass.data[DOMAIN].items():
+        # try finding ucr_id with given sensor_id
+        for ucr_id, cluster_data in hass.data[DOMAIN].items():
             for sensor in cluster_data["sensors"]:
                 if sensor == str(sensor_id):
-                    api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
+                    api_instance = hass.data[DOMAIN][str(ucr_id)]["api"]
 
-        # if nothing found, try sensor_id as cluster_id
-        for cluster_id in hass.data[DOMAIN]:
-            if cluster_id == sensor_id:
-                api_instance = hass.data[DOMAIN][str(cluster_id)]["api"]
+        # if nothing found, try sensor_id as ucr_id
+        for ucr_id in hass.data[DOMAIN]:
+            if ucr_id == sensor_id:
+                api_instance = hass.data[DOMAIN][str(ucr_id)]["api"]
 
         return api_instance
 
@@ -167,15 +162,15 @@ def get_api_instance(hass: HomeAssistant, sensor_id: str):
 
 
 def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
-    """Holt die Koordinatordaten für die gegebene cluster_id oder wirft eine Exception."""
+    """Holt die Koordinatordaten für die gegebene ucr_id oder wirft eine Exception."""
     try:
-        # try finding cluster_id with given sensor_id
-        for cluster_id, cluster_data in hass.data[DOMAIN].items():
+        # try finding ucr_id with given sensor_id
+        for ucr_id, cluster_data in hass.data[DOMAIN].items():
             for sensor in cluster_data["sensors"]:
                 if sensor == str(sensor_id):
                     coordinator_data = (
                         hass.data.get(DOMAIN, {})
-                        .get(str(cluster_id), "")
+                        .get(str(ucr_id), "")
                         .get(D_COORDINATOR)
                     )
 
@@ -193,11 +188,11 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
     match service:
         case "put_alarm" | "post_close_alarm":
             alarm_id = call.data.get("alarm_id")
-            cluster_id = get_cluster_id(hass, alarm_id)
-            coordinator = hass.data[DOMAIN].get(cluster_id, {}).get(D_COORDINATOR, None)
+            ucr_id = get_cluster_id(hass, alarm_id)
+            coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:
-                _LOGGER.error("Can't find coordinator for unit %s", cluster_id)
+                _LOGGER.error("Can't find coordinator for unit %s", ucr_id)
                 return
 
             alarm_data = (
@@ -215,11 +210,11 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
 
         case "post_vehicle_status" | "post_using_vehicle_property":
             vehicle_id = call.data.get("vehicle_id")
-            cluster_id = get_cluster_id(hass, vehicle_id)
-            coordinator = hass.data[DOMAIN].get(cluster_id, {}).get(D_COORDINATOR, None)
+            ucr_id = get_cluster_id(hass, vehicle_id)
+            coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:
-                _LOGGER.error("Can't find coordinator for unit %s", cluster_id)
+                _LOGGER.error("Can't find coordinator for unit %s", ucr_id)
                 return
 
             vehicle_data = (
@@ -277,3 +272,8 @@ def set_update_interval(old_interval, open_alarms, admin_data):
         return new_interval
 
     return old_interval
+
+
+def extract_keys(data) -> Set[str]:
+    """Extract keys from dictionaries."""
+    return set(data.keys()) if isinstance(data, dict) else set()

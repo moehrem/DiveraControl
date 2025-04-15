@@ -1,80 +1,36 @@
-"""Funktion: Kommunikation mit der Divera 24/7 API.
-
-Verantwortung:
-
-    Bereitstellen von Klassen und Methoden für die direkte Interaktion mit der API (z. B. Authentifizierung, Abrufen von Daten).
-    Verarbeitung und Rückgabe der rohen API-Daten.
-    Abstraktion der API-Details (z. B. HTTP-Requests, Header, etc.).
-
-Kommunikation:
-
-    Wird vom coordinator.py verwendet.
-    Gibt die Ergebnisse (z. B. JSON oder strukturierte Python-Daten) zurück
-"""
+"""Communication with Divera 24/7 api."""
 
 import logging
+
 from aiohttp import ClientError
-import asyncio
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .divera_error_handling import DiveraAPIError
-from .utils import (
-    log_execution_time,
-    permission_check,
-)
 from .const import (
-    D_COORDINATOR,
-    DOMAIN,
+    API_ACCESS_KEY,
+    API_ALARM,
+    API_AUTH_LOGIN,
+    API_MESSAGES,
+    API_PULL_ALL,
+    API_USING_VEHICLE_CREW,
+    API_USING_VEHICLE_PROP,
+    API_USING_VEHICLE_SET_SINGLE,
+    BASE_API_URL,
+    BASE_API_V2_URL,
     D_API_KEY,
     D_CLUSTER_NAME,
     D_DATA,
+    D_NAME,
     D_UCR,
     D_UCR_ID,
-    D_USER,
-    API_ACCESS_KEY,
-    # API_ACCESS_KEY,
-    API_ALARM,
-    API_AUTH_LOGIN,
-    # API_EVENT,
-    API_MESSAGES,
-    # API_MESSAGE_CHANNEL,
-    # API_NEWS,
-    # API_OPERATIONS,
-    API_PULL_ALL,
-    # API_PULL_VEHICLE,
-    API_USING_VEHICLE_SET_SINGLE,
-    # API_USING_VEHICLE_CREW,
-    API_USING_VEHICLE_PROP,
-    BASE_API_URL,
-    BASE_API_V2_URL,
-    API_STATUSGEBER,
-    API_STATUSGEBER_SIMPLE,
-    API_USING_VEHICLE_CREW,
-    # permissions
-    PERM_MESSAGES,
+    D_USERGROUP_ID,
     PERM_ALARM,
-    PERM_NEWS,
-    PERM_EVENT,
-    PERM_MESSAGE_CHANNEL,
-    PERM_REPORT,
-    PERM_STATUS,
-    PERM_STATUS_MANUAL,
-    PERM_STATUS_PLANER,
-    PERM_STATUS_GEOFENCE,
+    PERM_MESSAGES,
     PERM_STATUS_VEHICLE,
-    PERM_MONITOR,
-    PERM_MONITOR_SHOW_NAMES,
-    PERM_PERSONNEL_PHONENUMBERS,
-    PERM_LOCALMANAGEMENT,
-    PERM_MANAGEMENT,
-    PERM_DASHBOARD,
-    PERM_CROSS_UNIT,
-    PERM_LOCALMONITOR,
-    PERM_LOCALMONITOR_SHOW_NAMES,
-    PERM_FMS_EDITOR,
 )
+from .divera_error_handling import DiveraAPIError
+from .utils import log_execution_time, permission_check
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,10 +38,10 @@ LOGGER = logging.getLogger(__name__)
 class DiveraAPI:
     """Class to interact with the Divera 24/7 API."""
 
-    def __init__(self, hass: HomeAssistant, cluster_id: str, api_key: str) -> None:
+    def __init__(self, hass: HomeAssistant, ucr_id: str, api_key: str) -> None:
         """Initialize the API client."""
         self.api_key = api_key
-        self.cluster_id = cluster_id
+        self.ucr_id = ucr_id
         self.hass = hass
 
         self.session = async_get_clientsession(hass)
@@ -95,8 +51,7 @@ class DiveraAPI:
         self,
         url: str,
         method: str,
-        # perm_key: str,
-        parameters: dict | None = {},
+        parameters: dict | None = None,
         payload: dict | None = None,
         headers: dict | None = None,
     ) -> dict:
@@ -114,7 +69,6 @@ class DiveraAPI:
             dict: JSON response from the API.
 
         """
-
         # init headers, if None
         headers = headers or {
             "Accept": "*/*",
@@ -131,47 +85,47 @@ class DiveraAPI:
             param_string = "&".join(param_strings)
             url = f"{url}?{param_string}"
 
-        # create URL for logging
-        log_url = url.replace(self.api_key, "**REDACTED**")
-
         try:
             async with self.session.request(
                 method, url, json=payload, headers=headers, timeout=10
             ) as response:
                 if response.status != 200:
+                    log_url = url.replace(self.api_key, "**REDACTED**")
                     raise DiveraAPIError(
-                        f"Error in {method} request for cluster id '{self.cluster_id}'. Status: '{response.status}', reason: '{response.reason}', url: '{log_url}'"
+                        f"Error in {method} request for cluster id '{self.ucr_id}'. Status: '{response.status}', reason: '{response.reason}', url: '{log_url}'"
                     )
 
                 if response.status == 200:
                     try:
                         return await response.json()
                     except Exception:
+                        LOGGER.exception("Error parsing JSON response from Divera API")
                         return response
 
                 return {}
         except ClientError as e:
+            log_url = url.replace(self.api_key, "**REDACTED**")
             LOGGER.error(
                 "Client error: %s for cluster id %s from url %s",
                 e,
-                self.cluster_id,
+                self.ucr_id,
                 log_url,
             )
             return {}
 
     async def get_ucr_data(self, ucr_id) -> dict:
         """GET all data for user cluster relation from the Divera API. No permission check."""
-        LOGGER.debug("Fetching all data for cluster %s", self.cluster_id)
+        LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        parameters = {"ucr": ucr_id}
+        parameters = {D_UCR: ucr_id}
         return await self.api_request(url, method, parameters=parameters)
 
     async def post_vehicle_status(self, vehicle_id, payload) -> dict:
         """POST vehicle status and data to Divera API."""
-        LOGGER.debug("Posting vehicle status and data for cluster %s", self.cluster_id)
+        LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.cluster_id, PERM_STATUS_VEHICLE):
+        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -180,9 +134,9 @@ class DiveraAPI:
 
     async def post_alarms(self, payload) -> dict:
         """POST new alarm to Divera API."""
-        LOGGER.debug("Posting alarms for unit %s", self.cluster_id)
+        LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
 
-        if permission_check(self.hass, self.cluster_id, PERM_ALARM):
+        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -192,10 +146,10 @@ class DiveraAPI:
     async def put_alarms(self, payload, alarm_id) -> dict:
         """PUT changes for existing alarm to Divera API."""
         LOGGER.debug(
-            "Putting changes to alarm %s for cluster %s", alarm_id, self.cluster_id
+            "Putting changes to alarm %s for cluster %s", alarm_id, self.ucr_id
         )
 
-        if permission_check(self.hass, self.cluster_id, PERM_ALARM):
+        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
             method = "PUT"
             return await self.api_request(url, method, payload=payload)
@@ -204,11 +158,9 @@ class DiveraAPI:
 
     async def post_close_alarm(self, payload, alarm_id) -> dict:
         """POSt to close an existing alarm to Divera API."""
-        LOGGER.debug(
-            "Posting to close alarm %s for cluster %s", alarm_id, self.cluster_id
-        )
+        LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
-        if permission_check(self.hass, self.cluster_id, PERM_ALARM):
+        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -217,9 +169,9 @@ class DiveraAPI:
 
     async def post_message(self, payload) -> dict:
         """POSt to close an existing alarm to Divera API."""
-        LOGGER.debug("Posting message for cluster %s", self.cluster_id)
+        LOGGER.debug("Posting message for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.cluster_id, PERM_MESSAGES):
+        if permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -232,7 +184,7 @@ class DiveraAPI:
             "Getting individual vehicle properties for vehicle id %s", vehicle_id
         )
 
-        if permission_check(self.hass, self.cluster_id, PERM_STATUS_VEHICLE):
+        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
             method = "GET"
             return await self.api_request(url, method)
@@ -242,10 +194,10 @@ class DiveraAPI:
     async def post_using_vehicle_property(self, payload, vehicle_id) -> dict:
         """POST individual vehicle poroperties for vehicle from Divera API."""
         LOGGER.debug(
-            "Posting individual vehicle properties for cluster %s", self.cluster_id
+            "Posting individual vehicle properties for cluster %s", self.ucr_id
         )
 
-        if permission_check(self.hass, self.cluster_id, PERM_STATUS_VEHICLE):
+        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -254,15 +206,14 @@ class DiveraAPI:
 
     async def post_using_vehicle_crew(self, payload, vehicle_id, mode) -> dict:
         """POST add one or more crew to a vehicle."""
-        # read vehicle name based on vehicle id
         LOGGER.debug(
             "Posting %s crew members to vehicle %s for cluster %s",
             mode,
             vehicle_id,
-            self.cluster_id,
+            self.ucr_id,
         )
 
-        if permission_check(self.hass, self.cluster_id, PERM_STATUS_VEHICLE):
+        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
             method = "POST"
             return await self.api_request(url, method, payload=payload)
@@ -287,10 +238,8 @@ class DiveraCredentials:
                     return None, data_ucr_response.get("message", {})
 
                 data_ucr_data = data_ucr_response.get(D_DATA, {}).get(D_UCR, {})
-
-                # cluster_id = data_ucr_data.get(ucr_id, {}).get("cluster_id", "")
-                cluster_name = data_ucr_data.get(ucr_id, {}).get("name", "")
-                usergroup_id = data_ucr_data.get(ucr_id, {}).get("usergroup_id", "")
+                cluster_name = data_ucr_data.get(ucr_id, {}).get(D_NAME, "")
+                usergroup_id = data_ucr_data.get(ucr_id, {}).get(D_USERGROUP_ID, "")
 
                 return (
                     {
@@ -307,6 +256,7 @@ class DiveraCredentials:
         except (TypeError, AttributeError):
             return None, "no_data"
         except Exception:
+            LOGGER.exception("Error fetching cluster data")
             return None, "unknown"
 
     @staticmethod
@@ -315,9 +265,24 @@ class DiveraCredentials:
         session,
         user_input: dict[str, str],
     ) -> tuple[dict[str, str], dict[str, str]]:
-        """Validate API access and fetch all instance names."""
+        """Validate login and fetch all instance names.
+
+        Args:
+            errors (dict): Dictionary with error messages.
+            session (dict): Valid websession of Hass.
+            user_input (dict): User input, most likely from config_flow.
+
+        Returns:
+            errors (dict): Dictionary with error messages.
+            cluster (dict): Mapping of hub IDs to their names.
+
+        """
 
         errors = {}
+        clusters = {}
+        api_key = ""
+        data_ucr = {}
+
         url_auth = f"{BASE_API_URL}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
         payload = {
             "Login": {
@@ -326,11 +291,6 @@ class DiveraCredentials:
                 "jwt": "false",
             }
         }
-
-        clusters = {}
-        api_key = ""
-        usergroup_id = ""
-        data_ucr = {}
 
         # Login-Request
         try:
@@ -351,51 +311,32 @@ class DiveraCredentials:
                     else:
                         formatted_errors["base"] = str(raw_errors)
 
-                    return formatted_errors, clusters, usergroup_id
+                    return formatted_errors, clusters
 
                 data_user = data_auth.get("data", {}).get("user", {})
                 api_key = data_user.get("access_token", "")
                 data_ucr = data_auth.get("data", {}).get("ucr", {})
 
-                # return multicluster_info if check if len(data_ucr) > 1
-                # no need to fire pull_all, if more than 1 ucr
+                for cluster in data_ucr:
+                    ucr_id = cluster.get("id", "")
+                    clusters[ucr_id] = {
+                        D_CLUSTER_NAME: cluster.get(D_NAME, ""),
+                        D_UCR_ID: ucr_id,
+                        D_API_KEY: api_key,
+                        D_USERGROUP_ID: cluster.get(D_USERGROUP_ID, ""),
+                    }
+
+                return errors, clusters
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
-            return errors, clusters, usergroup_id
+            return errors, clusters
         except (TypeError, AttributeError):
             errors["base"] = "no_data"
-            return errors, clusters, usergroup_id
+            return errors, clusters
         except Exception:
             errors["base"] = "unknown"
-            return errors, clusters, usergroup_id
-
-        # prallel requests for cluster data
-        raw_url_ucr = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
-        tasks = []
-
-        for item in data_ucr:
-            ucr_id = str(item.get("id"))
-            if ucr_id:
-                url_ucr = f"{raw_url_ucr}?accesskey={api_key}&ucr={ucr_id}"
-                tasks.append(
-                    DiveraCredentials.fetch_cluster_data(
-                        session, url_ucr, api_key, ucr_id
-                    )
-                )
-
-        # paralell requests
-        results = await asyncio.gather(*tasks)
-
-        # process results
-        for i, (cluster_data, error, usergroup_id) in enumerate(results):
-            if error:
-                errors[f"ucr_{i}"] = error
-            elif cluster_data:
-                clusters[cluster_data[D_UCR_ID]] = cluster_data
-                usergroup_id = usergroup_id
-
-        return errors, clusters, usergroup_id
+            return errors, clusters
 
     @staticmethod
     async def validate_api_key(
@@ -418,7 +359,6 @@ class DiveraCredentials:
         """
         clusters = {}
         errors = {}
-        usergroup_id = ""
         api_key = user_input.get("api_key", "")
         url = (
             f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
@@ -430,19 +370,17 @@ class DiveraCredentials:
 
                 if response.status not in [200, 201]:
                     errors["base"] = data.get("message", {})
-                    return errors, clusters, usergroup_id
+                    return errors, clusters
 
                 data_ucr = data.get(D_DATA, {}).get(D_UCR, {})
 
                 for ucr_id, ucr_data in data_ucr.items():
-                    cluster_id = ucr_data.get("cluster_id", "")
-                    cluster_name = ucr_data.get("name", "")
-                    clusters[cluster_id] = {
-                        D_CLUSTER_NAME: cluster_name,
+                    clusters[ucr_id] = {
+                        D_CLUSTER_NAME: ucr_data.get(D_NAME, ""),
                         D_UCR_ID: ucr_id,
                         D_API_KEY: api_key,
+                        D_USERGROUP_ID: ucr_data.get(D_USERGROUP_ID, ""),
                     }
-                    usergroup_id = ucr_data.get("usergroup_id", "")
 
         except (ClientError, TimeoutError):
             errors["base"] = "cannot_connect"
@@ -451,4 +389,4 @@ class DiveraCredentials:
         except Exception:
             errors["base"] = "unknown"
 
-        return errors, clusters, usergroup_id
+        return errors, clusters

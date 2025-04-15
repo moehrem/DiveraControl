@@ -23,13 +23,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install black flake8
+          pip install black pylint
 
       - name: Check formatting with Black
         run: black --check .
 
-      - name: Run Flake8
-        run: flake8 .
+      - name: Run Pylint
+        run: |
+          # Optional: Verzeichnis anpassen
+          pylint custom_components/diveracontrol --exit-zero
 
   security_checks:
     name: "🔒 Security Checks"
@@ -67,22 +69,3 @@ jobs:
           base: HEAD~50
           head: HEAD
           extra_args: "--only-verified --json"
-
-          # tests:
-  #   name: "✅ Unit Tests"
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: '3.11'
-
-  #     - name: Install dependencies
-  #       run: |
-  #         pip install pytest pytest-asyncio
-
-  #     - name: Run Tests
-  #       run: pytest

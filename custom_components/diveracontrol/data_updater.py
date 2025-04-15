@@ -1,47 +1,13 @@
-"""Methoden zur Verarbeitung und Aktualisierung der API-Daten.
-
-Verantwortung:
-    - Festlegen, wie oft Daten abgerufen werden.
-    - Verwenden von Methoden aus der api.py, um Daten von der API abzurufen.
-    - Fehlerbehandlung (z. B. Logging oder UpdateFailed werfen).
-
-Kommunikation:
-    - Ruft die API-Methoden aus api.py auf.
-    - Rückgabe ermittelter und verarbeiteter Daten an coordinator.py.
-    - Dient als zentrale Schnittstelle, über die andere Plattformen (sensor, binary_sensor, etc.) auf die Daten zugreifen.
-"""
+"""Updates and processes data from Divera API."""
 
 import logging
 from typing import Any
-from .api import DiveraAPI
 
 from aiohttp import ClientError
 
+from .api import DiveraAPI
+from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
 from .utils import check_timestamp
-
-from .const import (
-    # data
-    D_DATA,
-    D_OPEN_ALARMS,
-    D_UCR,
-    D_UCR_DEFAULT,
-    D_UCR_ACTIVE,
-    D_TS,
-    D_USER,
-    D_STATUS,
-    D_CLUSTER,
-    D_MONITOR,
-    D_ALARM,
-    D_NEWS,
-    D_EVENTS,
-    D_DM,
-    D_MESSAGE_CHANNEL,
-    D_MESSAGE,
-    D_LOCALMONITOR,
-    D_STATUSPLAN,
-    D_VEHICLE,
-    D_CLUSTER_ID,
-)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,7 +36,7 @@ async def update_data(
 
     # request divera data
     try:
-        ucr_id = admin_data[D_CLUSTER_ID]
+        ucr_id = admin_data[D_UCR_ID]
         raw_ucr_data = await api.get_ucr_data(ucr_id)
 
         if not raw_ucr_data.get("success", False):
@@ -94,7 +60,10 @@ async def update_data(
             new_data = raw_ucr_data.get(D_DATA, {}).get(key, {})
             if check_timestamp(cluster_data.get(key), new_data):
                 cluster_data[key] = new_data
-                _LOGGER.debug("Sucessfully updated %s with new data: %s", key, new_data)
+                _LOGGER.debug(
+                    "Sucessfully updated key '%s', check diagnostics for data details",
+                    key,
+                )
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error updating Divera data for key '%s', error: '%s'", key, e)
     except Exception:
@@ -129,9 +98,7 @@ async def update_data(
                     vehicle_property,
                 )
     except (KeyError, AttributeError) as e:
-        _LOGGER.error(
-            "Error fetching vehicle properties for vehicle '%s', error: '%s'", key, e
-        )
+        _LOGGER.error("Error fetching vehicle properties, error: '%s'", e)
     except Exception:
         _LOGGER.exception("Unexpected error while processing vehicle properties")
 
@@ -153,5 +120,3 @@ async def update_data(
         _LOGGER.error("Error processing alarm data: %s", e)
     except Exception:
         _LOGGER.exception("Unexpected error while processing alarms")
-
-    # return cluster_data
