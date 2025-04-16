@@ -1,0 +1,71 @@
+name: ✅ CI Pipeline
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1" # Läuft jeden Montag um 03:00 UTC für automatische Updates
+
+jobs:
+  lint:
+    name: "🔍 Linting & Static Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install black pylint
+
+      - name: Check formatting with Black
+        run: black --check .
+
+      - name: Run Pylint
+        run: |
+          # Optional: Verzeichnis anpassen
+          pylint custom_components/diveracontrol --exit-zero
+
+  security_checks:
+    name: "🔒 Security Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: 🔒 Install Security Tools
+        run: pip install bandit safety
+
+      - name: 🔍 Run Bandit (Code Security)
+        run: bandit -r .
+
+      - name: 🛡️ Run Safety (Dependency Security)
+        run: safety check --full-report
+
+  secrets_scan:
+    name: "🕵️ Secret Scanning"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code (Full History)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 🐽 TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.88.6
+        with:
+          base: HEAD~50
+          head: HEAD
+          extra_args: "--only-verified --json"

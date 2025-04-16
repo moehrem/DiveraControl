@@ -1,0 +1,13 @@
+{
+  "domain": "diveracontrol",
+  "name": "DiveraControl",
+  "codeowners": ["@moehrem"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/moehrem/DiveraControl",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/moehrem/DiveraControl/issues",
+  "requirements": [],
+  "version": "0.9.1"
+}

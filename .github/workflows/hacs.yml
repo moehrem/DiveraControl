@@ -1,0 +1,21 @@
+name: HACS Quality Checks
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: HACS validation
+        uses: "hacs/action@main"
+        with:
+          category: "integration"
