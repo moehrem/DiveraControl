@@ -50,7 +50,7 @@ async def async_setup_entry(
     current_sensors = hass.data[DOMAIN][ucr_id].setdefault("sensors", {})
 
     async def async_add_sensor():
-        """Fügt neue Sensoren hinzu."""
+        """Adding new sensors."""
         cluster_data = coordinator.cluster_data
         new_sensors = []
 
@@ -59,27 +59,26 @@ async def async_setup_entry(
         new_availability_data = extract_keys(
             cluster_data.get(D_CLUSTER, {}).get(D_STATUS)
         )
-        # new_static_sensors_data = {D_OPEN_ALARMS, D_CLUSTER}
 
-        # Alarm-Sensoren hinzufügen
+        # adding alarm sensros
         for alarm_id in new_alarm_data - current_sensors.keys():
             sensor = DiveraAlarmSensor(coordinator, alarm_id)
             new_sensors.append(sensor)
             current_sensors[alarm_id] = sensor
 
-        # Fahrzeug-Sensoren hinzufügen
+        # adding vehicle sensors
         for vehicle_id in new_vehicle_data - current_sensors.keys():
             sensor = DiveraVehicleSensor(coordinator, vehicle_id)
             new_sensors.append(sensor)
             current_sensors[vehicle_id] = sensor
 
-        # Status-Sensoren hinzufügen
+        # adding availability sensors
         for status_id in new_availability_data - current_sensors.keys():
             sensor = DiveraAvailabilitySensor(coordinator, status_id)
             new_sensors.append(sensor)
             current_sensors[status_id] = sensor
 
-        # Statische Sensoren hinzufügen
+        # adding static sensors
         static_sensor_map = {
             D_OPEN_ALARMS: DiveraOpenAlarmsSensor(coordinator),
             D_CLUSTER: DiveraUnitSensor(coordinator),
@@ -90,12 +89,12 @@ async def async_setup_entry(
                 new_sensors.append(sensor_instance)
                 current_sensors[sensor_name] = sensor_instance
 
-        # Sensoren zur HA-Plattform hinzufügen
+        # adding sensors to platform
         if new_sensors:
-            async_add_entities(new_sensors, update_before_add=True)
+            async_add_entities(new_sensors, update_before_add=False)
 
     async def async_remove_sensor():
-        """Entfernt Sensoren, die nicht mehr benötigt werden."""
+        """Remove unnnecessary sensors."""
         cluster_data = coordinator.cluster_data
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items"))
@@ -121,10 +120,9 @@ async def async_setup_entry(
         if remove_tasks:
             await asyncio.gather(*remove_tasks)
 
-    # Initialer Aufruf für Sensor-Setup
     await async_add_sensor()
     await async_remove_sensor()
 
-    # Listener für automatische Updates registrieren
+    # register listeners for automatic updates
     coordinator.async_add_listener(lambda: asyncio.create_task(async_add_sensor()))
     coordinator.async_add_listener(lambda: asyncio.create_task(async_remove_sensor()))

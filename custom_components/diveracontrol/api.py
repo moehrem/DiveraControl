@@ -86,17 +86,20 @@ class DiveraAPI:
             url = f"{url}?{param_string}"
 
         try:
+            log_url = url.replace(self.api_key, "**REDACTED**")
+            LOGGER.debug("Starting request to Divera API: %s", log_url)
+
             async with self.session.request(
                 method, url, json=payload, headers=headers, timeout=10
             ) as response:
                 if response.status != 200:
-                    log_url = url.replace(self.api_key, "**REDACTED**")
                     raise DiveraAPIError(
                         f"Error in {method} request for cluster id '{self.ucr_id}'. Status: '{response.status}', reason: '{response.reason}', url: '{log_url}'"
                     )
 
                 if response.status == 200:
                     try:
+                        LOGGER.debug("Finished request to Divera API: %s", log_url)
                         return await response.json()
                     except Exception:
                         LOGGER.exception("Error parsing JSON response from Divera API")
