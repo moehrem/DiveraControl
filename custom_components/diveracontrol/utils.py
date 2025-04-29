@@ -4,10 +4,10 @@ import asyncio
 from functools import wraps
 import logging
 import time
-from typing import Set
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     D_ACCESS,
@@ -28,6 +28,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_translation_cache = {}
 
 
 def permission_check(hass: HomeAssistant, ucr_id, perm_key):
@@ -91,7 +92,10 @@ def get_device_info(cluster_name):
 
 
 def log_execution_time(func):
-    """Log execution times of function."""
+    """Log execution times of function only if loglevel is DEBUG."""
+
+    if not _LOGGER.isEnabledFor(logging.DEBUG):
+        return func
 
     if asyncio.iscoroutinefunction(func):
 
@@ -99,28 +103,23 @@ def log_execution_time(func):
         async def async_wrapper(*args, **kwargs):
             start_time = time.time()
             result = await func(*args, **kwargs)
-            end_time = time.time()
-            elapsed_time = end_time - start_time
+            elapsed_time = time.time() - start_time
             _LOGGER.debug(
                 "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
             )
             return result
 
         return async_wrapper
-    else:
 
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            _LOGGER.debug(
-                "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
-            )
-            return result
+    @wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        elapsed_time = time.time() - start_time
+        _LOGGER.debug("Execution time of %s: %.2f seconds", func.__name__, elapsed_time)
+        return result
 
-        return sync_wrapper
+    return sync_wrapper
 
 
 def get_cluster_id(hass: HomeAssistant, sensor_id: str):
@@ -238,23 +237,6 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
             raise HomeAssistantError(f"Service not found: {service}")
 
 
-def check_timestamp(old_data, new_data):
-    """Check if new data has a more recent timestamp than old data."""
-    try:
-        old_ts = old_data.get("ts", 0)
-        if old_ts == 0:
-            return True
-
-        new_ts = new_data.get("ts", 0)
-
-    except AttributeError as e:
-        _LOGGER.debug("Timestamp check failed due to missing attributes: %s", e)
-        return True
-
-    else:
-        return new_ts > old_ts
-
-
 def set_update_interval(old_interval, open_alarms, admin_data):
     """Set update interval based on open alarms."""
     interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
@@ -265,15 +247,37 @@ def set_update_interval(old_interval, open_alarms, admin_data):
 
     if old_interval != new_interval:
         _LOGGER.debug(
-            "Update interval changed to %s seconds for unit '%s'",
+            "Update interval changed to %s for unit '%s'",
             new_interval,
             cluster_name,
         )
         return new_interval
 
+    _LOGGER.debug(
+        "Update interval not changed, still %s for unit '%s'",
+        old_interval,
+        cluster_name,
+    )
+
     return old_interval
 
 
-def extract_keys(data) -> Set[str]:
+def extract_keys(data) -> set[str]:
     """Extract keys from dictionaries."""
     return set(data.keys()) if isinstance(data, dict) else set()
+
+
+async def get_translation(hass: HomeAssistant, category: str, language=None):
+    """Load and cache translations."""
+    if language is None:
+        language = hass.config.language
+
+    cache_key = (DOMAIN, category, language)
+    if cache_key not in _translation_cache:
+        _translation_cache[cache_key] = await async_get_translations(
+            hass,
+            language,
+            category=category,
+            integrations=[DOMAIN],
+        )
+    return _translation_cache[cache_key]

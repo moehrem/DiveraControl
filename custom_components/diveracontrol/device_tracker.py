@@ -6,7 +6,7 @@ import logging
 from homeassistant.core import HomeAssistant
 
 from .const import D_ALARM, D_CLUSTER, D_COORDINATOR, D_UCR_ID, D_VEHICLE, DOMAIN
-from .divera_entity_handling import DiveraAlarmTracker, DiveraVehicleTracker
+from .entity import DiveraAlarmTracker, DiveraVehicleTracker
 from .utils import extract_keys
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ async def async_setup_entry(
             current_trackers[vehicle_id] = tracker
 
         if new_trackers:
-            async_add_entities(new_trackers, update_before_add=True)
+            async_add_entities(new_trackers, update_before_add=False)
 
     async def async_remove_trackers():
         """Remove unused tracker."""
@@ -68,10 +68,9 @@ async def async_setup_entry(
         if remove_tasks:
             await asyncio.gather(*remove_tasks)
 
-    # Initialer Aufruf für Sensor-Setup
     await async_add_trackers()
     await async_remove_trackers()
 
-    # Listener für automatische Updates registrieren
+    # register listeners for auto updates of trackers
     coordinator.async_add_listener(lambda: asyncio.create_task(async_add_trackers()))
     coordinator.async_add_listener(lambda: asyncio.create_task(async_remove_trackers()))

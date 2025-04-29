@@ -7,7 +7,7 @@ from aiohttp import ClientError
 
 from .api import DiveraAPI
 from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
-from .utils import check_timestamp
+# from .utils import check_timestamp
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,13 +57,11 @@ async def update_data(
     # update data if new data available
     try:
         for key in cluster_data:
-            new_data = raw_ucr_data.get(D_DATA, {}).get(key, {})
-            if check_timestamp(cluster_data.get(key), new_data):
-                cluster_data[key] = new_data
-                _LOGGER.debug(
-                    "Sucessfully updated key '%s', check diagnostics for data details",
-                    key,
-                )
+            cluster_data[key] = raw_ucr_data.get(D_DATA, {}).get(key, {})
+            _LOGGER.debug(
+                "Sucessfully updated key '%s', check diagnostics for data details",
+                key,
+            )
     except (KeyError, AttributeError) as e:
         _LOGGER.error("Error updating Divera data for key '%s', error: '%s'", key, e)
     except Exception:

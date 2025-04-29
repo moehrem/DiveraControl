@@ -5,6 +5,7 @@ import logging
 from aiohttp import ClientError
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -29,7 +30,6 @@ from .const import (
     PERM_MESSAGES,
     PERM_STATUS_VEHICLE,
 )
-from .divera_error_handling import DiveraAPIError
 from .utils import log_execution_time, permission_check
 
 LOGGER = logging.getLogger(__name__)
@@ -86,17 +86,20 @@ class DiveraAPI:
             url = f"{url}?{param_string}"
 
         try:
+            log_url = url.replace(self.api_key, "**REDACTED**")
+            LOGGER.debug("Starting request to Divera API: %s", log_url)
+
             async with self.session.request(
                 method, url, json=payload, headers=headers, timeout=10
             ) as response:
                 if response.status != 200:
-                    log_url = url.replace(self.api_key, "**REDACTED**")
-                    raise DiveraAPIError(
-                        f"Error in {method} request for cluster id '{self.ucr_id}'. Status: '{response.status}', reason: '{response.reason}', url: '{log_url}'"
+                    raise ConfigEntryNotReady(
+                        f"Divera API not ready (status {response.status}) for cluster id '{self.ucr_id}'"
                     )
 
                 if response.status == 200:
                     try:
+                        LOGGER.debug("Finished request to Divera API: %s", log_url)
                         return await response.json()
                     except Exception:
                         LOGGER.exception("Error parsing JSON response from Divera API")
@@ -334,8 +337,8 @@ class DiveraCredentials:
         except (TypeError, AttributeError):
             errors["base"] = "no_data"
             return errors, clusters
-        except Exception:
-            errors["base"] = "unknown"
+        except Exception as e:
+            errors["base"] = e
             return errors, clusters
 
     @staticmethod
@@ -386,7 +389,7 @@ class DiveraCredentials:
             errors["base"] = "cannot_connect"
         except (TypeError, AttributeError):
             errors["base"] = "no_data"
-        except Exception:
-            errors["base"] = "unknown"
+        except Exception as e:
+            errors["base"] = e
 
         return errors, clusters

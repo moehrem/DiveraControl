@@ -21,7 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 
     # ensure only one calendar entity exist at a time
     calendar_entity = DiveraCalendar(coordinator, ucr_id)
-    async_add_entities([calendar_entity], update_before_add=True)
+    async_add_entities([calendar_entity], update_before_add=False)
 
     async def async_update_events():
         """Update the calendar with new event data."""
