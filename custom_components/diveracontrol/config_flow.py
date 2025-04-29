@@ -16,7 +16,6 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
-from homeassistant.helpers.translation import async_get_translations
 
 from .api import DiveraCredentials as dc
 from .const import (
@@ -33,12 +32,13 @@ from .const import (
     UPDATE_INTERVAL_DATA,
     VERSION,
 )
+from .utils import get_translation
 
 LOGGER = logging.getLogger(__name__)
 
 
-class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle the config flow for myDivera integration."""
+class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle the config flow for DiveraControl integration."""
 
     VERSION = VERSION
     MINOR_VERSION = MINOR_VERSION
@@ -239,7 +239,7 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         cluster_schema = vol.Schema(
             {
-                vol.Required("clusters", default=[cluster_names[0]]): SelectSelector(
+                vol.Required("clusters", default=cluster_names[0]): SelectSelector(
                     SelectSelectorConfig(options=cluster_names, multiple=False)
                 )
             }
@@ -280,36 +280,23 @@ class MyDiveraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, cluster_name: str, ucr_id: int, usergroup_id: int
     ) -> None:
         """Show persistant message based on usergroup_id and related issues and permissions."""
-        translation = await async_get_translations(
-            self.hass,
-            self.hass.config.language,
-            category="common",
-            integrations=[DOMAIN],
-        )
+        translation = await get_translation(self.hass, "config")
 
         message = translation.get(
-            "component.diveracontrol.common.usergroup_message"
+            "component.diveracontrol.config.usergroup.usergroup_message"
         ).format(cluster_name=cluster_name, ucr_id=ucr_id)
 
-        match usergroup_id:
-            case 4:  # standard user, no admin
-                message += translation.get("component.diveracontrol.common.usergroup_4")
-            case 5:  # monitor user
-                message += translation.get("component.diveracontrol.common.usergroup_5")
-            case 8:  # admin user, owner?
-                message += translation.get("component.diveracontrol.common.usergroup_8")
-            case 14:  # standard API-user
-                message += translation.get(
-                    "component.diveracontrol.common.usergroup_14"
-                )
-            case 19:  # system user
-                message += translation.get(
-                    "component.diveracontrol.common.usergroup_19"
-                )
-            case _:  # all other usergroup_ids
-                message += translation.get(
-                    "component.diveracontrol.common.usergroup_unknown"
-                ).format(usergroup_id=self.usergroup_id)
+        detail_key = (
+            f"component.diveracontrol.config.usergroup.usergroup_{usergroup_id}"
+        )
+        detail_text = translation.get(detail_key)
+
+        if detail_text is None:
+            detail_text = translation.get(
+                "component.diveracontrol.config.usergroup.usergroup_unknown"
+            ).format(usergroup_id=usergroup_id)
+
+        message += detail_text
 
         await self.hass.services.async_call(
             "persistent_notification",

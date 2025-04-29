@@ -92,10 +92,6 @@ class BaseDiveraEntity(CoordinatorEntity):
 class BaseDiveraSensor(BaseDiveraEntity):
     """Base class for Divera sensors."""
 
-    # def __init__(self, coordinator) -> None:
-    #     """Init sensor."""
-    #     super().__init__(coordinator)
-
     @property
     def device_info(self):
         """Fetch device info."""
@@ -326,7 +322,7 @@ class DiveraAvailabilitySensor(BaseDiveraSensor):
             .get(self.status_id, {})
             .get("name", "Unknown")
         )
-        return f"Verfügbarkeit: {status_name}"
+        return f"Status: {status_name}"
 
     @property
     def state(self) -> int:
