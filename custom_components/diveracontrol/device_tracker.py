@@ -6,7 +6,7 @@ import logging
 from homeassistant.core import HomeAssistant
 
 from .const import D_ALARM, D_CLUSTER, D_COORDINATOR, D_UCR_ID, D_VEHICLE, DOMAIN
-from .divera_entity_handling import DiveraAlarmTracker, DiveraVehicleTracker
+from .entity import DiveraAlarmTracker, DiveraVehicleTracker
 from .utils import extract_keys
 
 _LOGGER = logging.getLogger(__name__)

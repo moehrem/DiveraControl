@@ -28,7 +28,7 @@ from .const import (
     D_VEHICLE,
     DOMAIN,
 )
-from .divera_entity_handling import (
+from .entity import (
     DiveraAlarmSensor,
     DiveraAvailabilitySensor,
     DiveraOpenAlarmsSensor,

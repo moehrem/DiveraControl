@@ -1,14 +1,5 @@
 {
   "title": "DiveraControl",
-  "common": {
-    "usergroup_message": "Die Einheit {cluster_name} (ID {ucr_id}) wurde erfolgreich erstellt.\n\n",
-    "usergroup_4": "Der angemeldete Nutzer ist ein Standardnutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_5": "Der angemeldete Nutzer ist ein Monitorbenutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_8": "Der angemeldete Nutzer ist ein Nutzer mit Adminrechten und hat Zugriff auf alle Daten.",
-    "usergroup_14": "Der angemeldete Nutzer ist der Standard-API-Nutzer. Ein Zugriff ist daher nicht möglich auf:\n- Alarmdaten\n- News\n- Termine\n- Dashboards",
-    "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
-    "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe '{usergroup_id}' angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
-  },
   "config": {
       "step": {
           "user": {
@@ -70,6 +61,15 @@
         "hub_not_found": "Hub wurde nicht gefunden.",
         "reconfigure_successful": "Neukonfiguration erfolgreich.",
         "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      },
+      "usergroup": {
+        "usergroup_message": "Die Einheit {cluster_name} (ID {ucr_id}) wurde erfolgreich erstellt.\n\n",
+        "usergroup_4": "Der angemeldete Nutzer ist ein Standardnutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
+        "usergroup_5": "Der angemeldete Nutzer ist ein Monitorbenutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
+        "usergroup_8": "Der angemeldete Nutzer ist ein Nutzer mit Adminrechten und hat Zugriff auf alle Daten.",
+        "usergroup_14": "Der angemeldete Nutzer ist der Standard-API-Nutzer. Ein Zugriff ist daher nicht möglich auf:\n- Alarmdaten\n- News\n- Termine\n- Dashboards",
+        "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
+        "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe '{usergroup_id}' angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
       }
   }
 }

@@ -7,6 +7,7 @@ import time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     D_ACCESS,
@@ -27,6 +28,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_translation_cache = {}
 
 
 def permission_check(hass: HomeAssistant, ucr_id, perm_key):
@@ -235,23 +237,6 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
             raise HomeAssistantError(f"Service not found: {service}")
 
 
-# def check_timestamp(old_data, new_data):
-#     """Check if new data has a more recent timestamp than old data."""
-#     try:
-#         old_ts = old_data.get("ts", 0)
-#         if old_ts == 0:
-#             return True
-
-#         new_ts = new_data.get("ts", 0)
-
-#     except AttributeError as e:
-#         _LOGGER.debug("Timestamp check failed due to missing attributes: %s", e)
-#         return True
-
-#     else:
-#         return new_ts > old_ts
-
-
 def set_update_interval(old_interval, open_alarms, admin_data):
     """Set update interval based on open alarms."""
     interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
@@ -280,3 +265,19 @@ def set_update_interval(old_interval, open_alarms, admin_data):
 def extract_keys(data) -> set[str]:
     """Extract keys from dictionaries."""
     return set(data.keys()) if isinstance(data, dict) else set()
+
+
+async def get_translation(hass: HomeAssistant, category: str, language=None):
+    """Load and cache translations."""
+    if language is None:
+        language = hass.config.language
+
+    cache_key = (DOMAIN, category, language)
+    if cache_key not in _translation_cache:
+        _translation_cache[cache_key] = await async_get_translations(
+            hass,
+            language,
+            category=category,
+            integrations=[DOMAIN],
+        )
+    return _translation_cache[cache_key]
