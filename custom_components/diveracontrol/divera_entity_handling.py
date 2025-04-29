@@ -75,7 +75,7 @@ class BaseDiveraEntity(CoordinatorEntity):
                 e,
             )
 
-        # Entferne aus der State-Machine
+        # remove from state machine
         try:
             self.hass.states.async_remove(self.entity_id)
             _LOGGER.debug("Removed entity from state machine: %s", self.entity_id)

@@ -1,73 +1,75 @@
 {
   "title": "DiveraControl",
-  "common": {
-      "usergroup_message": "Unit {cluster_name} (ID {ucr_id}) created successfully.",
-      "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera permissions, so some data may not be available.",
-      "usergroup_8": "The logged-in user is an admin user and has access to all data.",
-      "usergroup_19": "The logged-in user is a system user and therefore will not have access to:\n- Alarm data\n- News\n- Events",
-      "usergroup_unknown": "A user from an unknown user group {usergroup_id} has logged in. Some data may not be available."
-  },
   "config": {
-      "step": {
-          "user": {
-            "title": "DiveraControl Setup",
-            "description": "Please choose a configuration option.",
-            "menu_options": {
-              "login": "User Login",
-              "api_key": "API Key"
-            }
-          },
-          "login": {
-            "title": "User Login",
-            "description": "Please enter a username and password. The login credentials are only used for the initial data retrieval and will not be stored.\nAdditionally, set the interval for data queries outside and during active alarms.",
-            "data": {
-              "username": "Username",
-              "password": "Password",
-              "update_interval_data": "Query interval outside alarms (seconds)",
-              "update_interval_alarm": "Query interval during active alarms (seconds)"
-            }
-          },
-          "api_key": {
-            "title": "Enter API Key",
-            "description": "If login fails or a system user needs to be logged in, the user's API key can be entered here as an alternative.",
-            "data": {
-              "api_key": "API Key",
-              "update_interval_data": "Query interval outside alarms (seconds)",
-              "update_interval_alarm": "Query interval during active alarms (seconds)"
-            }
-          },
-          "multi_cluster": {
-            "title": "Unit Selection",
-            "description": "Multiple units were found for the entered user. Please select the desired unit. Additional units must be added separately.",
-            "data": {
-              "clusters": "Units"
-            }
-          },
-          "reconfigure": {
-            "title": "Modify DiveraControl Configuration",
-            "description": "By changing the API key, a different user can be assigned to the unit. Additionally, the two intervals can be reconfigured.",
-            "data": {
-              "api_key": "API Key",
-              "update_interval_data": "Query interval outside alarms (seconds)",
-              "update_interval_alarm": "Query interval during active alarms (seconds)"
-            }
-          }
+    "step": {
+      "user": {
+        "title": "Setup of DiveraControl",
+        "description": "Please select an option for configuration.",
+        "menu_options": {
+          "login": "User Login",
+          "api_key": "API Key"
+        }
       },
-      "error": {
-        "cannot_auth": "Invalid username or password.",
-        "cannot_connect": "Unable to connect to Divera.",
-        "no_ucr": "No connected units found.",
-        "unknown": "Unknown error"
+      "login": {
+        "title": "User Login",
+        "description": "Please enter a username and password. These credentials are only used for the initial data query and will not be saved.\nAlso set the polling interval for when no alarm is active and when an alarm is ongoing.",
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "update_interval_data": "Polling interval when no alarm is active (seconds)",
+          "update_interval_alarm": "Polling interval during ongoing alarms (seconds)"
+        }
       },
-      "abort":{
-        "new_data_only": "Configuration completed.\n\nThe following units were created: {new_data}",
-        "existing_data_only": "Configuration completed.\n\nThe following units already exist and were not created: {existing_data}",
-        "new_and_existing_data": "Configuration completed.\n\nThe following units were created: {new_data}\n\nThe following units already exist and were not created: {existing_data}",
-        "no_new_hubs_found": "No new units were found, so no new hubs were created.",
-        "missing_entry_id": "Hub ID could not be determined.",
-        "hub_not_found": "Hub not found.",
-        "reconfigure_successful": "Reconfiguration successful.",
-        "unknown_step": "Unknown configuration step, setup aborted."
+      "api_key": {
+        "title": "Enter API Key",
+        "description": "If login fails or a system user should be used, the user's API key can be entered here as an alternative.",
+        "data": {
+          "api_key": "API Key",
+          "update_interval_data": "Polling interval when no alarm is active (seconds)",
+          "update_interval_alarm": "Polling interval during ongoing alarms (seconds)"
+        }
+      },
+      "multi_cluster": {
+        "title": "Unit Selection",
+        "description": "Multiple units were found for the provided user. Please select the desired unit. Additional units must be added separately.",
+        "data": {
+          "clusters": "Units"
+        }
+      },
+      "reconfigure": {
+        "title": "Change Configuration for DiveraControl",
+        "description": "By changing the API key, a different user can be assigned to the unit. Additionally, the polling intervals can be reconfigured.",
+        "data": {
+          "api_key": "API Key",
+          "update_interval_data": "Polling interval when no alarm is active (seconds)",
+          "update_interval_alarm": "Polling interval during ongoing alarms (seconds)"
+        }
       }
+    },
+    "error": {
+      "cannot_auth": "Invalid username or password.",
+      "cannot_connect": "Unable to connect to Divera.",
+      "no_ucr": "No connected units found.",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "new_data_only": "Configuration completed.\n\nThe following units were created: {new_data}",
+      "existing_data_only": "Configuration completed.\n\nThe following units already exist and were not created: {existing_data}",
+      "new_and_existing_data": "Configuration completed.\n\nThe following units were created: {new_data}\n\nThe following units already exist and were not created: {existing_data}",
+      "no_new_hubs_found": "No new units found, so no new hubs were created.",
+      "missing_entry_id": "Unable to determine hub ID.",
+      "hub_not_found": "Hub not found.",
+      "reconfigure_successful": "Reconfiguration successful.",
+      "unknown_step": "Unknown configuration step, setup aborted."
+    },
+    "usergroup": {
+      "usergroup_message": "The unit {cluster_name} (ID {ucr_id}) was successfully created.\n\n",
+      "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera privileges, so some data may be unavailable.",
+      "usergroup_5": "The logged-in user is a monitor user. Access permissions depend on Divera privileges, so some data may be unavailable.",
+      "usergroup_8": "The logged-in user is an admin user and has access to all data.",
+      "usergroup_14": "The logged-in user is the standard API user. Therefore, access is not possible to:\n- Alarm data\n- News\n- Appointments\n- Dashboards",
+      "usergroup_19": "The logged-in user is a system user and will not have access to:\n- Alarm data\n- News\n- Appointments",
+      "usergroup_unknown": "A user from an unknown user group '{usergroup_id}' has logged in. Depending on granted permissions, some data may not be available."
+    }
   }
 }

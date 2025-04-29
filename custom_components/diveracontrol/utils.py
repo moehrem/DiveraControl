@@ -68,9 +68,6 @@ def permission_check(hass: HomeAssistant, ucr_id, perm_key):
             success = False
 
         if not success:
-            # raise DiveraPermissionDenied(
-            #     f"Permission denied for {perm_key} in cluster {cluster_name}"
-            # )
             _LOGGER.warning(
                 "Permission denied for %s in cluster %s", perm_key, cluster_name
             )
@@ -123,7 +120,7 @@ def log_execution_time(func):
         return sync_wrapper
 
 
-def get_cluster_id(hass: HomeAssistant, sensor_id: str):
+def get_ucr_id(hass: HomeAssistant, sensor_id: str):
     """Fetch ucr_id based on sensor_id. Raises exception if not found."""
     try:
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
@@ -162,7 +159,7 @@ def get_api_instance(hass: HomeAssistant, sensor_id: str):
 
 
 def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
-    """Holt die Koordinatordaten für die gegebene ucr_id oder wirft eine Exception."""
+    """Fetch coordinator data based on sensor id."""
     try:
         # try finding ucr_id with given sensor_id
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
@@ -188,7 +185,7 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
     match service:
         case "put_alarm" | "post_close_alarm":
             alarm_id = call.data.get("alarm_id")
-            ucr_id = get_cluster_id(hass, alarm_id)
+            ucr_id = get_ucr_id(hass, alarm_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:
@@ -210,7 +207,7 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
 
         case "post_vehicle_status" | "post_using_vehicle_property":
             vehicle_id = call.data.get("vehicle_id")
-            ucr_id = get_cluster_id(hass, vehicle_id)
+            ucr_id = get_ucr_id(hass, vehicle_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:

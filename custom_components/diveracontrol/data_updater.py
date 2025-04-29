@@ -7,7 +7,6 @@ from aiohttp import ClientError
 
 from .api import DiveraAPI
 from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
-from .utils import check_timestamp
 
 _LOGGER = logging.getLogger(__name__)
 

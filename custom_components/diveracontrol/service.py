@@ -219,7 +219,7 @@ async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
 
 
 async def async_register_services(hass: HomeAssistant, domain):
-    """Registriert alle Services für die Integration."""
+    """Register services for DiveraCotnrol."""
     service_definitions = {
         "post_vehicle_status": (
             handle_post_vehicle_status,
