@@ -63,7 +63,7 @@
         "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
       }
   },
-  "usergroup": {
+  "common": {
     "usergroup_message": "Die Einheit {cluster_name} (ID {ucr_id}) wurde erfolgreich erstellt.\n\n",
     "usergroup_4": "Der angemeldete Nutzer ist ein Standardnutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
     "usergroup_5": "Der angemeldete Nutzer ist ein Monitorbenutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",

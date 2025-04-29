@@ -63,7 +63,7 @@
       "unknown_step": "Unknown configuration step, setup aborted."
     }
   },
-  "usergroup": {
+  "common": {
     "usergroup_message": "The unit {cluster_name} (ID {ucr_id}) was successfully created.\n\n",
     "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera privileges, so some data may be unavailable.",
     "usergroup_5": "The logged-in user is a monitor user. Access permissions depend on Divera privileges, so some data may be unavailable.",

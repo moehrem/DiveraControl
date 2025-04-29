@@ -280,18 +280,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         self, cluster_name: str, ucr_id: int, usergroup_id: int
     ) -> None:
         """Show persistant message based on usergroup_id and related issues and permissions."""
-        translation = await get_translation(self.hass, "usergroup")
+        translation = await get_translation(self.hass, "common")
 
         message = translation.get(
-            "component.diveracontrol.usergroup.usergroup_message"
+            "component.diveracontrol.common.usergroup_message"
         ).format(cluster_name=cluster_name, ucr_id=ucr_id)
 
-        detail_key = f"component.diveracontrol.usergroup.usergroup_{usergroup_id}"
+        detail_key = f"component.diveracontrol.common.usergroup_{usergroup_id}"
         detail_text = translation.get(detail_key)
 
         if detail_text is None:
             detail_text = translation.get(
-                "component.diveracontrol.usergroup.usergroup_unknown"
+                "component.diveracontrol.common.usergroup_unknown"
             ).format(usergroup_id=usergroup_id)
 
         message += detail_text
