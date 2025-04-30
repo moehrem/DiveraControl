@@ -70,6 +70,6 @@
     "usergroup_8": "The logged-in user is an admin user and has access to all data.",
     "usergroup_14": "The logged-in user is the standard API user. Therefore, access is not possible to:\n- Alarm data\n- News\n- Appointments\n- Dashboards",
     "usergroup_19": "The logged-in user is a system user and will not have access to:\n- Alarm data\n- News\n- Appointments",
-    "usergroup_unknown": "A user from an unknown user group '{usergroup_id}' has logged in. Depending on granted permissions, some data may not be available."
+    "usergroup_unknown": "A user from an unknown user group {usergroup_id} has logged in. Depending on granted permissions, some data may not be available."
   }
 }
