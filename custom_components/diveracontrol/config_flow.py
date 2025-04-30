@@ -282,26 +282,26 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """Show persistant message based on usergroup_id and related issues and permissions."""
         translation = await get_translation(self.hass, "common")
 
-        message = translation.get(
+        base_message = translation.get(
             "component.diveracontrol.common.usergroup_message"
         ).format(cluster_name=cluster_name, ucr_id=ucr_id)
 
         detail_key = f"component.diveracontrol.common.usergroup_{usergroup_id}"
-        detail_text = translation.get(detail_key)
+        detail_message = translation.get(detail_key)
 
-        if detail_text is None:
-            detail_text = translation.get(
+        if detail_message is None:
+            detail_message = translation.get(
                 "component.diveracontrol.common.usergroup_unknown"
             ).format(usergroup_id=usergroup_id)
 
-        message += detail_text
+        full_message = base_message + "\n\n" + detail_message
 
         await self.hass.services.async_call(
             "persistent_notification",
             "create",
             {
                 "title": "DiveraControl",
-                "message": message,
+                "message": full_message,
                 "notification_id": "diveracontrol_success_permissions",
             },
         )
