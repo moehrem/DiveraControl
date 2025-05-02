@@ -5,7 +5,6 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -45,7 +44,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     PATCH_VERSION = PATCH_VERSION
 
     def __init__(self) -> None:
-        """Initialize the config flow."""
+        """Initialize the config flow.
+
+        Returns:
+            None
+
+        """
+
         self.session = None
         self.errors: dict[str, str] = {}
         self.clusters = {}
@@ -54,9 +59,19 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         self.update_interval_alarm = ""
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Handle the initial step for user configuration."""
+        """Handle the initial step for user configuration.
+
+        Args:
+            user_input: The user input data of step "user".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "user".
+
+        """
+
         self.session = async_get_clientsession(self.hass)
 
         if user_input is None:
@@ -65,27 +80,57 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_abort(reason="unknown_step")
 
     async def async_step_login(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Handle user login step."""
+        """Handle user login step.
+
+        Args:
+            user_input: The user input data of step "login".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "login".
+
+        """
+
         if user_input is None:
             return self._show_login_form()
 
         return await self._validate_and_proceed(dc.validate_login, user_input)
 
     async def async_step_api_key(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Handle the API key input step."""
+        """Handle the API key input step.
+
+        Args:
+            user_input: The user input data of step "api_key".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "api_key".
+
+        """
+
         if user_input is None:
             return self._show_api_key_form()
 
         return await self._validate_and_proceed(dc.validate_api_key, user_input)
 
     async def async_step_multi_cluster(
-        self, user_input: dict[str, Any] | None = None
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Handle the multi-cluster input step."""
+        """Handle the multi-cluster input step.
+
+        Args:
+            user_input: The user input data of step "multi_cluster".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "multi_cluster".
+
+        """
+
         if user_input is None:
             return self._show_multi_cluster_form()
 
@@ -100,9 +145,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self._process_clusters()
 
     async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle reconfiguration of an existing hub."""
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of an existing hub.
+
+        Args:
+            user_input: The user input data of step "reconfigure".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
 
         entry_id = self.context.get("entry_id")
         if not entry_id:
@@ -137,8 +191,22 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             data_updates=new_data,
         )
 
-    async def _validate_and_proceed(self, validation_method, user_input):
-        """Validate user input and decide next steps."""
+    async def _validate_and_proceed(
+        self,
+        validation_method: callable,
+        user_input: dict[str, Any],
+    ) -> ConfigFlowResult:
+        """Validate user input and decide next steps.
+
+        Args:
+            validation_method (callable): The calidation method to be used.
+            user_input (dict[str, Any]): The user input data of step "reconfigure".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
+
         self.errors.clear()
 
         self.update_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
@@ -159,8 +227,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self._process_clusters()
 
-    def _show_login_form(self):
-        """Display the login input form."""
+    def _show_login_form(self) -> ConfigFlowResult:
+        """Display the login input form.
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
+
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_USERNAME): TextSelector(
@@ -188,8 +262,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _show_api_key_form(self):
-        """Display the API key input form."""
+    def _show_api_key_form(self) -> ConfigFlowResult:
+        """Display the API key input form.
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
+
         data_schema = vol.Schema(
             {
                 vol.Required(D_API_KEY): TextSelector(
@@ -210,8 +290,24 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _show_reconfigure_form(self, interval_data, interval_alarm, api_key):
-        """Display the reconfigure input form."""
+    def _show_reconfigure_form(
+        self,
+        interval_data: int,
+        interval_alarm: int,
+        api_key: str,
+    ) -> ConfigFlowResult:
+        """Display the reconfigure input form.
+
+        Args:
+            interval_data (int): data update interval in case of no alarm.
+            interval_alarm (int): data update interval in case of alarm.
+            api_key (str): The API key to access Divera API.
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
+
         data_schema = vol.Schema(
             {
                 vol.Required(D_API_KEY, default=api_key): TextSelector(
@@ -232,8 +328,19 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _show_multi_cluster_form(self, clusters):
-        """Display the multi-cluster input form."""
+    def _show_multi_cluster_form(
+        self,
+        clusters: dict[str, dict[str, Any]],
+    ) -> ConfigFlowResult:
+        """Display the multi-cluster input form.
+
+        Args:
+            clusters (dict[str, dict[str, Any]]): The clusters/units to be displayed for the user to choose.
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
 
         cluster_names = [cluster[D_CLUSTER_NAME] for cluster in clusters.values()]
 
@@ -251,8 +358,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=self.errors,
         )
 
-    def _handle_duplicates(self):
-        """Mark for removal if duplicate and remove duplicates from the clusters dict."""
+    def _handle_duplicates(self) -> None:
+        """Mark for removal if duplicate and remove duplicates from the clusters dict.
+
+        Returns:
+            None
+
+        """
 
         clusters_to_remove = []
 
@@ -277,9 +389,20 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             del self.clusters[ucr_id]
 
     async def _async_show_usergroup_message(
-        self, cluster_name: str, ucr_id: int, usergroup_id: int
+        self,
+        cluster_name: str,
+        ucr_id: int,
+        usergroup_id: int,
     ) -> None:
-        """Show persistant message based on usergroup_id and related issues and permissions."""
+        """Show persistant message based on usergroup_id and related issues and permissions.
+
+        Args:
+            cluster_name (str): The name of the cluster/unit.
+            ucr_id (int): The user_cluster_relation ID to identify the Divera user.
+            usergroup_id (int): The class-ID of the usergroup the user belongs to.
+
+        """
+
         translation = await get_translation(self.hass, "common")
 
         base_message = translation.get(
@@ -306,8 +429,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def _process_clusters(self):
-        """Process device creation."""
+    async def _process_clusters(self) -> ConfigFlowResult:
+        """Process device creation.
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
 
         if self.clusters:
             for ucr_id, cluster_data in self.clusters.items():

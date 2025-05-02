@@ -40,8 +40,24 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
-    def __init__(self, hass: HomeAssistant, api: DiveraAPI, config_entry: dict) -> None:
-        """Initialize DiveraControl coordinator."""
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: DiveraAPI,
+        config_entry: dict,
+    ) -> None:
+        """Initialize DiveraControl coordinator.
+
+        Args:
+            hass (HomeAssistant): Home Assistant instance.
+            api (DiveraAPI): Divera API instance.
+            config_entry (dict): Configuration entry for the integration.
+
+        Returns:
+            None
+
+        """
+
         super().__init__(
             hass,
             _LOGGER,
@@ -63,7 +79,12 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self._listeners = {}
 
     def init_cluster_data_structure(self) -> None:
-        """Define main data structures for divera data and admin data."""
+        """Define main data structures for divera data and admin data.
+
+        Returns:
+            None
+
+        """
         if not self.cluster_data:
             self.cluster_data = {
                 D_UCR: {},
@@ -125,14 +146,27 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         return self.cluster_data
 
-    def async_add_listener(self, update_callback):
-        """Add a listener and store the remove function."""
+    def async_add_listener(self, update_callback: callable) -> callable:
+        """Add a listener and store the remove function.
+
+        Args:
+            update_callback (callable): Callback function to be called when data is updated.
+
+        Returns:
+            callable: function to remove listener.
+
+        """
         remove_listener = super().async_add_listener(update_callback)
         self._listeners[remove_listener] = (update_callback, None)
         return remove_listener
 
     async def remove_listeners(self) -> None:
-        """Remove all update listeners for this coordinator."""
+        """Remove all update listeners for this coordinator.
+
+        Returns:
+            None
+
+        """
         to_remove = list(self._listeners.keys())
 
         for listener in to_remove:

@@ -19,8 +19,21 @@ from .utils import get_api_instance, get_coordinator_data, handle_entity
 LOGGER = logging.getLogger(__name__)
 
 
-async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
-    """POST set vehicle fms-status."""
+async def handle_post_vehicle_status(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """POST set vehicle fms-status.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     vehicle_id = call.data.get("vehicle_id")
 
     api_instance = get_api_instance(hass, vehicle_id)
@@ -38,8 +51,21 @@ async def handle_post_vehicle_status(hass: HomeAssistant, call: dict):
     await handle_entity(hass, call, "post_vehicle_status")
 
 
-async def handle_post_alarm(hass: HomeAssistant, call: dict):
-    """POST create an alarm."""
+async def handle_post_alarm(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """POST create an alarm.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     cluster_id = call.data.get("cluster_id")
     group = call.data.get("group")
     user_cluster_relation = call.data.get("user_cluster_relation")
@@ -63,8 +89,21 @@ async def handle_post_alarm(hass: HomeAssistant, call: dict):
     # no handle_entity(), as data will update from Divera
 
 
-async def handle_put_alarm(hass: HomeAssistant, call: dict):
-    """PUT change an existing alarm."""
+async def handle_put_alarm(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """PUT change an existing alarm.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     alarm_id = call.data.get("alarm_id")
 
     api_instance = get_api_instance(hass, alarm_id)
@@ -77,7 +116,7 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
         }
     }
 
-    ok_status = await api_instance.put_alarms(payload, alarm_id)
+    ok_status = await api_instance.put_alarms(alarm_id, payload)
     if not ok_status:
         error_msg = f"Failed to change alarm {alarm_id}, check logs for details"
         LOGGER.error(error_msg)
@@ -86,8 +125,21 @@ async def handle_put_alarm(hass: HomeAssistant, call: dict):
     await handle_entity(hass, call, "put_alarm")
 
 
-async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
-    """POST close an existing alarm."""
+async def handle_post_close_alarm(
+    hass: HomeAssistant,
+    call: dict,
+):
+    """POST close an existing alarm.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     alarm_id = call.data.get("alarm_id")
 
     api_instance = get_api_instance(hass, alarm_id)
@@ -107,8 +159,21 @@ async def handle_post_close_alarm(hass: HomeAssistant, call: dict):
     await handle_entity(hass, call, "post_close_alarm")
 
 
-async def handle_post_message(hass: HomeAssistant, call: dict):
-    """Post message for alarm messenger."""
+async def handle_post_message(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """Post message for alarm messenger.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     message_channel_id = call.data.get("message_channel_id")
     alarm_id = call.data.get("alarm_id")
 
@@ -158,8 +223,21 @@ async def handle_post_message(hass: HomeAssistant, call: dict):
         raise HomeAssistantError(error_msg) from None
 
 
-async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
-    """Set individual properties of a specific vehicle."""
+async def handle_post_using_vehicle_property(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """Set individual properties of a specific vehicle.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     vehicle_id = call.data.get("vehicle_id")
 
     api_instance = get_api_instance(hass, vehicle_id)
@@ -168,7 +246,7 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
         k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
     }
 
-    ok_status = await api_instance.post_using_vehicle_property(payload, vehicle_id)
+    ok_status = await api_instance.post_using_vehicle_property(vehicle_id, payload)
     if not ok_status:
         error_msg = f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}, check logs for details."
         LOGGER.error(error_msg)
@@ -177,8 +255,21 @@ async def handle_post_using_vehicle_property(hass: HomeAssistant, call: dict):
     await handle_entity(hass, call, "post_using_vehicle_property")
 
 
-async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
-    """Add, remove, reset the crew of a specific vehicle."""
+async def handle_post_using_vehicle_crew(
+    hass: HomeAssistant,
+    call: dict,
+) -> None:
+    """Add, remove, reset the crew of a specific vehicle.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
     vehicle_id = call.data.get("vehicle_id")
     mode = call.data.get("mode")
 
@@ -209,7 +300,7 @@ async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
             LOGGER.error(error_msg)
             raise HomeAssistantError(error_msg) from None
 
-    ok_status = await api_instance.post_using_vehicle_crew(payload, vehicle_id, mode)
+    ok_status = await api_instance.post_using_vehicle_crew(vehicle_id, mode, payload)
     if not ok_status:
         error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
         LOGGER.error(error_msg)
@@ -218,8 +309,21 @@ async def handle_post_using_vehicle_crew(hass: HomeAssistant, call: dict):
     await handle_entity(hass, call, "post_using_vehicle_crew")
 
 
-async def async_register_services(hass: HomeAssistant, domain):
-    """Register services for DiveraCotnrol."""
+async def async_register_services(
+    hass: HomeAssistant,
+    domain: str,
+):
+    """Register services for DiveraCotnrol.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        domain (str): Domain name for services.
+
+    Returns:
+        None
+
+    """
+
     service_definitions = {
         "post_vehicle_status": (
             handle_post_vehicle_status,

@@ -1,4 +1,4 @@
-"""Contain several helper methods."""
+"""Contain several helper methods for DiveraControl integration."""
 
 import asyncio
 from functools import wraps
@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.translation import async_get_translations
 
+from .api import DiveraAPI
 from .const import (
     D_ACCESS,
     D_ALARM,
@@ -26,12 +27,17 @@ from .const import (
     PERM_MANAGEMENT,
     VERSION,
 )
+from .coordinator import DiveraCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 _translation_cache = {}
 
 
-def permission_check(hass: HomeAssistant, ucr_id, perm_key):
+def permission_check(
+    hass: HomeAssistant,
+    ucr_id: str,
+    perm_key: str,
+) -> bool:
     """Check permission and return success.
 
     Args:
@@ -76,7 +82,7 @@ def permission_check(hass: HomeAssistant, ucr_id, perm_key):
     return success
 
 
-def get_device_info(cluster_name):
+def get_device_info(cluster_name: str) -> dict[str, any]:
     """Return device information, used in sensor and tracker base classes."""
     return {
         "identifiers": {(DOMAIN, cluster_name)},
@@ -88,8 +94,16 @@ def get_device_info(cluster_name):
     }
 
 
-def log_execution_time(func):
-    """Log execution times of function only if loglevel is DEBUG."""
+def log_execution_time(func: callable) -> callable:
+    """Log execution times of function only if loglevel is DEBUG.
+
+    Args:
+        func (callable): the function to be wrapped.
+
+    Returns:
+        callable: the wrapped function.
+
+    """
 
     if not _LOGGER.isEnabledFor(logging.DEBUG):
         return func
@@ -119,8 +133,21 @@ def log_execution_time(func):
     return sync_wrapper
 
 
-def get_ucr_id(hass: HomeAssistant, sensor_id: str):
-    """Fetch ucr_id based on sensor_id. Raises exception if not found."""
+def get_ucr_id(
+    hass: HomeAssistant,
+    sensor_id: str,
+) -> str:
+    """Fetch ucr_id based on sensor_id. Raises exception if not found.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance
+        sensor_id (str): Sensor ID to search for
+
+    Returns:
+        str: ucr_id (user_cluster_relation) associated with the sensor_id
+
+    """
+
     try:
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
             for sensor in cluster_data["sensors"]:
@@ -135,8 +162,21 @@ def get_ucr_id(hass: HomeAssistant, sensor_id: str):
         raise HomeAssistantError(error_message) from None
 
 
-def get_api_instance(hass: HomeAssistant, sensor_id: str):
-    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
+def get_api_instance(
+    hass: HomeAssistant,
+    sensor_id: str,
+) -> DiveraAPI:
+    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance
+        sensor_id (str): sensor ID to search for
+
+    Returns:
+        DiveraAPI: API isntance associated with the sensor id
+
+    """
+
     try:
         # try finding ucr_id with given sensor_id
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
@@ -149,16 +189,30 @@ def get_api_instance(hass: HomeAssistant, sensor_id: str):
             if ucr_id == sensor_id:
                 api_instance = hass.data[DOMAIN][str(ucr_id)]["api"]
 
-        return api_instance
-
     except KeyError:
         error_message = f"API-instance not found for Sensor-ID {sensor_id}"
         _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
+    else:
+        return api_instance
 
-def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
-    """Fetch coordinator data based on sensor id."""
+
+def get_coordinator_data(
+    hass: HomeAssistant,
+    sensor_id: str,
+) -> DiveraCoordinator:
+    """Fetch coordinator data based on sensor id.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance
+        sensor_id (str): sensor ID to search for
+
+    Returns:
+        DiveraCoordinator: coordinator instance of DIveraContol
+
+    """
+
     try:
         # try finding ucr_id with given sensor_id
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
@@ -170,16 +224,31 @@ def get_coordinator_data(hass: HomeAssistant, sensor_id: str) -> dict[str, any]:
                         .get(D_COORDINATOR)
                     )
 
-        return coordinator_data
-
     except KeyError:
         error_message = f"Coordinator data not found for Sensor-ID {sensor_id}"
         _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
+    else:
+        return coordinator_data
 
-async def handle_entity(hass: HomeAssistant, call: dict, service: str):
-    """Update entity data based on given method."""
+
+async def handle_entity(
+    hass: HomeAssistant,
+    call: dict,
+    service: str,
+) -> None:
+    """Update entity data based on given method.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance
+        call (dict): Data from service call
+        service (str): Service name that was called
+
+    Returns:
+        None
+
+    """
 
     match service:
         case "put_alarm" | "post_close_alarm":
@@ -234,8 +303,20 @@ async def handle_entity(hass: HomeAssistant, call: dict, service: str):
             raise HomeAssistantError(f"Service not found: {service}")
 
 
-def set_update_interval(old_interval, open_alarms, admin_data):
-    """Set update interval based on open alarms."""
+def set_update_interval(
+    old_interval: int,
+    open_alarms: int,
+    admin_data: dict[str, any],
+) -> int:
+    """Set update interval based on open alarms.
+
+    Args:
+        old_interval (int): current update interval.
+        open_alarms (int): number of open alarms.
+        admin_data (dict): admin data of coordinator containing update interval configuration.
+
+    """
+
     interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
     interval_alarm = admin_data[D_UPDATE_INTERVAL_ALARM]
     cluster_name = admin_data[D_CLUSTER_NAME]
@@ -264,8 +345,20 @@ def extract_keys(data) -> set[str]:
     return set(data.keys()) if isinstance(data, dict) else set()
 
 
-async def get_translation(hass: HomeAssistant, category: str, language=None):
-    """Load and cache translations."""
+async def get_translation(
+    hass: HomeAssistant,
+    category: str,
+    language=None,
+) -> dict[str, str]:
+    """Load and cache translations.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance
+        category (str): category of translation to be loaded
+        language (str, optional): language code, defaults to None
+
+    """
+
     if language is None:
         language = hass.config.language
 

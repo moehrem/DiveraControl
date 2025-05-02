@@ -12,7 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def update_data(
-    api: DiveraAPI, cluster_data: dict[str, Any], admin_data: dict[str, Any]
+    api: DiveraAPI,
+    cluster_data: dict[str, Any],
+    admin_data: dict[str, Any],
 ) -> None:
     """Update operational data from the Divera API.
 
@@ -29,7 +31,7 @@ async def update_data(
         Sets alarm and vehicle data to empty if any issues occur.
 
     Returns:
-        data (dict): A dictionary to store and update alarm and vehicle data.
+        None
 
     """
 

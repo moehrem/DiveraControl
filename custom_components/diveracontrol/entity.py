@@ -34,6 +34,7 @@ class BaseDiveraEntity(CoordinatorEntity):
 
     def __init__(self, coordinator) -> None:
         """Init base class."""
+
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.cluster_data = coordinator.cluster_data
@@ -52,6 +53,7 @@ class BaseDiveraEntity(CoordinatorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Register entity with coordinator."""
+        await super().async_added_to_hass()
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
@@ -60,7 +62,7 @@ class BaseDiveraEntity(CoordinatorEntity):
         """Fully remove entity from HomeAssistant."""
         _LOGGER.debug("Starting removal process for entity: %s", self.entity_id)
 
-        # Entferne aus dem Entity-Registry
+        # remove from entity-registry
         try:
             registry = er.async_get(self.hass)
             if registry.async_is_registered(self.entity_id):
@@ -160,7 +162,11 @@ class DiveraAlarmSensor(BaseDiveraSensor):
 class DiveraVehicleSensor(BaseDiveraSensor):
     """Sensor to represent a single vehicle."""
 
-    def __init__(self, coordinator, vehicle_id: str) -> None:
+    def __init__(
+        self,
+        coordinator,
+        vehicle_id: str,
+    ) -> None:
         """Init class DiveraVehicleSensor."""
         super().__init__(coordinator)
         self.vehicle_id = vehicle_id

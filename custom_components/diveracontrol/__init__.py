@@ -1,4 +1,4 @@
-"""Initializing myDivera integration."""
+"""Initializing DiveraControl integration."""
 
 import logging
 

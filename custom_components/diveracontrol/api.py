@@ -38,8 +38,23 @@ LOGGER = logging.getLogger(__name__)
 class DiveraAPI:
     """Class to interact with the Divera 24/7 API."""
 
-    def __init__(self, hass: HomeAssistant, ucr_id: str, api_key: str) -> None:
-        """Initialize the API client."""
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        ucr_id: str,
+        api_key: str,
+    ) -> None:
+        """Initialize the API client.
+
+        Args:
+            hass (HomeAssistant): Instance of HomeAssistant.
+            ucr_id (str): user_cluster_relation, the ID to identify the Divera-user.
+            api_key (str): API key to access Divera API.
+
+        Returns:
+            None
+
+        """
         self.api_key = api_key
         self.ucr_id = ucr_id
         self.hass = hass
@@ -116,16 +131,40 @@ class DiveraAPI:
             )
             return {}
 
-    async def get_ucr_data(self, ucr_id) -> dict:
-        """GET all data for user cluster relation from the Divera API. No permission check."""
+    async def get_ucr_data(
+        self,
+        ucr_id: str,
+    ) -> dict:
+        """GET all data for user cluster relation from the Divera API. No permission check.
+
+        Args:
+            ucr_id (str): user_cluster_relation, the ID to identify the Divera-user.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
         parameters = {D_UCR: ucr_id}
         return await self.api_request(url, method, parameters=parameters)
 
-    async def post_vehicle_status(self, vehicle_id, payload) -> dict:
-        """POST vehicle status and data to Divera API."""
+    async def post_vehicle_status(
+        self,
+        vehicle_id: str,
+        payload: dict,
+    ) -> dict:
+        """POST vehicle status and data to Divera API.
+
+        Args:
+            vehicle_id (str): Divera-ID of the vehicle to update.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
 
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
@@ -135,8 +174,19 @@ class DiveraAPI:
 
         return False
 
-    async def post_alarms(self, payload) -> dict:
-        """POST new alarm to Divera API."""
+    async def post_alarms(
+        self,
+        payload: dict,
+    ) -> dict:
+        """POST new alarm to Divera API.
+
+        Args:
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
 
         if permission_check(self.hass, self.ucr_id, PERM_ALARM):
@@ -146,8 +196,21 @@ class DiveraAPI:
 
         return False
 
-    async def put_alarms(self, payload, alarm_id) -> dict:
-        """PUT changes for existing alarm to Divera API."""
+    async def put_alarms(
+        self,
+        alarm_id: str,
+        payload: dict,
+    ) -> dict:
+        """PUT changes for existing alarm to Divera API.
+
+        Args:
+            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug(
             "Putting changes to alarm %s for cluster %s", alarm_id, self.ucr_id
         )
@@ -159,8 +222,21 @@ class DiveraAPI:
 
         return False
 
-    async def post_close_alarm(self, payload, alarm_id) -> dict:
-        """POSt to close an existing alarm to Divera API."""
+    async def post_close_alarm(
+        self,
+        payload: dict,
+        alarm_id: str,
+    ) -> dict:
+        """POST to close an existing alarm to Divera API.
+
+        Args:
+            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
         if permission_check(self.hass, self.ucr_id, PERM_ALARM):
@@ -170,8 +246,19 @@ class DiveraAPI:
 
         return False
 
-    async def post_message(self, payload) -> dict:
-        """POSt to close an existing alarm to Divera API."""
+    async def post_message(
+        self,
+        payload: dict,
+    ) -> dict:
+        """POSt to close an existing alarm to Divera API.
+
+        Args:
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug("Posting message for cluster %s", self.ucr_id)
 
         if permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
@@ -181,8 +268,19 @@ class DiveraAPI:
 
         return False
 
-    async def get_vehicle_property(self, vehicle_id) -> dict:
-        """GET individual vehicle poroperties for vehicle from Divera API."""
+    async def get_vehicle_property(
+        self,
+        vehicle_id: str,
+    ) -> dict:
+        """GET individual vehicle poroperties for vehicle from Divera API.
+
+        Args:
+            vehicle_id (str): ID of the vehicle to fetch property data from.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug(
             "Getting individual vehicle properties for vehicle id %s", vehicle_id
         )
@@ -194,8 +292,21 @@ class DiveraAPI:
 
         return False
 
-    async def post_using_vehicle_property(self, payload, vehicle_id) -> dict:
-        """POST individual vehicle poroperties for vehicle from Divera API."""
+    async def post_using_vehicle_property(
+        self,
+        vehicle_id: str,
+        payload: dict,
+    ) -> dict:
+        """POST individual vehicle poroperties for vehicle from Divera API.
+
+        Args:
+            vehicle_id (str): ID of the vehicle to fetch property data from.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug(
             "Posting individual vehicle properties for cluster %s", self.ucr_id
         )
@@ -207,8 +318,26 @@ class DiveraAPI:
 
         return False
 
-    async def post_using_vehicle_crew(self, payload, vehicle_id, mode) -> dict:
-        """POST add one or more crew to a vehicle."""
+    async def post_using_vehicle_crew(
+        self,
+        vehicle_id: str,
+        mode: str,
+        payload: dict,
+    ) -> dict:
+        """POST add one or more crew to a vehicle.
+
+        Args:
+            vehicle_id (str): ID of the vehicle to fetch property data from.
+            mode (str): Mode to work with crew members. Can be
+                        "add" - adding new crew,
+                        "remove" - removing specific crew,
+                        "reset" - resetting all crew from vehicle.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            dict: JSON response from the API.
+
+        """
         LOGGER.debug(
             "Posting %s crew members to vehicle %s for cluster %s",
             mode,
@@ -226,41 +355,6 @@ class DiveraAPI:
 
 class DiveraCredentials:
     """Validates Divera credentials: username, password, api-key."""
-
-    @staticmethod
-    async def fetch_cluster_data(session, url_ucr, api_key, ucr_id):
-        """Fetch cluster data for ucr_id."""
-        try:
-            async with session.get(url_ucr, timeout=10) as response:
-                data_ucr_response = await response.json()
-
-                if not data_ucr_response.get("success") or response.status not in [
-                    200,
-                    201,
-                ]:
-                    return None, data_ucr_response.get("message", {})
-
-                data_ucr_data = data_ucr_response.get(D_DATA, {}).get(D_UCR, {})
-                cluster_name = data_ucr_data.get(ucr_id, {}).get(D_NAME, "")
-                usergroup_id = data_ucr_data.get(ucr_id, {}).get(D_USERGROUP_ID, "")
-
-                return (
-                    {
-                        D_CLUSTER_NAME: cluster_name,
-                        D_UCR_ID: ucr_id,
-                        D_API_KEY: api_key,
-                    },
-                    None,
-                    usergroup_id,
-                )
-
-        except (ClientError, TimeoutError):
-            return None, "cannot_connect"
-        except (TypeError, AttributeError):
-            return None, "no_data"
-        except Exception:
-            LOGGER.exception("Error fetching cluster data")
-            return None, "unknown"
 
     @staticmethod
     async def validate_login(
@@ -357,7 +451,6 @@ class DiveraCredentials:
         Returns:
             errors (dict): Dictionary with error messages.
             cluster (dict): Mapping of hub IDs to their names.
-            api_key (str): Retrieved API key.
 
         """
         clusters = {}
