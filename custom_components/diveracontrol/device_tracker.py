@@ -1,6 +1,7 @@
 """Handles all device_tracker entities."""
 
 import asyncio
+from collections.abc import Callable
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -16,14 +17,14 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: callable,
+    async_add_entities: Callable,
 ) -> None:
     """Set up Divera device trackers.
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
         config_entry (ConfigEntry): The config entry to set up.
-        async_add_entities (callable): Function to add entities.
+        async_add_entities (Callable): Function to add entities.
 
     Returns:
         None

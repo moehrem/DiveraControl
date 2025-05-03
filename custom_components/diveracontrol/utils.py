@@ -1,15 +1,18 @@
 """Contain several helper methods for DiveraControl integration."""
 
 import asyncio
+from collections.abc import Callable
+from datetime import timedelta
 from functools import wraps
 import logging
 import time
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
 
-from .api import DiveraAPI
 from .const import (
     D_ACCESS,
     D_ALARM,
@@ -27,7 +30,10 @@ from .const import (
     PERM_MANAGEMENT,
     VERSION,
 )
-from .coordinator import DiveraCoordinator
+
+if TYPE_CHECKING:
+    from .coordinator import DiveraCoordinator
+    from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
 _translation_cache = {}
@@ -82,7 +88,7 @@ def permission_check(
     return success
 
 
-def get_device_info(cluster_name: str) -> dict[str, any]:
+def get_device_info(cluster_name: str) -> DeviceInfo:
     """Return device information, used in sensor and tracker base classes."""
     return {
         "identifiers": {(DOMAIN, cluster_name)},
@@ -90,11 +96,11 @@ def get_device_info(cluster_name: str) -> dict[str, any]:
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-        "entry_type": "service",
+        "entry_type": "service",  # type: ignore[misc]
     }
 
 
-def log_execution_time(func: callable) -> callable:
+def log_execution_time(func: Callable) -> Callable:
     """Log execution times of function only if loglevel is DEBUG.
 
     Args:
@@ -150,58 +156,57 @@ def get_ucr_id(
 
     try:
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
-            for sensor in cluster_data["sensors"]:
-                if sensor == str(sensor_id):
-                    return ucr_id
-            for tracker in cluster_data["device_tracker"]:
-                if tracker == str(sensor_id):
-                    return ucr_id
+            if sensor_id in cluster_data.get("sensors", []):
+                return ucr_id
+            if sensor_id in cluster_data.get("device_tracker", []):
+                return ucr_id
+
     except KeyError:
-        error_message = f"Cluster-ID not found for Sensor-ID {sensor_id}"
-        _LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
+        pass  # behandelt unten im Fehlerfall
+
+    error_message = f"Cluster-ID not found for Sensor-ID {sensor_id}"
+    _LOGGER.error(error_message)
+    raise HomeAssistantError(error_message)
 
 
 def get_api_instance(
     hass: HomeAssistant,
     sensor_id: str,
-) -> DiveraAPI:
-    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found.
+) -> "DiveraAPI":
+    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
 
-    Args:
-        hass (HomeAssistant): Home Assistant instance
-        sensor_id (str): sensor ID to search for
-
-    Returns:
-        DiveraAPI: API isntance associated with the sensor id
-
-    """
+    api_instance = None
 
     try:
         # try finding ucr_id with given sensor_id
-        for ucr_id, cluster_data in hass.data[DOMAIN].items():
+        for cluster_data in hass.data[DOMAIN].values():
             for sensor in cluster_data["sensors"]:
-                if sensor == str(sensor_id):
-                    api_instance = hass.data[DOMAIN][str(ucr_id)]["api"]
+                if sensor == sensor_id:
+                    api_instance = cluster_data["api"]
+                    break
 
         # if nothing found, try sensor_id as ucr_id
-        for ucr_id in hass.data[DOMAIN]:
-            if ucr_id == sensor_id:
-                api_instance = hass.data[DOMAIN][str(ucr_id)]["api"]
+        if api_instance is None:
+            for ucr_id, cluster_data in hass.data[DOMAIN].items():
+                if ucr_id == sensor_id:
+                    api_instance = cluster_data["api"]
+                    break
+
+        if api_instance is None:
+            raise KeyError
 
     except KeyError:
         error_message = f"API-instance not found for Sensor-ID {sensor_id}"
         _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
-    else:
-        return api_instance
+    return api_instance
 
 
 def get_coordinator_data(
     hass: HomeAssistant,
     sensor_id: str,
-) -> DiveraCoordinator:
+) -> "DiveraCoordinator":
     """Fetch coordinator data based on sensor id.
 
     Args:
@@ -209,33 +214,37 @@ def get_coordinator_data(
         sensor_id (str): sensor ID to search for
 
     Returns:
-        DiveraCoordinator: coordinator instance of DIveraContol
+        DiveraCoordinator: DiveraControl coordinator instance of DiveraControl
 
     """
+    coordinator_data = None
 
     try:
         # try finding ucr_id with given sensor_id
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
             for sensor in cluster_data["sensors"]:
-                if sensor == str(sensor_id):
+                if sensor == sensor_id:
                     coordinator_data = (
-                        hass.data.get(DOMAIN, {})
-                        .get(str(ucr_id), "")
-                        .get(D_COORDINATOR)
+                        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
                     )
+                    break
+            if coordinator_data:
+                break
+
+        if coordinator_data is None:
+            raise KeyError
 
     except KeyError:
         error_message = f"Coordinator data not found for Sensor-ID {sensor_id}"
         _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from None
 
-    else:
-        return coordinator_data
+    return coordinator_data
 
 
 async def handle_entity(
     hass: HomeAssistant,
-    call: dict,
+    call: ServiceCall,
     service: str,
 ) -> None:
     """Update entity data based on given method.
@@ -252,7 +261,7 @@ async def handle_entity(
 
     match service:
         case "put_alarm" | "post_close_alarm":
-            alarm_id = call.data.get("alarm_id")
+            alarm_id: str = call.data.get("alarm_id") or ""
             ucr_id = get_ucr_id(hass, alarm_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
@@ -274,7 +283,7 @@ async def handle_entity(
             coordinator.async_set_updated_data(coordinator.cluster_data)
 
         case "post_vehicle_status" | "post_using_vehicle_property":
-            vehicle_id = call.data.get("vehicle_id")
+            vehicle_id: str = call.data.get("vehicle_id") or ""
             ucr_id = get_ucr_id(hass, vehicle_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
@@ -304,26 +313,30 @@ async def handle_entity(
 
 
 def set_update_interval(
-    old_interval: int,
+    old_interval: timedelta | None,
     open_alarms: int,
-    admin_data: dict[str, any],
-) -> int:
+    admin_data: dict[str, Any],
+) -> timedelta:
     """Set update interval based on open alarms.
 
     Args:
-        old_interval (int): current update interval.
+        old_interval (timedelta | None): current update interval.
         open_alarms (int): number of open alarms.
         admin_data (dict): admin data of coordinator containing update interval configuration.
 
+    Returns:
+        timedelta: new update interval.
+
     """
 
-    interval_data = admin_data[D_UPDATE_INTERVAL_DATA]
-    interval_alarm = admin_data[D_UPDATE_INTERVAL_ALARM]
+    new_interval = (
+        admin_data[D_UPDATE_INTERVAL_ALARM]
+        if open_alarms > 0
+        else admin_data[D_UPDATE_INTERVAL_DATA]
+    )
     cluster_name = admin_data[D_CLUSTER_NAME]
 
-    new_interval = interval_alarm if open_alarms > 0 else interval_data
-
-    if old_interval != new_interval:
+    if old_interval is None or old_interval != new_interval:
         _LOGGER.debug(
             "Update interval changed to %s for unit '%s'",
             new_interval,

@@ -1,11 +1,13 @@
 """Manage calendar and event creation and updating based on Divera events."""
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 import logging
 from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import parse_datetime
 
@@ -17,15 +19,15 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: dict[str, Any],
-    async_add_entities: callable,
+    config_entry: ConfigEntry,
+    async_add_entities: Callable,
 ) -> None:
     """Set up the Divera-Calendar entity.
 
     Args:
         hass (HomeAssistant): HomeAssistant instance.
         config_entry (dict[str, Any]): configuration entry data.
-        async_add_entities (callable): function to add calendar entites.
+        async_add_entities (Callable): function to add calendar entites.
 
     Returns:
         None
@@ -69,15 +71,10 @@ class DiveraCalendar(CalendarEntity):
             None
 
         """
-        self._name = coordinator.admin_data.get(D_CLUSTER_NAME)
-        self._event_list = []
+        self._attr_name = coordinator.admin_data.get(D_CLUSTER_NAME)
+        self._event_list: list[dict[str, Any]] = []
         self.entity_id = f"calendar.{ucr_id}_calendar"
-        self.unique_id = f"{ucr_id}_calendar"
-
-    @property
-    def name(self):
-        """Return the name of calendar."""
-        return self._name
+        self._attr_unique_id = f"{ucr_id}_calendar"
 
     @property
     def event(self) -> CalendarEvent | None:
@@ -86,14 +83,17 @@ class DiveraCalendar(CalendarEntity):
             return None
 
         sorted_events = sorted(
-            self._event_list, key=lambda e: parse_datetime(e["start"]["dateTime"])
+            self._event_list,
+            key=lambda e: parse_datetime(e["start"]["dateTime"]) or datetime.min,
         )
+        first_event = sorted_events[0]
+
         return CalendarEvent(
-            start=parse_datetime(sorted_events[0]["start"]["dateTime"]),
-            end=parse_datetime(sorted_events[0]["end"]["dateTime"]),
-            summary=sorted_events[0]["summary"],
-            description=sorted_events[0]["description"],
-            location=sorted_events[0].get("location"),
+            start=parse_datetime(first_event["start"]["dateTime"]) or datetime.min,
+            end=parse_datetime(first_event["end"]["dateTime"]) or datetime.min,
+            summary=first_event["summary"],
+            description=first_event["description"],
+            location=first_event.get("location"),
         )
 
     def update_events(

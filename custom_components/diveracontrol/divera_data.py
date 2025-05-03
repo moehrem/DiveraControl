@@ -5,8 +5,8 @@ from typing import Any
 
 from aiohttp import ClientError
 
-from .api import DiveraAPI
 from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
+from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,17 +45,18 @@ async def update_data(
                 "Unexpected data format or API request failed: %s",
                 raw_ucr_data,
             )
-            return cluster_data
+            return
 
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
-        return cluster_data
+        return
 
     # set local data
     cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
     alarm = raw_ucr_data.get(D_DATA, {}).get(D_ALARM, {})
 
     # update data if new data available
+    key = None
     try:
         for key in cluster_data:
             cluster_data[key] = raw_ucr_data.get(D_DATA, {}).get(key, {})

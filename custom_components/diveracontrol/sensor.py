@@ -1,6 +1,7 @@
 """Definition of Home Assistant Sensors for the DiveraControl integration."""
 
 import asyncio
+from collections.abc import Callable
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -31,14 +32,14 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: callable,
+    async_add_entities: Callable,
 ) -> None:
     """Set up the Divera sensors.
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
         config_entry (Config_Entry): configuration entry for the integration.
-        async_add_entities (callable): function to add entities to Home Assistant.
+        async_add_entities (Callable): function to add entities to Home Assistant.
 
     Returns:
         None

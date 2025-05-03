@@ -63,6 +63,13 @@
       "unknown_step": "Unknown configuration step, setup aborted."
     }
   },
+  "entity": {
+    "sensor": {
+      "open_alarms": {
+        "name": "Open Alarms"
+      }
+    }
+  },
   "common": {
     "usergroup_message": "The unit {cluster_name} (ID {ucr_id}) was successfully created.",
     "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera privileges, so some data may be unavailable.",
