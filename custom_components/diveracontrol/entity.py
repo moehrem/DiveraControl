@@ -122,9 +122,7 @@ class DiveraAlarmSensor(BaseDiveraEntity):
         self._attr_icon = (
             I_CLOSED_ALARM
             if self.closed
-            else I_OPEN_ALARM
-            if self.priority
-            else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM if self.priority else I_OPEN_ALARM_NOPRIO
         )
 
 
@@ -304,9 +302,7 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         self._attr_icon = (
             I_CLOSED_ALARM
             if self.closed
-            else I_OPEN_ALARM
-            if self.priority
-            else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM if self.priority else I_OPEN_ALARM_NOPRIO
         )
 
 
