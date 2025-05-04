@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
-from homeassistant.components.sensor import SensorEntity
 import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -137,7 +136,9 @@ class DiveraAlarmSensor(BaseDiveraEntity):
         return (
             I_CLOSED_ALARM
             if _closed
-            else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM
+            if _priority
+            else I_OPEN_ALARM_NOPRIO
         )
 
 
@@ -352,7 +353,9 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         return (
             I_CLOSED_ALARM
             if _closed
-            else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM
+            if _priority
+            else I_OPEN_ALARM_NOPRIO
         )
 
 
