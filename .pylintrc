@@ -1,14 +1,14 @@
-[MASTER]
-ignore=tests
-
 [MESSAGES CONTROL]
 disable=
     import-error,
-    broad-exception-caught,
-    too-many-branches,
-    too-many-locals,
-    too-many-arguments,
+    attribute-defined-outside-init,
     too-many-instance-attributes,
-    line-too-long,
-    unused-argument,
-    unused-import
+    broad-exception-caught
+
+[DESIGN]
+max-args=8
+max-locals=20
+max-branches=20
+
+[FORMAT]
+max-line-length=100
