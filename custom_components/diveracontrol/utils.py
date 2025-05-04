@@ -81,7 +81,7 @@ def permission_check(
             success = False
 
         if not success:
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Permission denied for %s in cluster %s", perm_key, cluster_name
             )
 
