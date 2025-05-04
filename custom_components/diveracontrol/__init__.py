@@ -16,6 +16,8 @@ from .const import (
     DEFAULT_DEVICE_TRACKER,
     DEFAULT_SENSORS,
     DOMAIN,
+    MINOR_VERSION,
+    VERSION,
 )
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPI
@@ -132,5 +134,49 @@ async def async_unload_entry(
             ucr_id,
         )
         return False
+
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old config_entry of integration DiveraControl."""
+    current_version = config_entry.version
+    current_minor = config_entry.minor_version
+
+    _LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        current_version,
+        current_minor,
+    )
+
+    if current_version == 0:
+        # migration from before v0.9 not supported
+        if current_minor < 9:
+            _LOGGER.error(
+                "Migration from versions older than v0.9 is not supported. "
+                "Please delete the integration and re-add it"
+            )
+            return False
+
+        # migration from v0.9 → v1.0 - no changes needed
+        if current_minor >= 9:
+            new_data = {**config_entry.data}
+
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data=new_data,
+                version=VERSION,
+                minor_version=MINOR_VERSION,
+            )
+
+    # migration from v1.0 -> ... - no changes needed
+    elif current_version == 1 and current_minor < MINOR_VERSION:
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=config_entry.data,
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
+        _LOGGER.debug("Migration to version %s.%s completed", VERSION, MINOR_VERSION)
 
     return True
