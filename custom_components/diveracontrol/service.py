@@ -243,7 +243,7 @@ async def handle_post_using_vehicle_property(
     api_instance = get_api_instance(hass, vehicle_id)
 
     payload = {
-        k: v for k, v in call.data.items() if k != "cluster_id" and v is not None
+        k: v for k, v in call.data.items() if k != "vehicle_id" and v is not None
     }
 
     ok_status = await api_instance.post_using_vehicle_property(vehicle_id, payload)
@@ -306,7 +306,7 @@ async def handle_post_using_vehicle_crew(
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
-    await handle_entity(hass, call, "post_using_vehicle_crew")
+    # await handle_entity(hass, call, "post_using_vehicle_crew")
 
 
 def async_register_services(

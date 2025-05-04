@@ -188,7 +188,7 @@ def get_api_instance(
         # if nothing found, try sensor_id as ucr_id
         if api_instance is None:
             for ucr_id, cluster_data in hass.data[DOMAIN].items():
-                if ucr_id == sensor_id:
+                if ucr_id == int(sensor_id):
                     api_instance = cluster_data["api"]
                     break
 

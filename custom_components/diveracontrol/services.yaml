@@ -340,19 +340,28 @@ post_message:
 
 post_using_vehicle_property:
   name: Fahrzeugeigenschaften ändern
-  description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein!
+  description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein. Es können beliebige Schlüssel-Wert-Paare ergänzt werden.
   fields:
     vehicle_id:
       name: Fahrzeug-ID
       description: (Erforderlich) Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
       example: 654321
-    key:
-      name: Eigenschaftsschlüssel
-      description: (Optional) Schlüssel und Wert der Eigenschaft, deren Wert gesetzt werden soll. Eigenschaft muss in Divera existieren!
+    bat:
+      name: Batterie
+      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden!
       required: false
-      example: 654
-
+      example: 1.343453443
+    zünd:
+      name: Zündung
+      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden!
+      required: false
+      example: 1
+    funk:
+      name: Funk
+      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden! Es können beliebige weitere Schlüssel-Wert-Paare ergänzt werden.
+      required: false
+      example: 3
 
 post_using_vehicle_crew:
   name: Fahrzeugbesatzung ändern
@@ -362,7 +371,7 @@ post_using_vehicle_crew:
       name: Fahrzeug-ID
       description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
-      example: 654321
+      example: 98765
     mode:
       name: Modus
       description: (Erforderlich) Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
