@@ -137,9 +137,7 @@ class DiveraAlarmSensor(BaseDiveraEntity):
         return (
             I_CLOSED_ALARM
             if _closed
-            else I_OPEN_ALARM
-            if _priority
-            else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
         )
 
 
@@ -354,9 +352,7 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         return (
             I_CLOSED_ALARM
             if _closed
-            else I_OPEN_ALARM
-            if _priority
-            else I_OPEN_ALARM_NOPRIO
+            else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
         )
 
 
