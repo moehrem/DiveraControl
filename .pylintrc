@@ -1,0 +1,14 @@
+[MASTER]
+ignore=tests
+
+[MESSAGES CONTROL]
+disable=
+    import-error,
+    broad-exception-caught,
+    too-many-branches,
+    too-many-locals,
+    too-many-arguments,
+    too-many-instance-attributes,
+    line-too-long,
+    unused-argument,
+    unused-import
