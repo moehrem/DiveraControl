@@ -1,8 +1,10 @@
 """Handles all device_tracker entities."""
 
 import asyncio
+from collections.abc import Callable
 import logging
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import D_ALARM, D_CLUSTER, D_COORDINATOR, D_UCR_ID, D_VEHICLE, DOMAIN
@@ -13,16 +15,34 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry, async_add_entities
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: Callable,
 ) -> None:
-    """Set up Divera device trackers."""
+    """Set up Divera device trackers.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        config_entry (ConfigEntry): The config entry to set up.
+        async_add_entities (Callable): Function to add entities.
+
+    Returns:
+        None
+
+    """
 
     ucr_id = config_entry.data[D_UCR_ID]
     coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
     current_trackers = hass.data[DOMAIN][ucr_id].setdefault("device_tracker", {})
 
-    async def async_add_trackers():
-        """Add new tracker."""
+    async def async_add_trackers() -> None:
+        """Add new tracker.
+
+        Returns:
+            None
+
+        """
+
         cluster_data = coordinator.cluster_data
         new_trackers = []
 
@@ -46,8 +66,14 @@ async def async_setup_entry(
         if new_trackers:
             async_add_entities(new_trackers, update_before_add=False)
 
-    async def async_remove_trackers():
-        """Remove unused tracker."""
+    async def async_remove_trackers() -> None:
+        """Remove unused tracker.
+
+        Returns:
+            None
+
+        """
+
         cluster_data = coordinator.cluster_data
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items", {}))

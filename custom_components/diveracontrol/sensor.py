@@ -1,21 +1,10 @@
-"""Definition of Home Assistant Sensors for the Divera Integration.
-
-Responsibilities:
-- Subscribe to data from the DataUpdateCoordinator (per HUB).
-- Provide sensor data (state, extra_state_attributes, etc.) for Home Assistant.
-- Handle attributes such as unique_id, name, etc., required for sensor integration.
-- Adding and removing of sensors.
-
-Communication:
-- Retrieves data from the DataUpdateCoordinator (per HUB).
-- Delivers data to Home Assistant for display in the user interface or use in automations.
-
-
-"""
+"""Definition of Home Assistant Sensors for the DiveraControl integration."""
 
 import asyncio
+from collections.abc import Callable
 import logging
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
@@ -41,16 +30,33 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry, async_add_entities
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: Callable,
 ) -> None:
-    """Set up the Divera sensors."""
+    """Set up the Divera sensors.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        config_entry (Config_Entry): configuration entry for the integration.
+        async_add_entities (Callable): function to add entities to Home Assistant.
+
+    Returns:
+        None
+
+    """
 
     ucr_id = config_entry.data[D_UCR_ID]
     coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
     current_sensors = hass.data[DOMAIN][ucr_id].setdefault("sensors", {})
 
-    async def async_add_sensor():
-        """Adding new sensors."""
+    async def async_add_sensor() -> None:
+        """Adding new sensors.
+
+        Retuns:
+            None
+
+        """
         cluster_data = coordinator.cluster_data
         new_sensors = []
 
@@ -93,8 +99,13 @@ async def async_setup_entry(
         if new_sensors:
             async_add_entities(new_sensors, update_before_add=False)
 
-    async def async_remove_sensor():
-        """Remove unnnecessary sensors."""
+    async def async_remove_sensor() -> None:
+        """Remove unnnecessary sensors.
+
+        Returns:
+            None
+
+        """
         cluster_data = coordinator.cluster_data
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items"))

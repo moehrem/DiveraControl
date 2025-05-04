@@ -1,21 +1,40 @@
 """Manage calendar and event creation and updating based on Divera events."""
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 import logging
 from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.dt import parse_datetime
 
 from .const import D_CLUSTER_NAME, D_COORDINATOR, D_EVENTS, D_UCR_ID, DOMAIN
+from .coordinator import DiveraCoordinator
+from .utils import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
-    """Set up the Divera-Calendar entity."""
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: Callable,
+) -> None:
+    """Set up the Divera-Calendar entity.
+
+    Args:
+        hass (HomeAssistant): HomeAssistant instance.
+        config_entry (dict[str, Any]): configuration entry data.
+        async_add_entities (Callable): function to add calendar entites.
+
+    Returns:
+        None
+
+    """
     ucr_id = config_entry.data[D_UCR_ID]
     coordinator = hass.data[DOMAIN][ucr_id][D_COORDINATOR]
 
@@ -39,17 +58,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entitie
 class DiveraCalendar(CalendarEntity):
     """A single calendar entity for all Divera events."""
 
-    def __init__(self, coordinator, ucr_id) -> None:
-        """Initialize the calendar entity."""
-        self._name = coordinator.admin_data.get(D_CLUSTER_NAME)
-        self._event_list = []
-        self.entity_id = f"calendar.{ucr_id}_calendar"
-        self.unique_id = f"{ucr_id}_calendar"
+    def __init__(
+        self,
+        coordinator: DiveraCoordinator,
+        ucr_id: str,
+    ) -> None:
+        """Initialize the calendar entity.
 
-    @property
-    def name(self):
-        """Return the name of calendar."""
-        return self._name
+        Args:
+            coordinator (DiveraCoordinator): coordinator instance.
+            ucr_id (str): user_cluster_relation, ID to identify Divera user.
+
+        Returns:
+            None
+
+        """
+        self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
+
+        self._attr_device_info = get_device_info(self.cluster_name)
+        self._attr_name = coordinator.admin_data.get(D_CLUSTER_NAME)
+        self._event_list: list[dict[str, Any]] = []
+        self.entity_id = f"calendar.{ucr_id}_calendar"
+        self._attr_unique_id = f"{ucr_id}_calendar"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def event(self) -> CalendarEvent | None:
@@ -58,18 +89,32 @@ class DiveraCalendar(CalendarEntity):
             return None
 
         sorted_events = sorted(
-            self._event_list, key=lambda e: parse_datetime(e["start"]["dateTime"])
+            self._event_list,
+            key=lambda e: parse_datetime(e["start"]["dateTime"]) or datetime.min,
         )
+        first_event = sorted_events[0]
+
         return CalendarEvent(
-            start=parse_datetime(sorted_events[0]["start"]["dateTime"]),
-            end=parse_datetime(sorted_events[0]["end"]["dateTime"]),
-            summary=sorted_events[0]["summary"],
-            description=sorted_events[0]["description"],
-            location=sorted_events[0].get("location"),
+            start=parse_datetime(first_event["start"]["dateTime"]) or datetime.min,
+            end=parse_datetime(first_event["end"]["dateTime"]) or datetime.min,
+            summary=first_event["summary"],
+            description=first_event["description"],
+            location=first_event.get("location"),
         )
 
-    def update_events(self, new_events: dict[str, Any]):
-        """Update the event list with new data."""
+    def update_events(
+        self,
+        new_events: dict[str, Any],
+    ) -> None:
+        """Update the event list with new data.
+
+        Args:
+            new_events (dict[str, Any]): Dictionary containing event data.
+
+        Returns:
+            None
+
+        """
         self._event_list = []
         for event_data in new_events.values():
             start = datetime.fromtimestamp(event_data.get("start")).replace(tzinfo=UTC)
@@ -87,9 +132,23 @@ class DiveraCalendar(CalendarEntity):
             )
 
     async def async_get_events(
-        self, hass: HomeAssistant, start_date: datetime, end_date: datetime
-    ):
-        """Return a list of events within the given time range."""
+        self,
+        hass: HomeAssistant,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[CalendarEvent]:
+        """Return a list of events within the given time range.
+
+        Args:
+            hass (HomeAssistant): HomeAssistant instance.
+            start_date (datetime): Start date of the range.
+            end_date (datetime): End date of the range.
+
+        Returns:
+            list[CalendarEvent]: List of calendar events within the range.
+
+        """
+
         _LOGGER.debug("Fetching events from %s to %s", start_date, end_date)
         events = []
         for event in self._event_list:

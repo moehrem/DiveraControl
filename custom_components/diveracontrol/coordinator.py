@@ -1,5 +1,6 @@
 """Coordinator for myDivera integration."""
 
+from collections.abc import Callable
 from datetime import timedelta
 import logging
 from typing import Any
@@ -7,7 +8,6 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .api import DiveraAPI
 from .const import (
     D_ALARM,
     D_CLUSTER,
@@ -31,7 +31,8 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_USER,
 )
-from .data_updater import update_data
+from .divera_api import DiveraAPI
+from .divera_data import update_data
 from .utils import log_execution_time, set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,8 +41,24 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
-    def __init__(self, hass: HomeAssistant, api: DiveraAPI, config_entry: dict) -> None:
-        """Initialize DiveraControl coordinator."""
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: "DiveraAPI",
+        config_entry: dict,
+    ) -> None:
+        """Initialize DiveraControl coordinator.
+
+        Args:
+            hass (HomeAssistant): Home Assistant instance.
+            api (DiveraAPI): Divera API instance.
+            config_entry (dict): Configuration entry for the integration.
+
+        Returns:
+            None
+
+        """
+
         super().__init__(
             hass,
             _LOGGER,
@@ -62,8 +79,18 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         self._listeners = {}
 
+        if not hasattr(self, "_listener_index"):
+            self._listener_index = 0
+        if not hasattr(self, "_removers"):
+            self._removers: dict[int, Callable[[], None]] = {}
+
     def init_cluster_data_structure(self) -> None:
-        """Define main data structures for divera data and admin data."""
+        """Define main data structures for divera data and admin data.
+
+        Returns:
+            None
+
+        """
         if not self.cluster_data:
             self.cluster_data = {
                 D_UCR: {},
@@ -100,6 +127,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             self.cluster_data (dict): all new data, freshly requested from Divera.
 
         """
+
         if not self.cluster_data or not self.admin_data:
             self.init_cluster_data_structure()
 
@@ -125,23 +153,51 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         return self.cluster_data
 
-    def async_add_listener(self, update_callback):
-        """Add a listener and store the remove function."""
+    def async_add_listener(
+        self,
+        update_callback: Callable,
+        context: Any = None,
+    ) -> Callable:
+        """Add a listener and store the remove function.
+
+        Args:
+            update_callback (callable): Callback function to be called when data is updated.
+            context (Any): optional context for the listener.
+
+        Returns:
+            callable: function to remove listener.
+
+        """
         remove_listener = super().async_add_listener(update_callback)
-        self._listeners[remove_listener] = (update_callback, None)
+
+        self._listener_index += 1
+        listener_id = self._listener_index
+
+        self._listeners[listener_id] = (update_callback, context)
+        self._removers[listener_id] = remove_listener
+
         return remove_listener
 
     async def remove_listeners(self) -> None:
-        """Remove all update listeners for this coordinator."""
-        to_remove = list(self._listeners.keys())
+        """Remove all update listeners for this coordinator.
 
-        for listener in to_remove:
-            if callable(listener):
+        Returns:
+            None
+
+        """
+
+        remover_ids = list(self._removers.keys())
+
+        for listener_id in remover_ids:
+            remove_func = self._removers.get(listener_id)
+
+            if callable(remove_func):
                 try:
-                    listener()
+                    remove_func()
                 except Exception as e:
                     _LOGGER.debug("Error while removing listener: %s", e)
 
-            self._listeners.pop(listener, None)
+            self._listeners.pop(listener_id, None)
+            self._removers.pop(listener_id, None)
 
         _LOGGER.debug("Removed update listeners for HUB: %s", self.admin_data[D_UCR_ID])

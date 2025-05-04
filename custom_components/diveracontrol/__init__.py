@@ -1,4 +1,4 @@
-"""Initializing myDivera integration."""
+"""Initializing DiveraControl integration."""
 
 import logging
 
@@ -6,7 +6,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .api import DiveraAPI
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
@@ -19,13 +18,17 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import DiveraCoordinator
+from .divera_api import DiveraAPI
 from .service import async_register_services
 
 PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+) -> bool:
     """Set up DiveraControl from a config entry.
 
     Args:
@@ -36,15 +39,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         bool: True if setup succesfully, otherwise False.
 
     """
-    ucr_id = config_entry.data.get(D_UCR_ID)
-    cluster_name = config_entry.data.get(D_CLUSTER_NAME)
-    cluster_api_key = config_entry.data.get(D_API_KEY)
+    ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
+    cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
+    cluster_api_key: str = config_entry.data.get(D_API_KEY) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
     try:
-        api = DiveraAPI(hass, ucr_id, cluster_api_key)
-        coordinator = DiveraCoordinator(hass, api, config_entry.data)
+        api = DiveraAPI(
+            hass,
+            ucr_id,
+            cluster_api_key,
+        )
+        coordinator = DiveraCoordinator(
+            hass,
+            api,
+            dict(config_entry.data),
+        )
 
         hass.data.setdefault(DOMAIN, {})[ucr_id] = {
             DEFAULT_COORDINATOR: coordinator,
@@ -55,7 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
         await coordinator.async_config_entry_first_refresh()
         await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-        await async_register_services(hass, DOMAIN)
+        async_register_services(hass, DOMAIN)
 
         _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
@@ -70,7 +81,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+) -> bool:
     """Unload a config entry.
 
     Args:
