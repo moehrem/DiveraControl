@@ -9,10 +9,12 @@ from typing import Any
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.dt import parse_datetime
 
 from .const import D_CLUSTER_NAME, D_COORDINATOR, D_EVENTS, D_UCR_ID, DOMAIN
 from .coordinator import DiveraCoordinator
+from .utils import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,10 +73,14 @@ class DiveraCalendar(CalendarEntity):
             None
 
         """
+        self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
+
+        self._attr_device_info = get_device_info(self.cluster_name)
         self._attr_name = coordinator.admin_data.get(D_CLUSTER_NAME)
         self._event_list: list[dict[str, Any]] = []
         self.entity_id = f"calendar.{ucr_id}_calendar"
         self._attr_unique_id = f"{ucr_id}_calendar"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def event(self) -> CalendarEvent | None:

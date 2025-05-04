@@ -244,7 +244,7 @@ class DiveraOpenAlarmsSensor(BaseDiveraEntity):
 
     # dynamic entity attributes
     @property
-    def stat(self) -> int:
+    def state(self) -> int:  # type: ignore[override]
         """Return number of open alarms."""
         return self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
 
