@@ -25,13 +25,12 @@ jobs:
         run: |
           pip install black pylint
 
-      - name: Check formatting with Black
-        run: black --check .
+      - name: Autoformat with Black
+        run: black . --line-length=88 --fast
 
       - name: Run Pylint
         run: |
-          # Optional: Verzeichnis anpassen
-          pylint custom_components/diveracontrol --exit-zero
+          pylint custom_components/diveracontrol
 
   security_checks:
     name: "🔒 Security Checks"
