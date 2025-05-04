@@ -409,7 +409,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         base_message = (
             translation.get("component.diveracontrol.common.usergroup_message") or ""
         )
-        base_message.format(cluster_name=cluster_name, ucr_id=ucr_id)
+        base_message = base_message.format(cluster_name=cluster_name, ucr_id=ucr_id)
 
         detail_key = f"component.diveracontrol.common.usergroup_{usergroup_id}"
         detail_message = translation.get(detail_key)
