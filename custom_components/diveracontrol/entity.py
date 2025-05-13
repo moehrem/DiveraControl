@@ -11,6 +11,7 @@ from .const import (
     D_ALARM,
     D_CLUSTER,
     D_CLUSTER_NAME,
+    D_FMS_STATUS,
     D_MONITOR,
     D_OPEN_ALARMS,
     D_STATUS,
@@ -282,7 +283,7 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
         )
 
     @property
-    def self_extra_state_attributes(self) -> dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the extra state attributes, which are the available qualifications."""
         _monitor_qualification_data = (
             self.cluster_data.get(D_MONITOR, {})
@@ -426,3 +427,22 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
             if _veh_status == "unknown"
             else f"mdi:numeric-{_veh_status}-box"
         )
+
+    @property
+    def extra_state_attributes(self):  # type: ignore[override]
+        """Return extra state attributes for vehicle tracker."""
+        extra_state_attributes = {}
+        _fms_items = (
+            self.cluster_data.get(D_CLUSTER, {}).get(D_FMS_STATUS, {}).get("items", {})
+        )
+        _veh_status = (
+            self.cluster_data.get(D_CLUSTER, {})
+            .get(D_VEHICLE, {})
+            .get(self.vehicle_id, {})
+            .get("fmsstatus_id", "unknown")
+        )
+        extra_state_attributes["icon_color"] = _fms_items.get(str(_veh_status), {}).get(
+            "color_hex", "#000000"
+        )
+
+        return extra_state_attributes
