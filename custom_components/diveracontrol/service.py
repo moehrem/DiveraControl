@@ -306,7 +306,61 @@ async def handle_post_using_vehicle_crew(
         LOGGER.error(error_msg)
         raise HomeAssistantError(error_msg) from None
 
-    # await handle_entity(hass, call, "post_using_vehicle_crew")
+    await handle_entity(hass, call, "post_using_vehicle_crew")
+
+
+async def handle_post_news(
+    hass: HomeAssistant,
+    call: ServiceCall,
+) -> None:
+    """Add, remove, reset the crew of a specific vehicle.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+    ucr_id: str = call.data.get("cluster_id") or ""
+    survey: bool = call.data.get("survey") or False
+    group: bool = call.data.get("group") or False
+    user_cluster_relation: bool = call.data.get("user_cluster_relation") or False
+    notification_type: int = 4 if user_cluster_relation else 3 if group else 2
+
+    news_data = {}
+    survey_data = {}
+
+    for key, value in call.data.items():
+        if key.startswith("survey_"):
+            survey_key = key[len("survey_") :]
+            if survey_key == "answers" and isinstance(value, str):
+                survey_data[survey_key] = [s.strip() for s in value.split(",")]
+            else:
+                survey_data[survey_key] = value
+        elif key == "notification_type":
+            news_data[key] = notification_type
+        elif key in ("group", "user_cluster_relation"):
+            news_data[key] = [s.strip() for s in value.split(",")]
+
+        else:
+            news_data[key] = value
+
+    payload = {
+        "News": news_data,
+        "NewsSurvey": survey_data,
+    }
+
+    api_instance = get_api_instance(hass, ucr_id)
+
+    ok_status = await api_instance.post_news(payload)
+    if not ok_status:
+        error_msg = "Failed to post new message, check logs for details."
+        LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from None
+
+    # no handle entity as new data needs to be fetched from Divera first
 
 
 def async_register_services(
@@ -427,6 +481,35 @@ def async_register_services(
                 vol.Required("vehicle_id"): cv.string,
                 vol.Required("mode"): cv.string,
                 vol.Optional("crew"): cv.ensure_list,
+            },
+        ),
+        "post_news": (
+            handle_post_news,
+            {
+                vol.Required("cluster_id"): cv.string,
+                vol.Required("title"): cv.string,
+                vol.Required("notification_type"): cv.positive_int,
+                vol.Optional("text"): cv.string,
+                vol.Optional("address"): cv.string,
+                vol.Optional("survey"): cv.boolean,
+                vol.Optional("private_mode"): cv.boolean,
+                vol.Optional("send_push"): cv.boolean,
+                vol.Optional("send_sms"): cv.boolean,
+                vol.Optional("send_call"): cv.boolean,
+                vol.Optional("send_mail"): cv.boolean,
+                vol.Optional("send_pager"): cv.boolean,
+                vol.Optional("archive"): cv.boolean,
+                vol.Optional("ts_archive"): cv.positive_int,
+                vol.Optional("group"): cv.string,
+                vol.Optional("user_cluster_relation"): cv.string,
+                vol.Optional("survey_title"): cv.string,
+                vol.Optional("survey_show_result_count"): cv.positive_int,
+                vol.Optional("survey_show_result_names"): cv.positive_int,
+                vol.Optional("survey_multiple_answers"): cv.boolean,
+                vol.Optional("survey_custom_answers"): cv.boolean,
+                vol.Optional("survey_response_until"): cv.boolean,
+                vol.Optional("survey_ts_response"): cv.positive_int,
+                vol.Optional("survey_answers"): cv.string,
             },
         ),
     }

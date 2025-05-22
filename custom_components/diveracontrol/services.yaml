@@ -67,12 +67,12 @@ post_alarm:
       name: Meldung
       description: (Optional) Zusatztext zur Alarmierung
       required: false
-      example: "Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"
+      example: '"Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"'
     address:
       name: Adresse
       description: (Optional) Einsatzort. Damit die Adresse im Kartenplugin des Dachboards korrekt angezeigt wird, muss sie vollständig mit Strasse, PLZ, Ort und Land angegeben werden.
       required: false
-      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
+      example: '"Hauptstraße 247, 12345 Musterstadt, Deutschland"'
     lat:
       name: Breitengrad
       description: (Optional) Breitengrad
@@ -365,7 +365,7 @@ post_using_vehicle_property:
 
 post_using_vehicle_crew:
   name: Fahrzeugbesatzung ändern
-  description: (Erforderlich) Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
+  description: Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
   fields:
     vehicle_id:
       name: Fahrzeug-ID
@@ -383,3 +383,127 @@ post_using_vehicle_crew:
       required: false
       example: 123, 456, 789
 
+post_news:
+  name: Erstellen einer neuen Mitteilung
+  description: Methode zur Erstellung einer neuen Mitteilung.
+  fields:
+    cluster_id:
+      name: Cluster-ID
+      description: (Erforderlich) Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
+      required: true
+      example: 794613
+    title:
+      name: Titel
+      description: Titel
+      required: true
+      example: Neue Dienstanweisung
+    notification_type:
+      name: Empfänger-Auswahl
+      description: (Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
+      required: true
+      example: 2
+    text:
+      name: Meldung
+      description: (Optional) Meldungstext
+      required: false
+      example: Rückwärtsfahren nur mit Einweiser
+    address:
+      name: Adresse
+      description: (Optional) Ort/Adresse
+      required: false
+      example: Raum 1.23
+    survey:
+      name: Umfrage
+      description: (Optional) Umfrage hinzufügen, Parameter siehe unten alle mit "survey_" beginnend
+      required: false
+      example: True
+    private_mode:
+      name: Sichtbarkeit privat
+      description: (Optional) Mitteilung nur für adressierte Personen sichtbr
+      required: false
+      example: False
+    send_push:
+      name: Pushbenachrichtigung
+      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
+      required: false
+      example: true
+    send_sms:
+      name: SMS-Benachrichtigung (kostenpflichtig!)
+      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_call:
+      name: Sprachanruf (kostenpflichtig!)
+      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
+      required: false
+      example: false
+    send_mail:
+      name: Email-Benachrichtigung
+      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
+      required: false
+      example: false
+    send_pager:
+      name: Pager-Benachrichtigung
+      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
+      required: false
+      example: false
+    archive:
+      name: Mitteilung zeitgesteuert archivieren
+      description: (Optional) Mitteilung zeitgesteuert archivieren
+      required: false
+      example: True
+    ts_archive:
+      name: Zeitstempel, zu dem die Mitteilung archiviert werden soll
+      description: (Optional) Mitteilung zeitgesteuert archivieren nach UNIX-Timestamp, bei leerem Wert keine automatische Archivierung
+      required: false
+      example: 4902061253
+    group:
+      name: Gruppen für Benachrichtigung
+      description: (Optional) IDs der Gruppen (bedingt 'notification_type' = 1 oder 3).
+      required: false
+      example: [ 1, 2, 3, 4 ]
+    user_cluster_relation:
+      name: Nutzer für Benachrichtigung
+      description: (Optional) IDs der Benutzer (bedingt 'notification_type' = 1 oder 4).
+      required: false
+      example: [ 1, 2, 3, 4 ]
+    survey_title:
+      name: Titel/Frage
+      description: (Optional) Titel oder Frage der Umfrage
+      required: false
+      example: Mit wie vielen Personen nehmt ihr am Sommerfest teil?
+    survey_show_result_count:
+      name: Sichtbarkeit der Rückmeldungen
+      description: (Optional) Sichtbarkeit der anonymen Rückmeldungen (0 = Nur für Autor, 1 = Für alle mit Schreibrecht, 2 = Sichtbar für alle)
+      required: false
+      example: 2
+    survey_show_result_names:
+      name: Sichtbarkeit der Namen
+      description: (Optional) Sichtbarkeit der Rückmeldungen mit Name und Freitext-Antwort (0 = Nur für Autor, 1 = Für alle mit Schreibrecht, 2 = Sichtbar für alle)
+      required: false
+      example: 2
+    survey_multiple_answers:
+      name: Mehrere Antworten
+      description: (Optional) Mehrere Antworten zulassen
+      required: false
+      example: True
+    survey_custom_answers:
+      name: Freitext-Antwort
+      description: (Optional) Freitext-Antwort zulassen
+      required: false
+      example: True
+    survey_response_until:
+      name: Rückmeldung zeitlich begrenzen
+      description: (Optional) Rückmeldung zeitlich begrenzen
+      required: false
+      example: True
+    survey_ts_response:
+      name: Rückmeldungsende
+      description: (Optional) Rückmeldung endet, als UNIX-Timestamp
+      required: false
+      example: 4902061253
+    survey_answers:
+      name: Umfrageantworten
+      description: (Optional) Strings der einzelnen Antwort-Optionen als Array
+      required: false
+      example: [Trupp, Staffel, Gruppe, Zug]
