@@ -80,6 +80,7 @@ Various Divera endpoints are implemented as services in Home Assistant, enabling
 * Vehicle data & custom attributes
 * Response feedback
 * Message dispatch
+* Create news
 
 ---
 
@@ -157,6 +158,7 @@ Several Home Assistant services are implemented for interacting with Divera. The
 * Modify vehicle properties
 * Update vehicle status/data
 * Modify alarm
+* Create news
 
 More details on the parameters (required and optional) can be found in Home Assistant under "Developer Tools" -> "Services". All services start with "DiveraControl: ...". You can test them manually there. For more information on how services work, [see here](https://www.home-assistant.io/docs/scripts/perform-actions/).
 

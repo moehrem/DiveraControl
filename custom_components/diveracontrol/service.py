@@ -19,6 +19,58 @@ from .utils import get_api_instance, get_coordinator_data, handle_entity
 LOGGER = logging.getLogger(__name__)
 
 
+def extract_news(data: dict, notification_type: int) -> dict:
+    """Extract news data from call-data of service 'post_news'.
+
+    Args:
+        data (dict): service call data.
+        notification_type (int): notification_type.
+
+    Returns:
+        dict: news_data
+
+    """
+
+    news_data: dict = {}
+    for key, value in data.items():
+        if key == "notification_type":
+            news_data["notification_type"] = notification_type
+        elif key in ("group", "user_cluster_relation"):
+            val = value
+            if isinstance(val, list):
+                news_data[key] = val
+            elif isinstance(val, str):
+                news_data[key] = [int(s.strip()) for s in val.split(",") if s.strip()]
+        elif key == "cluster_id":
+            news_data["cluster_id"] = int(value)
+        else:
+            news_data[key] = value
+    return news_data
+
+
+def extract_survey(data: dict) -> dict:
+    """Extract survey data from call-data of service "post_news.
+
+    Args:
+        data (dict): service call data.
+
+    Returns:
+        dict: survey_data
+
+    """
+
+    survey_data: dict = {}
+    for key, value in data.items():
+        if not key.startswith("NewsSurvey_"):
+            continue
+        survey_key = key[len("NewsSurvey_") :]
+        if survey_key in ("answers", "sorting") and isinstance(value, str):
+            survey_data[survey_key] = [s.strip() for s in value.split(",") if s.strip()]
+        else:
+            survey_data[survey_key] = value
+    return survey_data
+
+
 async def handle_post_vehicle_status(
     hass: HomeAssistant,
     call: ServiceCall,
@@ -66,12 +118,15 @@ async def handle_post_alarm(
 
     """
 
-    cluster_id: str = call.data.get("cluster_id") or ""
-    group = call.data.get("group")
-    user_cluster_relation = call.data.get("user_cluster_relation")
-    notification_type = 4 if user_cluster_relation else 3 if group else 2
+    ucr_id: str = call.data.get("cluster_id") or ""
 
-    api_instance = get_api_instance(hass, cluster_id)
+    notification_type = call.data.get("notification_type") or False
+    if not notification_type:
+        group = call.data.get("group")
+        user_cluster_relation = call.data.get("user_cluster_relation")
+        notification_type = 4 if user_cluster_relation else 3 if group else 2
+
+    api_instance = get_api_instance(hass, ucr_id)
 
     payload = {
         "Alarm": {
@@ -324,28 +379,25 @@ async def handle_post_news(
 
     """
     ucr_id: str = call.data.get("cluster_id") or ""
-    survey: bool = call.data.get("survey") or False
-    group: bool = call.data.get("group") or False
-    user_cluster_relation: bool = call.data.get("user_cluster_relation") or False
-    notification_type: int = 4 if user_cluster_relation else 3 if group else 2
+
+    survey_flag = call.data.get("survey") or False
+
+    notification_type = call.data.get("notification_type") or (
+        4
+        if call.data.get("user_cluster_relation")
+        else 3
+        if call.data.get("group")
+        else 2
+    )
 
     news_data = {}
     survey_data = {}
 
-    for key, value in call.data.items():
-        if key.startswith("survey_"):
-            survey_key = key[len("survey_") :]
-            if survey_key == "answers" and isinstance(value, str):
-                survey_data[survey_key] = [s.strip() for s in value.split(",")]
-            else:
-                survey_data[survey_key] = value
-        elif key == "notification_type":
-            news_data[key] = notification_type
-        elif key in ("group", "user_cluster_relation"):
-            news_data[key] = [s.strip() for s in value.split(",")]
-
-        else:
-            news_data[key] = value
+    if survey_flag:
+        survey_data = extract_survey(call.data)
+        news_data = extract_news(call.data, notification_type)
+    else:
+        news_data = extract_news(call.data, notification_type)
 
     payload = {
         "News": news_data,
@@ -502,14 +554,15 @@ def async_register_services(
                 vol.Optional("ts_archive"): cv.positive_int,
                 vol.Optional("group"): cv.string,
                 vol.Optional("user_cluster_relation"): cv.string,
-                vol.Optional("survey_title"): cv.string,
-                vol.Optional("survey_show_result_count"): cv.positive_int,
-                vol.Optional("survey_show_result_names"): cv.positive_int,
-                vol.Optional("survey_multiple_answers"): cv.boolean,
-                vol.Optional("survey_custom_answers"): cv.boolean,
-                vol.Optional("survey_response_until"): cv.boolean,
-                vol.Optional("survey_ts_response"): cv.positive_int,
-                vol.Optional("survey_answers"): cv.string,
+                vol.Optional("NewsSurvey_title"): cv.string,
+                vol.Optional("NewsSurvey_show_result_count"): cv.positive_int,
+                vol.Optional("NewsSurvey_show_result_names"): cv.positive_int,
+                vol.Optional("NewsSurvey_multiple_answers"): cv.boolean,
+                vol.Optional("NewsSurvey_custom_answers"): cv.boolean,
+                vol.Optional("NewsSurvey_response_until"): cv.boolean,
+                vol.Optional("NewsSurvey_ts_response"): cv.positive_int,
+                vol.Optional("NewsSurvey_answers"): cv.string,
+                vol.Optional("NewsSurvey_sorting"): cv.string,
             },
         ),
     }
