@@ -26,7 +26,6 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     MINOR_VERSION,
-    PATCH_VERSION,
     PERM_MANAGEMENT,
     VERSION,
 )
@@ -95,7 +94,7 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
         "name": cluster_name,
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
-        "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+        "sw_version": f"{VERSION}.{MINOR_VERSION}",
         "entry_type": "service",  # type: ignore[misc]
     }
 

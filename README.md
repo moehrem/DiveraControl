@@ -78,6 +78,7 @@ Verschiedene Divera-Endpunkte sind als Services in HomeAssistant umgesetzt und e
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
 - Nachrichtenversand
+- Erstellung von Mitteilungen
 
 ---
 
@@ -149,6 +150,7 @@ Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implement
 - Fahrzeugeigenschaften ändern
 - Fahrzeugstatus und -daten ändern
 - Alarm ändern
+- Erstellen einer neuen Mitteilung
 
 Weitere Details zu den Services, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Alle Services beginnen mit "DiveraControl: ...". Es ist in den Aktionen möglich, Services manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Services und Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 

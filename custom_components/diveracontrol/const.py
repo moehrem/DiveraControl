@@ -2,9 +2,8 @@
 
 # general
 DOMAIN = "diveracontrol"
-VERSION = "1"
-MINOR_VERSION = "0"
-PATCH_VERSION = "0"
+VERSION = 1
+MINOR_VERSION = 1
 MANUFACTURER = "Divera GmbH"
 UPDATE_INTERVAL_DATA = 60
 UPDATE_INTERVAL_ALARM = 30
@@ -23,6 +22,7 @@ API_PULL_ALL = "pull/all"
 API_ALARM = "alarms"
 API_EVENT = "event"
 API_MESSAGES = "messages"
+API_NEWS = "news"
 API_USING_VEHICLE_SET_SINGLE = "using-vehicles/set-status"
 API_USING_VEHICLE_PROP = "using-vehicle-property"
 API_USING_VEHICLE_CREW = "using-vehicle-crew"
@@ -56,12 +56,14 @@ D_LOCALMONITOR = "localmonitor"
 D_STATUSPLAN = "statusplan"
 D_ACCESS = "access"
 D_VEHICLE = "vehicle"
+D_FMS_STATUS = "fms_status"
 
 # permissions
 PERM_MESSAGES = "messages"
 PERM_ALARM = "alarm"
 PERM_STATUS_VEHICLE = "status_vehicle"
 PERM_MANAGEMENT = "management"
+PERM_NEWS = "news"
 
 # icons
 I_OPEN_ALARM = "mdi:alarm-light-outline"

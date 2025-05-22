@@ -26,7 +26,6 @@ from .const import (
     D_USERGROUP_ID,
     DOMAIN,
     MINOR_VERSION,
-    PATCH_VERSION,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
     VERSION,
@@ -42,7 +41,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = VERSION
     MINOR_VERSION = MINOR_VERSION
-    PATCH_VERSION = PATCH_VERSION
 
     def __init__(self) -> None:
         """Initialize the config flow.

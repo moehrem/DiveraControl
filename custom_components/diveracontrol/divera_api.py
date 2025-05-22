@@ -12,6 +12,7 @@ from .const import (
     API_ACCESS_KEY,
     API_ALARM,
     API_MESSAGES,
+    API_NEWS,
     API_PULL_ALL,
     API_USING_VEHICLE_CREW,
     API_USING_VEHICLE_PROP,
@@ -21,6 +22,7 @@ from .const import (
     D_UCR,
     PERM_ALARM,
     PERM_MESSAGES,
+    PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
 from .utils import log_execution_time, permission_check
@@ -170,7 +172,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -194,7 +195,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -222,7 +222,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
             method = "PUT"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -248,7 +247,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_ALARM):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -272,7 +270,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -324,7 +321,6 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -360,7 +356,32 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
             method = "POST"
-            # return await self.api_request(url, method, payload=payload)
+            await self.api_request(url, method, payload=payload)
+            return True
+
+        return False
+
+    async def post_news(
+        self,
+        payload: dict,
+    ) -> bool:
+        """POST news to Divera.
+
+        Args:
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        Returns:
+            bool: True if API-call successful, False otherwise.
+
+        """
+        LOGGER.debug(
+            "Posting news to unit %s",
+            self.ucr_id,
+        )
+
+        if permission_check(self.hass, self.ucr_id, PERM_NEWS):
+            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
+            method = "POST"
             await self.api_request(url, method, payload=payload)
             return True
 
