@@ -86,7 +86,7 @@ async def handle_post_vehicle_status(
 
     """
 
-    vehicle_id: str = call.data.get("vehicle_id") or ""
+    vehicle_id: int = call.data.get("vehicle_id") or 0
 
     api_instance = get_api_instance(hass, vehicle_id)
 
@@ -118,7 +118,7 @@ async def handle_post_alarm(
 
     """
 
-    ucr_id: str = call.data.get("cluster_id") or ""
+    cluster_id: str = call.data.get("cluster_id") or ""
 
     notification_type = call.data.get("notification_type") or False
     if not notification_type:
@@ -126,7 +126,7 @@ async def handle_post_alarm(
         user_cluster_relation = call.data.get("user_cluster_relation")
         notification_type = 4 if user_cluster_relation else 3 if group else 2
 
-    api_instance = get_api_instance(hass, ucr_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
     payload = {
         "Alarm": {
@@ -293,7 +293,7 @@ async def handle_post_using_vehicle_property(
 
     """
 
-    vehicle_id: str = call.data.get("vehicle_id") or ""
+    vehicle_id: int = call.data.get("vehicle_id") or 0
 
     api_instance = get_api_instance(hass, vehicle_id)
 
@@ -325,7 +325,7 @@ async def handle_post_using_vehicle_crew(
 
     """
 
-    vehicle_id: str = call.data.get("vehicle_id") or ""
+    vehicle_id: int = call.data.get("vehicle_id") or 0
     mode = call.data.get("mode")
 
     api_instance = get_api_instance(hass, vehicle_id)
@@ -378,7 +378,7 @@ async def handle_post_news(
         None
 
     """
-    ucr_id: str = call.data.get("cluster_id") or ""
+    cluster_id: str = call.data.get("cluster_id") or ""
 
     survey_flag = call.data.get("survey") or False
 
@@ -404,7 +404,7 @@ async def handle_post_news(
         "NewsSurvey": survey_data,
     }
 
-    api_instance = get_api_instance(hass, ucr_id)
+    api_instance = get_api_instance(hass, cluster_id)
 
     ok_status = await api_instance.post_news(payload)
     if not ok_status:
@@ -434,7 +434,7 @@ def async_register_services(
         "post_vehicle_status": (
             handle_post_vehicle_status,
             {
-                vol.Required("vehicle_id"): cv.string,
+                vol.Required("vehicle_id"): cv.positive_int,
                 vol.Optional("status"): cv.positive_int,
                 vol.Optional("status_id"): cv.positive_int,
                 vol.Optional("status_note"): cv.string,
@@ -445,7 +445,7 @@ def async_register_services(
         "post_alarm": (
             handle_post_alarm,
             {
-                vol.Required("cluster_id"): cv.string,
+                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
                 vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("foreign_id"): cv.string,
@@ -521,7 +521,7 @@ def async_register_services(
         "post_using_vehicle_property": (
             handle_post_using_vehicle_property,
             {
-                vol.Required("vehicle_id"): cv.string,
+                vol.Required("vehicle_id"): cv.positive_int,
                 vol.Extra: vol.Any(
                     vol.Coerce(str), vol.Coerce(int), vol.Coerce(float), None
                 ),
@@ -530,7 +530,7 @@ def async_register_services(
         "post_using_vehicle_crew": (
             handle_post_using_vehicle_crew,
             {
-                vol.Required("vehicle_id"): cv.string,
+                vol.Required("vehicle_id"): cv.positive_int,
                 vol.Required("mode"): cv.string,
                 vol.Optional("crew"): cv.ensure_list,
             },
@@ -538,7 +538,7 @@ def async_register_services(
         "post_news": (
             handle_post_news,
             {
-                vol.Required("cluster_id"): cv.string,
+                vol.Required("cluster_id"): cv.positive_int,
                 vol.Required("title"): cv.string,
                 vol.Required("notification_type"): cv.positive_int,
                 vol.Optional("text"): cv.string,

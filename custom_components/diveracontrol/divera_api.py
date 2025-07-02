@@ -154,13 +154,13 @@ class DiveraAPI:
 
     async def post_vehicle_status(
         self,
-        vehicle_id: str,
+        vehicle_id: int,
         payload: dict,
     ) -> bool:
         """POST vehicle status and data to Divera API.
 
         Args:
-            vehicle_id (str): Divera-ID of the vehicle to update.
+            vehicle_id (int): Divera-ID of the vehicle to update.
             payload (dict): Dictionary of data to send to Divera-API.
 
         Returns:
@@ -277,12 +277,12 @@ class DiveraAPI:
 
     async def get_vehicle_property(
         self,
-        vehicle_id: str,
+        vehicle_id: int,
     ) -> dict:
         """GET individual vehicle poroperties for vehicle from Divera API.
 
         Args:
-            vehicle_id (str): ID of the vehicle to fetch property data from.
+            vehicle_id (int): ID of the vehicle to fetch property data from.
 
         Returns:
             dict: JSON response from the API, otherwise empty if no permissions.
@@ -301,13 +301,13 @@ class DiveraAPI:
 
     async def post_using_vehicle_property(
         self,
-        vehicle_id: str,
+        vehicle_id: int,
         payload: dict,
     ) -> bool:
         """POST individual vehicle poroperties for vehicle from Divera API.
 
         Args:
-            vehicle_id (str): ID of the vehicle to fetch property data from.
+            vehicle_id (int): ID of the vehicle to fetch property data from.
             payload (dict): Dictionary of data to send to Divera-API.
 
         Returns:
@@ -328,14 +328,14 @@ class DiveraAPI:
 
     async def post_using_vehicle_crew(
         self,
-        vehicle_id: str,
+        vehicle_id: int,
         mode: str,
         payload: dict,
     ) -> bool:
         """POST add one or more crew to a vehicle.
 
         Args:
-            vehicle_id (str): ID of the vehicle to fetch property data from.
+            vehicle_id (int): ID of the vehicle to fetch property data from.
             mode (str): Mode to work with crew members. Can be
                         "add" - adding new crew,
                         "remove" - removing specific crew,
