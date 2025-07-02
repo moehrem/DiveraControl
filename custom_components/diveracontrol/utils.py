@@ -239,14 +239,14 @@ def get_api_instance(
 
     # Try finding api instance by sensor_id as cluster_id (int or str)
     possible_keys = {sensor_id}
-    try:
-        possible_keys.add(int(sensor_id))
-    except (ValueError, TypeError):
-        pass
-    try:
-        possible_keys.add(str(sensor_id))
-    except Exception:
-        pass
+
+    if not isinstance(sensor_id, int):
+        try:
+            possible_keys.add(int(sensor_id))
+        except (ValueError, TypeError):
+            _LOGGER.debug("sensor_id '%s' konnte nicht in int umgewandelt werden", sensor_id)
+
+    possible_keys.add(str(sensor_id))
 
     for key in possible_keys:
         cluster_data = domain_data.get(key)
