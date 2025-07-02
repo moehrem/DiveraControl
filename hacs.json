@@ -1,4 +1,4 @@
 {
     "name": "DiveraControl",
-    "country": "AT, CH, DE"
+    "country": ["AT", "CH", "DE"]
   }
