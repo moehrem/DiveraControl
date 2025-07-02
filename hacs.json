@@ -1,3 +1,4 @@
 {
-    "name": "DiveraControl"
+    "name": "DiveraControl",
+    "country": ["AT", "CH", "DE"]
   }

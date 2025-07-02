@@ -168,38 +168,99 @@ def get_ucr_id(
     raise HomeAssistantError(error_message)
 
 
+# def get_api_instance(
+#     hass: HomeAssistant,
+#     sensor_id: str,
+# ) -> "DiveraAPI":
+#     """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
+
+#     api_instance = None
+
+#     try:
+#         # try finding ucr_id with given sensor_id
+#         for cluster_data in hass.data[DOMAIN].values():
+#             for sensor in cluster_data["sensors"]:
+#                 if sensor == sensor_id:
+#                     api_instance = cluster_data["api"]
+#                     break
+
+#         # if nothing found, try sensor_id as ucr_id
+#         if api_instance is None:
+#             for ucr_id, cluster_data in hass.data[DOMAIN].items():
+#                 if ucr_id == int(sensor_id):
+#                     api_instance = cluster_data["api"]
+#                     break
+
+#         if api_instance is None:
+#             raise KeyError
+
+#     except KeyError:
+#         error_message = f"API-instance not found for Sensor-ID {sensor_id}"
+#         _LOGGER.error(error_message)
+#         raise HomeAssistantError(error_message) from None
+
+#     return api_instance
+
+
 def get_api_instance(
     hass: HomeAssistant,
-    sensor_id: str,
+    sensor_id: str | int,
 ) -> "DiveraAPI":
-    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
+    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found.
 
-    api_instance = None
+    Args:
+        hass: HomeAssistant instance
+        sensor_id: Sensor ID or ucr_id (str or int)
+
+    Returns:
+        DiveraAPI: API instance for the given sensor or ucr_id
+
+    Raises:
+        HomeAssistantError: If integration data or API instance is missing or not found
+    """
 
     try:
-        # try finding ucr_id with given sensor_id
-        for cluster_data in hass.data[DOMAIN].values():
-            for sensor in cluster_data["sensors"]:
-                if sensor == sensor_id:
-                    api_instance = cluster_data["api"]
-                    break
-
-        # if nothing found, try sensor_id as ucr_id
-        if api_instance is None:
-            for ucr_id, cluster_data in hass.data[DOMAIN].items():
-                if ucr_id == int(sensor_id):
-                    api_instance = cluster_data["api"]
-                    break
-
-        if api_instance is None:
-            raise KeyError
-
-    except KeyError:
-        error_message = f"API-instance not found for Sensor-ID {sensor_id}"
+        domain_data = hass.data[DOMAIN]
+    except KeyError as exc:
+        error_message = f"Integration data missing in hass.data for domain {DOMAIN}"
         _LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
+        raise HomeAssistantError(error_message) from exc
 
-    return api_instance
+    # Try finding api instance by sensor_id in sensors
+    for cluster_data in domain_data.values():
+        sensors = cluster_data.get("sensors", [])
+        if str(sensor_id) in sensors or sensor_id in sensors:
+            api_instance = cluster_data.get("api")
+            if api_instance is not None:
+                return api_instance
+            error_message = f"API instance missing for sensor {sensor_id}"
+            _LOGGER.error(error_message)
+            raise HomeAssistantError(error_message)
+
+    # Try finding api instance by sensor_id as cluster_id (int or str)
+    possible_keys = {sensor_id}
+
+    if not isinstance(sensor_id, int):
+        try:
+            possible_keys.add(int(sensor_id))
+        except (ValueError, TypeError):
+            _LOGGER.debug("sensor_id '%s' konnte nicht in int umgewandelt werden", sensor_id)
+
+    possible_keys.add(str(sensor_id))
+
+    for key in possible_keys:
+        cluster_data = domain_data.get(key)
+        if cluster_data:
+            api_instance = cluster_data.get("api")
+            if api_instance is not None:
+                return api_instance
+            error_message = f"API instance missing for ucr_id {key}"
+            _LOGGER.error(error_message)
+            raise HomeAssistantError(error_message)
+
+    error_message = f"API instance not found for sensor_id {sensor_id}"
+    _LOGGER.error(error_message)
+    raise HomeAssistantError(error_message)
 
 
 def get_coordinator_data(
