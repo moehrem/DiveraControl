@@ -100,7 +100,7 @@ Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung gepla
 ## 📂 Installation
 
 ### 🏆 **HACS (empfohlen)**
-DiveraControl ist (noch) nicht im HAC-Store verfügbar, kann aber bereits manuell hinzugefügt werden:
+DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
