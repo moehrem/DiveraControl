@@ -130,7 +130,7 @@ Divera offers various user types:
 * monitor user
 * vehicle user
 
-> **Note:** For proper permission management, a personal or monitor user is recommended. Other user types (including the flexible-looking system user, which in reality is mainly for TetraControl) also work but are limited by fixed restrictions and cannot access all data.
+> **Note:** For proper permission management, a personal or monitor user is recommended. Other user types (including the flexible-looking system user, which in reality is mainly for tetraHAconnect) also work but are limited by fixed restrictions and cannot access all data.
 
 If login with username/password fails or you're using a **system, interface, monitor, or vehicle user**, the integration will prompt for the API key.
 
