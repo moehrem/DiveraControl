@@ -210,7 +210,7 @@ def get_api_instance(
 
     Args:
         hass: HomeAssistant instance
-        sensor_id: Sensor ID or ucr_id (str or int)
+        sensor_id: alarm_id, vehicle_id or cluster_id (str or int)
 
     Returns:
         DiveraAPI: API instance for the given sensor or ucr_id
@@ -226,25 +226,25 @@ def get_api_instance(
         _LOGGER.error(error_message)
         raise HomeAssistantError(error_message) from exc
 
-    # Try finding api instance by sensor_id in sensors
+    # Try finding api instance in cluster_data by vehicle_id or alarm_id
     for cluster_data in domain_data.values():
         sensors = cluster_data.get("sensors", [])
         if str(sensor_id) in sensors or sensor_id in sensors:
             api_instance = cluster_data.get("api")
             if api_instance is not None:
                 return api_instance
-            error_message = f"API instance missing for sensor {sensor_id}"
+            error_message = f"Found the correct sensor-entity, but can't find API instance for sensor {sensor_id}. Please report that to the developer under https://github.com/moehrem/DiveraControl/issues."
             _LOGGER.error(error_message)
             raise HomeAssistantError(error_message)
 
-    # Try finding api instance by sensor_id as cluster_id (int or str)
+    # Try finding api instance in cluster_data by cluster_id (int or str)
     possible_keys = {sensor_id}
 
     if not isinstance(sensor_id, int):
         try:
             possible_keys.add(int(sensor_id))
         except (ValueError, TypeError):
-            _LOGGER.debug("sensor_id '%s' konnte nicht in int umgewandelt werden", sensor_id)
+            _LOGGER.debug("Failed to transform ID '%s'", sensor_id)
 
     possible_keys.add(str(sensor_id))
 
@@ -254,11 +254,14 @@ def get_api_instance(
             api_instance = cluster_data.get("api")
             if api_instance is not None:
                 return api_instance
-            error_message = f"API instance missing for ucr_id {key}"
+
+            # error handling if cluster found but API instance is missing
+            error_message = f"Found cluster, but API instance missing for cluster_id {key}. Please report that to the developer under https://github.com/moehrem/DiveraControl/issues."
             _LOGGER.error(error_message)
             raise HomeAssistantError(error_message)
 
-    error_message = f"API instance not found for sensor_id {sensor_id}"
+    # error handling if no cluster found
+    error_message = f"API instance not found for ID '{sensor_id}' of cluster, alarm or vehicle, please check input"
     _LOGGER.error(error_message)
     raise HomeAssistantError(error_message)
 

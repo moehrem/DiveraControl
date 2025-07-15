@@ -66,7 +66,7 @@ Die Kommunikation zu Divera basiert vollständig auf der APIv2.
 - Alarmdaten
 - Einheitendetails
 - Verfügbarkeiten
-- Fahrzeugdaten und -positionen 
+- Fahrzeugdaten und -positionen
 - individuelle Fahrzeugeigenschaften
 - Berechtigungen
 - Nachrichtenkanäle
@@ -115,7 +115,7 @@ DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
 ## ⚙️ Einrichtung
 
 ### 🔑 **Authentifizierung**
-Zur Einrichtung werden entweder **Benutzername & Passwort** oder der **API-Schlüssel** benötigt. Die entsprechende Einrichtungsform kann vom Nutzer gewählt werden. 
+Zur Einrichtung werden entweder **Benutzername & Passwort** oder der **API-Schlüssel** benötigt. Die entsprechende Einrichtungsform kann vom Nutzer gewählt werden.
 Der persönliche API-Schlüssel ist in den Nutzerdaten unter "Einstellungen" -> "Debug" zu finden. Alternativ kann der Schlüssel der Einheit unter "Verwaltung" -> "Schnittstellen" genutzt werden oder der Schlüssel des System- oder Monitornutzers aus den jeweiligen Verwaltungsoptionen.
 
 Divera bietet verscheidene Nutzerformen an:
@@ -124,7 +124,7 @@ Divera bietet verscheidene Nutzerformen an:
 - Monitornutzer
 - Fahrzeugnutzer
 
-> **Hinweis:** Für eine echte Berechtigungssteuerung sollte ein persönlicher, regulärer Nutzer oder ein Monitornutzer zur Anmeldung verwendet werden. Alle anderen Nutzerformen (auch der Sytemnutzer, der scheinbar flexibel berechtigt werden kann, tatsächlich aber Daten für TetraControl zurückgibt) werden ebenso funktionieren, unterliegen jedoch unterschiedlichen nicht änderbaren Beschränkungen der Berechtigungen, können also nicht alle Daten abfragen.
+> **Hinweis:** Für eine echte Berechtigungssteuerung sollte ein persönlicher, regulärer Nutzer oder ein Monitornutzer zur Anmeldung verwendet werden. Alle anderen Nutzerformen (auch der Sytemnutzer, der scheinbar flexibel berechtigt werden kann, tatsächlich aber Daten für TETRAcontrol (Status3IT) zurückgibt) werden ebenso funktionieren, unterliegen jedoch unterschiedlichen nicht änderbaren Beschränkungen der Berechtigungen, können also nicht alle Daten abfragen.
 
 Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **System-, Schnittstellen-, Monitor- oder Fahrzeugbenutzer** handelt, fragt die Integration direkt nach dem API-Schlüssel.
 
@@ -142,7 +142,7 @@ Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval w
 ## 🔨 Benutzung
 
 ### 📟 **Services**
-Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen oder eigenen Entwicklungen aufgerufen werden. Umgesetzte Services sind:
+Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen, im Frontend über Buttons, in eigenen Entwicklungen - kurz: überall da, wo in HomeAssistant Services unterstützt werden - aufgerufen werden. Umgesetzte Services sind:
 - Alarm erstellen
 - Alarm schließen/öffnen
 - Nachrichten senden
@@ -152,7 +152,7 @@ Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implement
 - Alarm ändern
 - Erstellen einer neuen Mitteilung
 
-Weitere Details zu den Services, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Alle Services beginnen mit "DiveraControl: ...". Es ist in den Aktionen möglich, Services manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Services und Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
+Weitere Details zu den Services, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Es ist in den Aktionen möglich, Services manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Services und Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
 Services, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
 
@@ -161,4 +161,4 @@ Services, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auc
 Zur Analyse kann im Menü der Integration das "Debug-Protokoll" aktiviert werden. Damit wird der Loglevel der Integration auf "Debug" gesetzt und entsprechend deutlich mehr Logging ausgegeben.
 
 Im Kontextenü zum erstellen Dienst selbst können die "Diagnosedaten heruntergeladen" werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
-> **Hinweis:** In den Ausgabe werden lediglich die API-Schlüssel maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!
+> **Hinweis:** In der Ausgabedatei werden lediglich die API-Schlüssel maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!
