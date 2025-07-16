@@ -155,9 +155,13 @@ def get_ucr_id(
 
     try:
         for ucr_id, cluster_data in hass.data[DOMAIN].items():
-            if sensor_id in cluster_data.get("sensors", []):
+            if sensor_id in cluster_data.get("sensors", []) or str(
+                sensor_id
+            ) in cluster_data.get("sensors", []):
                 return ucr_id
-            if sensor_id in cluster_data.get("device_tracker", []):
+            if sensor_id in cluster_data.get("device_tracker", []) or str(
+                sensor_id
+            ) in cluster_data.get("device_tracker", []):
                 return ucr_id
 
     except KeyError:
