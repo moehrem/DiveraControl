@@ -74,7 +74,7 @@ Communication with Divera is entirely based on APIv2.
 * Calendar entries
 
 ### 📤 **Data Submission**
-Various Divera endpoints are implemented as services in Home Assistant, enabling data submission to Divera:
+Various Divera endpoints are implemented as actions in Home Assistant, enabling data submission to Divera:
 
 * Alarm creation, update & closure
 * Vehicle data & custom attributes
@@ -148,8 +148,8 @@ Intervals are set **per unit** and control how often data is retrieved and updat
 
 ## 🔨 Usage
 
-### 📿 **Services**
-Several Home Assistant services are implemented for interacting with Divera. They all start with "DiveraControl" and can be used in automations or custom scripts. Implemented services include:
+### 📿 **Actions**
+Several Home Assistant actions are implemented for interacting with Divera. They all start with "DiveraControl" and can be used in automations or custom scripts. Implemented actions include:
 
 * Create alarm
 * Open/close alarm
@@ -160,15 +160,15 @@ Several Home Assistant services are implemented for interacting with Divera. The
 * Modify alarm
 * Create news
 
-More details on the parameters (required and optional) can be found in Home Assistant under "Developer Tools" -> "Services". All services start with "DiveraControl: ...". You can test them manually there. For more information on how services work, [see here](https://www.home-assistant.io/docs/scripts/perform-actions/).
+More details on the parameters (required and optional) can be found in Home Assistant under "Developer Tools" -> "Actions". All actions start with "DiveraControl: ...". You can test them manually there. For more information on how actions work, [see here](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
-Services that modify existing data (e.g., vehicle position) also update the local state in Home Assistant. This means Home Assistant is always up to date and does not wait for Divera to sync. However, this does **not** apply to new data entries! For example, a new alarm or message is always created on Divera first and then synced to Home Assistant.
+Actions that modify existing data (e.g., vehicle position) also update the local state in Home Assistant. This means Home Assistant is always up to date and does not wait for Divera to sync. However, this does **not** apply to new data entries! For example, a new alarm or message is always created on Divera first and then synced to Home Assistant.
 
 ---
 
 ## ⁉️ **Troubleshooting**
 To debug issues, enable the **debug log** in the integration menu. This sets the log level to "debug" and provides much more detailed output.
 
-In the context menu of the created service, you can also **download diagnostic data**. This includes system details, integration metadata, all data fetched from Divera, and logs from the current session relevant to DiveraControl.
+In the context menu of the created hub, you can also **download diagnostic data**. This includes system details, integration metadata, all data fetched from Divera, and logs from the current session relevant to DiveraControl.
 
 > **Note:** Only the API keys are masked in the log output. All other data, including personal information and alarm content, is included unmasked as received from Divera. These files should **not be shared unfiltered**!

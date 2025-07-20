@@ -73,7 +73,7 @@ Die Kommunikation zu Divera basiert vollständig auf der APIv2.
 - Kalendereinträge
 
 ### 📤 **Datenübergabe**
-Verschiedene Divera-Endpunkte sind als Services in HomeAssistant umgesetzt und ermöglichen das Übermitteln von Daten an Divera:
+Verschiedene Divera-Endpunkte sind als Aktionen in HomeAssistant umgesetzt und ermöglichen das Übermitteln von Daten an Divera:
 - Alarmerstellung, -änderung & -abschluss
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
@@ -141,8 +141,8 @@ Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval w
 
 ## 🔨 Benutzung
 
-### 📟 **Services**
-Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen, im Frontend über Buttons, in eigenen Entwicklungen - kurz: überall da, wo in HomeAssistant Services unterstützt werden - aufgerufen werden. Umgesetzte Services sind:
+### 📟 **Aktionen**
+Zur Interaktion mit Divera sind verschiedene Aktionen in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen, im Frontend über Buttons, in eigenen Entwicklungen - kurz: überall da, wo in HomeAssistant Aktionen unterstützt werden - aufgerufen werden. Umgesetzte Aktionen sind:
 - Alarm erstellen
 - Alarm schließen/öffnen
 - Nachrichten senden
@@ -152,9 +152,9 @@ Zur Interaktion mit Divera sind verschiedene Services in HomeAssistant implement
 - Alarm ändern
 - Erstellen einer neuen Mitteilung
 
-Weitere Details zu den Services, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Es ist in den Aktionen möglich, Services manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Services und Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
+Weitere Details zu den Aktionen, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Es ist in dort außerdem möglich, Aktionen manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
-Services, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
+Aktionen, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
 
 
 ## ⁉️ **Fehleranalyse**
