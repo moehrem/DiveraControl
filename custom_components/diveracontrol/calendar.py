@@ -10,7 +10,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.util.dt import parse_datetime
+from homeassistant.util.dt import parse_datetime, utc_from_timestamp, as_local
 
 from .const import D_CLUSTER_NAME, D_COORDINATOR, D_EVENTS, D_UCR_ID, DOMAIN
 from .coordinator import DiveraCoordinator
@@ -94,9 +94,15 @@ class DiveraCalendar(CalendarEntity):
         )
         first_event = sorted_events[0]
 
+        start = parse_datetime(
+            first_event["start"]["dateTime"]
+        ) or datetime.min.replace(tzinfo=UTC)
+        end = parse_datetime(first_event["end"]["dateTime"]) or datetime.min.replace(
+            tzinfo=UTC
+        )
         return CalendarEvent(
-            start=parse_datetime(first_event["start"]["dateTime"]) or datetime.min,
-            end=parse_datetime(first_event["end"]["dateTime"]) or datetime.min,
+            start=start,
+            end=end,
             summary=first_event["summary"],
             description=first_event["description"],
             location=first_event.get("location"),
