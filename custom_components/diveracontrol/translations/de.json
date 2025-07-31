@@ -49,7 +49,7 @@
       "error": {
         "cannot_auth": "Ungültiger Benutzername oder Passwort.",
         "cannot_connect": "Keine Verbindung zu Divera möglich.",
-        "no_ucr": "Keine verbundenen Einheiten gefunden erhalten",
+        "no_ucr": "Keine verbundenen Einheiten gefunden.",
         "unknown": "Unbekannter Fehler"
       },
       "abort":{
