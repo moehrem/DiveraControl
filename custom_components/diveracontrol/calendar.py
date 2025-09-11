@@ -123,8 +123,8 @@ class DiveraCalendar(CalendarEntity):
         """
         self._event_list = []
         for event_data in new_events.values():
-            start = datetime.fromtimestamp(event_data.get("start")).replace(tzinfo=UTC)
-            end = datetime.fromtimestamp(event_data.get("end")).replace(tzinfo=UTC)
+            start = utc_from_timestamp(event_data.get("start"))
+            end = utc_from_timestamp(event_data.get("end"))
 
             self._event_list.append(
                 {
