@@ -104,7 +104,7 @@ async def update_data(
 
     # handle open alarms
     try:
-        if len(alarm.get("items")) > 0:
+        if alarm.get("items", {}):
             open_alarms = sum(
                 1
                 for alarm_details in alarm.get("items", {}).values()
