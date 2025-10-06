@@ -6,6 +6,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .service import async_register_services
+
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
@@ -27,6 +29,12 @@ PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up DiveraControl at Home Assistant start to register services."""
+    async_register_services(hass, DOMAIN)
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -43,7 +51,7 @@ async def async_setup_entry(
     """
     ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
-    cluster_api_key: str = config_entry.data.get(D_API_KEY) or ""
+    api_key: str = config_entry.data.get(D_API_KEY) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
@@ -51,7 +59,7 @@ async def async_setup_entry(
         api = DiveraAPI(
             hass,
             ucr_id,
-            cluster_api_key,
+            api_key,
         )
         coordinator = DiveraCoordinator(
             hass,

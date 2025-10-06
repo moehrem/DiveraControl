@@ -61,10 +61,10 @@ class DiveraAPI:
         self,
         url: str,
         method: str,
-        parameters: dict | None = None,
-        payload: dict | None = None,
-        headers: dict | None = None,
-    ) -> dict:
+        parameters: dict[str, str] | None = None,
+        payload: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, str]:
         """Request data from Divera API at the given endpoint.
 
         Args:
@@ -88,6 +88,7 @@ class DiveraAPI:
         # init "parameters" as dict, if None; add mandatory api-key
         parameters = parameters or {}
         parameters[API_ACCESS_KEY] = self.api_key
+        parameters[D_UCR] = self.ucr_id
 
         # Add parameters to the URL
         if parameters:
@@ -135,8 +136,7 @@ class DiveraAPI:
 
     async def get_ucr_data(
         self,
-        ucr_id: str,
-    ) -> dict:
+    ) -> dict[str, str]:
         """GET all data for user cluster relation from the Divera API. No permission check.
 
         Args:
@@ -149,13 +149,12 @@ class DiveraAPI:
         LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        parameters = {D_UCR: ucr_id}
-        return await self.api_request(url, method, parameters=parameters)
+        return await self.api_request(url, method)
 
     async def post_vehicle_status(
         self,
         vehicle_id: int,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POST vehicle status and data to Divera API.
 
@@ -172,14 +171,15 @@ class DiveraAPI:
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
             method = "POST"
-            await self.api_request(url, method, payload=payload)
+            parameters = {D_UCR: self.ucr_id}
+            await self.api_request(url, method, parameters=parameters, payload=payload)
             return True
 
         return False
 
     async def post_alarms(
         self,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POST new alarm to Divera API.
 
@@ -203,7 +203,7 @@ class DiveraAPI:
     async def put_alarms(
         self,
         alarm_id: str,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """PUT changes for existing alarm to Divera API.
 
@@ -229,7 +229,7 @@ class DiveraAPI:
 
     async def post_close_alarm(
         self,
-        payload: dict,
+        payload: dict[str, str],
         alarm_id: str,
     ) -> bool:
         """POST to close an existing alarm to Divera API.
@@ -254,7 +254,7 @@ class DiveraAPI:
 
     async def post_message(
         self,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POSt to close an existing alarm to Divera API.
 
@@ -278,7 +278,7 @@ class DiveraAPI:
     async def get_vehicle_property(
         self,
         vehicle_id: int,
-    ) -> dict:
+    ) -> dict[str, str]:
         """GET individual vehicle poroperties for vehicle from Divera API.
 
         Args:
@@ -302,7 +302,7 @@ class DiveraAPI:
     async def post_using_vehicle_property(
         self,
         vehicle_id: int,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POST individual vehicle poroperties for vehicle from Divera API.
 
@@ -330,7 +330,7 @@ class DiveraAPI:
         self,
         vehicle_id: int,
         mode: str,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POST add one or more crew to a vehicle.
 
@@ -346,6 +346,7 @@ class DiveraAPI:
             bool: True if API-call successful, False otherwise.
 
         """
+
         LOGGER.debug(
             "Posting %s crew members to vehicle %s for cluster %s",
             mode,
@@ -355,7 +356,10 @@ class DiveraAPI:
 
         if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
             url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
-            method = "POST"
+            if mode in {"add", "remove"}:
+                method = "POST"
+            elif mode == "reset":
+                method = "DELETE"
             await self.api_request(url, method, payload=payload)
             return True
 
@@ -363,7 +367,7 @@ class DiveraAPI:
 
     async def post_news(
         self,
-        payload: dict,
+        payload: dict[str, str],
     ) -> bool:
         """POST news to Divera.
 

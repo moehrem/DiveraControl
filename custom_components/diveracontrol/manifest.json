@@ -3,11 +3,11 @@
   "name": "DiveraControl",
   "codeowners": ["@moehrem"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["device_automation"],
   "documentation": "https://github.com/moehrem/DiveraControl",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/moehrem/DiveraControl/issues",
   "requirements": [],
-  "version": "1.1.5"
+  "version": "1.2.0"
 }

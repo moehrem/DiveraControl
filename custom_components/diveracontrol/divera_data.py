@@ -5,7 +5,7 @@ from typing import Any
 
 from aiohttp import ClientError
 
-from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
+from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_VEHICLE
 from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,8 +37,7 @@ async def update_data(
 
     # request divera data
     try:
-        ucr_id = admin_data[D_UCR_ID]
-        raw_ucr_data = await api.get_ucr_data(ucr_id)
+        raw_ucr_data = await api.get_ucr_data()
 
         if not raw_ucr_data.get("success", False):
             _LOGGER.error(
@@ -53,7 +52,6 @@ async def update_data(
 
     # set local data
     cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
-    alarm = raw_ucr_data.get(D_DATA, {}).get(D_ALARM, {})
 
     # update data if new data available
     key = None
@@ -104,10 +102,12 @@ async def update_data(
 
     # handle open alarms
     try:
-        if alarm.get("items", {}):
+        # Use normalized data from cluster_data instead of raw alarm data
+        alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
+        if alarm_items:
             open_alarms = sum(
                 1
-                for alarm_details in alarm.get("items", {}).values()
+                for alarm_details in alarm_items.values()
                 if not alarm_details.get("closed", True)
             )
             cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms

@@ -12,6 +12,8 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     D_ACCESS,
@@ -19,6 +21,7 @@ from .const import (
     D_CLUSTER,
     D_CLUSTER_NAME,
     D_COORDINATOR,
+    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USER,
@@ -26,6 +29,7 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     MINOR_VERSION,
+    PATCH_VERSION,
     PERM_MANAGEMENT,
     VERSION,
 )
@@ -94,8 +98,9 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
         "name": cluster_name,
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
-        "sw_version": f"{VERSION}.{MINOR_VERSION}",
+        "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
         "entry_type": "service",  # type: ignore[misc]
+        "configuration_url": "https://app.divera247.com/session/login.html",
     }
 
 
@@ -138,136 +143,111 @@ def log_execution_time(func: Callable) -> Callable:
     return sync_wrapper
 
 
-def get_ucr_id(
-    hass: HomeAssistant,
-    sensor_id: str,
-) -> str:
-    """Fetch ucr_id based on sensor_id. Raises exception if not found.
+def _normalize_id_list(value: Any) -> list[str]:
+    """Normalize device_id or entity_id to a list of strings.
 
-    Args:
-        hass (HomeAssistant): Home Assistant instance
-        sensor_id (str): Sensor ID to search for
-
-    Returns:
-        str: ucr_id (user_cluster_relation) associated with the sensor_id
-
+    Handles:
+    - Single string: "device_123" -> ["device_123"]
+    - Comma-separated string: "device_123,device_456" -> ["device_123", "device_456"]
+    - List of strings: ["device_123", "device_456"] -> ["device_123", "device_456"]
+    - Empty/None: [] -> []
     """
+    if not value:
+        return []
 
-    try:
-        for ucr_id, cluster_data in hass.data[DOMAIN].items():
-            if sensor_id in cluster_data.get("sensors", []) or str(
-                sensor_id
-            ) in cluster_data.get("sensors", []):
-                return ucr_id
-            if sensor_id in cluster_data.get("device_tracker", []) or str(
-                sensor_id
-            ) in cluster_data.get("device_tracker", []):
-                return ucr_id
+    if isinstance(value, str):
+        # Handle comma-separated strings
+        return [item.strip() for item in value.split(",") if item.strip()]
 
-    except KeyError:
-        pass  # behandelt unten im Fehlerfall
+    if isinstance(value, list):
+        # Handle list of strings (flatten any comma-separated items)
+        result = []
+        for item in value:
+            if isinstance(item, str):
+                result.extend(
+                    subitem.strip() for subitem in item.split(",") if subitem.strip()
+                )
+            else:
+                result.append(str(item))
+        return result
 
-    error_message = f"Cluster-ID not found for Sensor-ID {sensor_id}"
-    _LOGGER.error(error_message)
-    raise HomeAssistantError(error_message)
-
-
-# def get_api_instance(
-#     hass: HomeAssistant,
-#     sensor_id: str,
-# ) -> "DiveraAPI":
-#     """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found."""
-
-#     api_instance = None
-
-#     try:
-#         # try finding ucr_id with given sensor_id
-#         for cluster_data in hass.data[DOMAIN].values():
-#             for sensor in cluster_data["sensors"]:
-#                 if sensor == sensor_id:
-#                     api_instance = cluster_data["api"]
-#                     break
-
-#         # if nothing found, try sensor_id as ucr_id
-#         if api_instance is None:
-#             for ucr_id, cluster_data in hass.data[DOMAIN].items():
-#                 if ucr_id == int(sensor_id):
-#                     api_instance = cluster_data["api"]
-#                     break
-
-#         if api_instance is None:
-#             raise KeyError
-
-#     except KeyError:
-#         error_message = f"API-instance not found for Sensor-ID {sensor_id}"
-#         _LOGGER.error(error_message)
-#         raise HomeAssistantError(error_message) from None
-
-#     return api_instance
+    # Single non-string value
+    return [str(value)]
 
 
-def get_api_instance(
+def get_api_instances(
     hass: HomeAssistant,
-    sensor_id: str | int,
-) -> "DiveraAPI":
-    """Fetch api-instance of hub based on sensor_id or ucr_id. Raises exception if not found.
+    device_ids: list[str],
+    entity_ids: list[str],
+) -> list["DiveraAPI"]:
+    """Fetch api-instance of devices based on device_ids and/or entity_ids given from user input. Raises exception if not found. Handles duplicates by using a dict.
 
     Args:
         hass: HomeAssistant instance
-        sensor_id: alarm_id, vehicle_id or cluster_id (str or int)
+        device_ids: List of device IDs to search for
+        entity_ids: List of entity IDs to search for
 
     Returns:
-        DiveraAPI: API instance for the given sensor or ucr_id
+        api_instances: API instances as list of classes of DiveraAPI
 
     Raises:
         HomeAssistantError: If integration data or API instance is missing or not found
     """
 
-    try:
-        domain_data = hass.data[DOMAIN]
-    except KeyError as exc:
-        error_message = f"Integration data missing in hass.data for domain {DOMAIN}"
-        _LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from exc
+    api_instances_dict: dict[str, DiveraAPI] = {}
+    device_registry = dr.async_get(hass)
 
-    # Try finding api instance in cluster_data by vehicle_id or alarm_id
-    for cluster_data in domain_data.values():
-        sensors = cluster_data.get("sensors", [])
-        if str(sensor_id) in sensors or sensor_id in sensors:
-            api_instance = cluster_data.get("api")
-            if api_instance is not None:
-                return api_instance
-            error_message = f"Found the correct sensor-entity, but can't find API instance for sensor {sensor_id}. Please report that to the developer under https://github.com/moehrem/DiveraControl/issues."
-            _LOGGER.error(error_message)
-            raise HomeAssistantError(error_message)
+    # handle device_ids
+    if device_ids:
+        device_ids = _normalize_id_list(device_ids)
 
-    # Try finding api instance in cluster_data by cluster_id (int or str)
-    possible_keys = {sensor_id}
+        for device_id in device_ids:
+            device = device_registry.devices.get(device_id)
+            if not device:
+                raise HomeAssistantError(f"Device {device_id} not found")
 
-    if not isinstance(sensor_id, int):
-        try:
-            possible_keys.add(int(sensor_id))
-        except (ValueError, TypeError):
-            _LOGGER.debug("Failed to transform ID '%s'", sensor_id)
+            entry_id = next(iter(device.config_entries))
+            config_entry = hass.config_entries.async_get_entry(entry_id)
 
-    possible_keys.add(str(sensor_id))
+            if not config_entry:
+                raise HomeAssistantError(f"No config entry for device {device_id}")
 
-    for key in possible_keys:
-        cluster_data = domain_data.get(key)
-        if cluster_data:
-            api_instance = cluster_data.get("api")
-            if api_instance is not None:
-                return api_instance
+            ucr_id = config_entry.data.get(D_UCR_ID)
 
-            # error handling if cluster found but API instance is missing
-            error_message = f"Found cluster, but API instance missing for cluster_id {key}. Please report that to the developer under https://github.com/moehrem/DiveraControl/issues."
-            _LOGGER.error(error_message)
-            raise HomeAssistantError(error_message)
+            if not ucr_id:
+                raise HomeAssistantError(f"No ucr_id found for device {device_id}")
 
-    # error handling if no cluster found
-    error_message = f"API instance not found for ID '{sensor_id}' of cluster, alarm or vehicle, please check input"
-    _LOGGER.error(error_message)
-    raise HomeAssistantError(error_message)
+            api_instance = hass.data["diveracontrol"][ucr_id]["api"]
+
+            api_instances_dict[ucr_id] = api_instance
+
+    # handle entity_ids
+    if entity_ids:
+        entity_ids = _normalize_id_list(entity_ids)
+        entity_registry = er.async_get(hass)
+        for entity_id in entity_ids:
+            entity_entry = entity_registry.entities.get(entity_id)
+            if not entity_entry:
+                raise HomeAssistantError(f"Entity {entity_id} not found")
+
+            entry_id = entity_entry.config_entry_id
+            config_entry = hass.config_entries.async_get_entry(entry_id)
+
+            if not config_entry:
+                raise HomeAssistantError(f"No config entry for entity {entity_id}")
+
+            ucr_id = config_entry.data.get(D_UCR_ID)
+
+            if not ucr_id:
+                raise HomeAssistantError(
+                    f"No user cluster relation found for entity {entity_id}"
+                )
+
+            api_instance = hass.data["diveracontrol"][ucr_id]["api"]
+
+            api_instances_dict[ucr_id] = api_instance
+
+    return list(api_instances_dict.values())
 
 
 def get_coordinator_data(
@@ -313,6 +293,8 @@ async def handle_entity(
     hass: HomeAssistant,
     call: ServiceCall,
     service: str,
+    ucr_id: str,
+    entity_id: int | str,
 ) -> None:
     """Update entity data based on given method.
 
@@ -320,16 +302,18 @@ async def handle_entity(
         hass (HomeAssistant): Home Assistant instance
         call (dict): Data from service call
         service (str): Service name that was called
+        ucr_id (str): User cluster relation ID
+        entity_id (int): Entity ID if needed
 
     Returns:
         None
 
     """
 
+    entity_id = str(entity_id)
+
     match service:
         case "put_alarm" | "post_close_alarm":
-            alarm_id: str = call.data.get("alarm_id") or ""
-            ucr_id = get_ucr_id(hass, alarm_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:
@@ -339,7 +323,7 @@ async def handle_entity(
             alarm_data = (
                 coordinator.cluster_data.get(D_ALARM, {})
                 .get("items", {})
-                .get(str(alarm_id), {})
+                .get(str(entity_id), {})
             )
 
             for key in call.data:
@@ -350,8 +334,6 @@ async def handle_entity(
             coordinator.async_set_updated_data(coordinator.cluster_data)
 
         case "post_vehicle_status" | "post_using_vehicle_property":
-            vehicle_id: str = call.data.get("vehicle_id") or ""
-            ucr_id = get_ucr_id(hass, vehicle_id)
             coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
             if not coordinator:
@@ -361,7 +343,7 @@ async def handle_entity(
             vehicle_data = (
                 coordinator.cluster_data.get(D_CLUSTER, {})
                 .get(D_VEHICLE, {})
-                .get(str(vehicle_id), {})
+                .get(str(entity_id), {})
             )
 
             for key in call.data:
@@ -373,6 +355,10 @@ async def handle_entity(
 
             # updating coordinator data
             coordinator.async_set_updated_data(coordinator.cluster_data)
+
+        case "post_using_vehicle_crew":
+            # TODO add entity update with crew
+            pass
 
         case _:  # default
             _LOGGER.error("Service not found: %s", service)

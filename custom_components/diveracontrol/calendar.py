@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.dt import parse_datetime, utc_from_timestamp, as_local
 
-from .const import D_CLUSTER_NAME, D_COORDINATOR, D_EVENTS, D_UCR_ID, DOMAIN
+from .const import D_CLUSTER_NAME, D_COORDINATOR, D_ENTRY_ID, D_EVENTS, D_UCR_ID, DOMAIN
 from .coordinator import DiveraCoordinator
 from .utils import get_device_info
 

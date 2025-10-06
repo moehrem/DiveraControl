@@ -78,5 +78,17 @@
     "usergroup_14": "Der angemeldete Nutzer ist der Standard-API-Nutzer. Ein Zugriff ist daher nicht möglich auf:\n- Alarmdaten\n- News\n- Termine\n- Dashboards",
     "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
     "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
+  },
+  "device_automation": {
+    "action_type": {
+      "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
+      "post_alarm": "Alarm erstellen",
+      "put_alarm": "Alarm ändern",
+      "post_close_alarm": "Alarm öffnen/schließen",
+      "post_message": "Nachricht senden",
+      "post_using_vehicle_property": "Fahrzeugeigenschaften ändern",
+      "post_using_vehicle_crew": "Fahrzeugbesatzung ändern",
+      "post_news": "Mitteilung erstellen"
+    }
   }
 }

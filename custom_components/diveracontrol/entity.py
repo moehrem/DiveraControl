@@ -11,6 +11,7 @@ from .const import (
     D_ALARM,
     D_CLUSTER,
     D_CLUSTER_NAME,
+    D_ENTRY_ID,
     D_FMS_STATUS,
     D_MONITOR,
     D_OPEN_ALARMS,
@@ -41,6 +42,7 @@ class BaseDiveraEntity(CoordinatorEntity):
         self.cluster_data = coordinator.cluster_data
         self.ucr_id = coordinator.admin_data[D_UCR_ID]
         self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
+        self.config_entry_id = coordinator.admin_data.get(D_ENTRY_ID)
 
         self._attr_device_info = get_device_info(self.cluster_name)
         self._attr_should_poll = False

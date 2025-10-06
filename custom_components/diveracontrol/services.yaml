@@ -1,6 +1,9 @@
 post_vehicle_status:
   name: Fahrzeugstatus und -daten ändern
   description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
+  target:
+    device:
+      integration: diveracontrol
   fields:
     vehicle_id:
       name: Fahrzeug-ID
@@ -14,7 +17,7 @@ post_vehicle_status:
       example: 123456
     status_id:
       name: Status-ID
-      description: (Optional) 1 bis 9 entsprechen dem jeweiligen FMS-Status (z.B. ID 5 = 'Status 5 - Sprechwunsch', ID 10 bedeutet 'Status 0' (Notruf), alternativ zu 'status'
+      description: (Optional) 1 bis 9 entsprechen dem jeweiligen FMS-Status (z.B. ID 5 = 'Status 5 - Sprechwunsch'), ID 10 bedeutet 'Status 0' (Notruf); Alternative zu 'status'
       required: false
       example: 67890
     status_note:
@@ -37,12 +40,10 @@ post_vehicle_status:
 post_alarm:
   name: Alarm erstellen
   description: Erstellt einen neuen Alarm in Divera 24/7.
+  target:
+    device:
+      integration: diveracontrol
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: (Erforderlich) Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     title:
       name: Stichwort
       description: (Erforderlich) Alarmstichwort
@@ -83,6 +84,31 @@ post_alarm:
       description: (Optional) Längengrad
       required: false
       example: 7.2309561
+    scene_object:
+      name: Objektdetails
+      description: (Optional) Angaben zum Objekt/Gebäude
+      required: false
+      example: "Hinterhof, 2ter Aufgang"
+    caller:
+      name: Anrufer
+      description: (Optional) Angaben zur meldenden Person
+      required: false
+      example: "Max Mustermann, 01234 567890"
+    patient:
+      name: Patient
+      description: (Optional) Angaben zum Patienten
+      required: false
+      example: "Erika Mustermann, 45 Jahre, bekannte Allergie gegen Penicillin"
+    units:
+      name: Beteiligte Einsatzmittel
+      description: (Optional) Beteiligte Einsatzmittel
+      required: false
+      example: "Musterdorf, Beispielstadt"
+    remarks:
+      name: Bemerkungen
+      description: (Optional) Bemerkungen/Hinweise für die Einsatzkräfte
+      required: false
+      example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
     response_time:
       name: Rückmeldezeit
       description: (Optional) Zeitraum in Sekunden in dem eine Rückmeldung zulässig ist.
@@ -118,6 +144,11 @@ post_alarm:
       description: (Optional) Einsatz beendet
       required: false
       example: false
+    message_channel:
+      name: Nachrichtenkanal erstellen
+      description: (Optional) Nachrichtenkanal für den Einsatz erstellen
+      required: false
+      example: true
     notification_filter_access:
       name: Einsatzsichtbarkeit
       description: (Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen
@@ -158,6 +189,9 @@ post_alarm:
 put_alarm:
   name: Alarm ändern
   description: Ändert einen bestehenden Alarm in Divera 24/7. Es ist ausreichend, die zu ändernden Parameter mitzugeben.
+  target:
+    device:
+      integration: diveracontrol
   fields:
     alarm_id:
       name: Alarm-ID
@@ -209,6 +243,21 @@ put_alarm:
       description: (Optional) Längengrad
       required: false
       example: 7.2309561
+    scene_object:
+      name: Objektdetails
+      description: (Optional) Details zum betroffenen Objekt
+      required: false
+      example: "PKW, rot, 4 Türen"
+    caller:
+      name: Anrufer
+      description: (Optional) Name des Anrufers
+      required: false
+      example: "Max Mustermann"
+    patient:
+      name: Patient
+      description: (Optional) Name des Patienten
+      required: false
+      example: "Max Mustermann"
     report:
       name: Einsatzbericht
       description: (Optional) Einsatzbericht
@@ -254,6 +303,11 @@ put_alarm:
       description: (Optional) Einsatz beendet
       required: false
       example: false
+    message_channel:
+      name: Nachrichtenkanal erstellen
+      description: (Optional) Nachrichtenkanal für den Einsatz erstellen
+      required: false
+      example: true
     ts_publish:
       name: Alarmierungszeit
       description: (Optional) Alarmierung zeitgesteuert auslösen nach UNIX-Timestamp
@@ -299,6 +353,9 @@ put_alarm:
 post_close_alarm:
   name: Alarm öffnen/schließen
   description: Schließt einen offenen Alarm (je nach Setup um den Einsatz im Monitor zu verbergen und die Rückmeldung einzuschränken).
+  target:
+    device:
+      integration: diveracontrol
   fields:
     alarm_id:
       name: Alarm-ID
@@ -320,15 +377,18 @@ post_close_alarm:
 post_message:
   name: Nachricht senden
   description: Ermöglicht das Senden einer Nachricht in einen bestimmten Kanal.
+  target:
+    device:
+      integration: diveracontrol
   fields:
     message_channel_id:
       name: Nachrichtenkanal-ID
-      description: (Erforderlich) Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
+      description: (Entweder) Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
       required: false
       example: 54321
     alarm_id:
       name: Alarm-ID
-      description: (Erforderlich) Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
+      description: (Oder) Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
       required: false
       example: 54321
     text:
@@ -341,37 +401,31 @@ post_message:
 post_using_vehicle_property:
   name: Fahrzeugeigenschaften ändern
   description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein. Es können beliebige Schlüssel-Wert-Paare ergänzt werden.
+  target:
+    device:
+      integration: diveracontrol
+  vehicle_id:
+    name: Fahrzeug-ID
+    description: (Erforderlich) Die ID des Fahrzeugs, für das die Eigenschaften aktualisiert werden sollen. Zu finden in den Attributen des Fahrzeugsensors.
+    required: true
+    example: 123456
   fields:
-    vehicle_id:
-      name: Fahrzeug-ID
-      description: (Erforderlich) Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
-      required: true
-      example: 654321
-    bat:
-      name: Batterie
-      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden!
+    properties:
+      name: Eigenschaften
+      description: (Optional) Fahrzeugspezifische Eigenschaften als YAML-Objekt. Schlüssel müssen den Eigenschaftsnamen in Divera entsprechen (Groß-/Kleinschreibung beachten). Beispielwerte können beliebig überschrieben werden.
       required: false
-      example: 1.343453443
-    zünd:
-      name: Zündung
-      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden!
-      required: false
-      example: 1
-    funk:
-      name: Funk
-      description: (Optional) Beispielwert, kann beliebig überschrieben werden. Eigenschaft muss in Divera existieren, Groß-/Kleinschreibung muss beachtet werden! Es können beliebige weitere Schlüssel-Wert-Paare ergänzt werden.
-      required: false
-      example: 3
+      example: |
+        bat: 85.5
+        zünd: 1
+        funk: 1
 
 post_using_vehicle_crew:
   name: Fahrzeugbesatzung ändern
   description: Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
+  target:
+    device:
+      integration: diveracontrol
   fields:
-    vehicle_id:
-      name: Fahrzeug-ID
-      description: Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
-      required: true
-      example: 98765
     mode:
       name: Modus
       description: (Erforderlich) Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
@@ -384,17 +438,15 @@ post_using_vehicle_crew:
       example: 123, 456, 789
 
 post_news:
-  name: Erstellen einer neuen Mitteilung
+  name: Mitteilung erstellen
   description: Methode zur Erstellung einer neuen Mitteilung.
+  target:
+    device:
+      integration: diveracontrol
   fields:
-    cluster_id:
-      name: Cluster-ID
-      description: (Erforderlich) Die ID des Hubs/der Einheit. Zu finden in den Attributen des Sensors mit den Einheitsdetails.
-      required: true
-      example: 794613
     title:
       name: Titel
-      description: Titel
+      description: (Erforderlich) Titel
       required: true
       example: Neue Dienstanweisung
     notification_type:

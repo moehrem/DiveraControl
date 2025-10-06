@@ -78,5 +78,17 @@
     "usergroup_14": "The logged-in user is the standard API user. Therefore, access is not possible to:\n- Alarm data\n- News\n- Appointments\n- Dashboards",
     "usergroup_19": "The logged-in user is a system user and will not have access to:\n- Alarm data\n- News\n- Appointments",
     "usergroup_unknown": "A user from an unknown user group {usergroup_id} has logged in. Depending on granted permissions, some data may not be available."
+  },
+  "device_automation": {
+    "action_type": {
+      "post_vehicle_status": "Change vehicle status and data",
+      "post_alarm": "Create alarm",
+      "put_alarm": "Update alarm",
+      "post_close_alarm": "Open/close alarm",
+      "post_message": "Send message",
+      "post_using_vehicle_property": "Change vehicle properties",
+      "post_using_vehicle_crew": "Change vehicle crew",
+      "post_news": "Create news"
+    }
   }
 }
