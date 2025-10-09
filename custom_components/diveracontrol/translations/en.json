@@ -89,6 +89,126 @@
       "post_using_vehicle_property": "Change vehicle properties",
       "post_using_vehicle_crew": "Change vehicle crew",
       "post_news": "Create news"
+    },
+    "extra_fields": {
+      "vehicle_id": "Vehicle",
+      "fms_status": "FMS status (0-9)",
+      "status_id": "Status ID (1-10; 10 = emergency call)",
+      "status_note": "Status note",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "title": "Title",
+      "notification_type": "Recipient group",
+      "foreign_id": "External ID",
+      "priority": "Priority",
+      "text": "Text",
+      "address": "Address",
+      "response_time": "Response deadline, in seconds",
+      "send_push": "Push notification",
+      "send_sms": "SMS notification",
+      "send_call": "Call notification",
+      "send_mail": "Email notification",
+      "send_pager": "Pager notification",
+      "closed": "Closed",
+      "notification_filter_access": "Visibility for non-alerted users",
+      "group": "Groups",
+      "user_cluster_relation": "Users",
+      "notification_filter_vehicle": "Only alert people on specific vehicles",
+      "vehicle": "Vehicles",
+      "notification_filter_status": "Only alert people with specific status",
+      "alarm_id": "Alarm",
+      "alarmcode_id": "Alarm template",
+      "report": "Incident report",
+      "private_mode": "Private visibility",
+      "ts_publish": "Publication time",
+      "message_channel_id": "Message channel ID",
+      "properties": "Properties (YAML)",
+      "mode": "Mode",
+      "crew": "Crew",
+      "survey": "Enable survey",
+      "archive": "Archive",
+      "ts_archive": "Archive time",
+      "NewsSurvey_title": "Survey title",
+      "NewsSurvey_show_result_count": "Response visibility",
+      "NewsSurvey_show_result_names": "Name visibility",
+      "NewsSurvey_multiple_answers": "Allow multiple answers",
+      "NewsSurvey_custom_answers": "Allow custom answers",
+      "NewsSurvey_response_until": "Enable response deadline",
+      "NewsSurvey_ts_response": "Response deadline (date/time)",
+      "NewsSurvey_answers": "Answer options (comma-separated)",
+      "NewsSurvey_sorting": "Sorting (comma-separated)",
+      "scene_object": "Object information",
+      "caller": "Caller",
+      "patient": "Patient",
+      "units": "Alerted units",
+      "remarks": "Remarks",
+      "message_channel": "Create message channel",
+      "user_status": "User status",
+      "add": "Add",
+      "remove": "Remove",
+      "reset": "Reset"
+    }
+  },
+  "exceptions": {
+    "no_vehicle_id": {
+      "message": "No vehicle provided."
+    },
+    "no_divera_unit": {
+      "message": "No Divera unit found."
+    },
+    "api_post_vehicle_status_failed": {
+      "message": "Changing vehicle status and data for {vehicle_id} failed."
+    },
+    "no_alarm_title": {
+      "message": "No alarm title provided."
+    },
+    "no_notification_type": {
+      "message": "No notification type provided."
+    },
+    "api_post_alarm_failed": {
+      "message": "Creating alarm '{title}' failed."
+    },
+    "no_alarm_id": {
+      "message": "No alarm ID provided."
+    },
+    "api_put_alarm_failed": {
+      "message": "Updating alarm {alarm_id} failed."
+    },
+    "api_post_close_alarm_failed": {
+      "message": "Opening/closing alarm {alarm_id} failed."
+    },
+    "both_message_channel_and_alarm_id": {
+      "message": "Either 'message channel id' or 'alarm id' must be provided, not both."
+    },
+    "no_message_channel_or_alarm_id": {
+      "message": "Either 'message channel id' or 'alarm id' must be provided."
+    },
+    "no_message_channel": {
+      "message": "No message channel found for alarm id '{alarm_id}'. Check if there is a message channel for that alarm."
+    },
+    "api_post_message_failed": {
+      "message": "Sending message to channel {message_channel_id} failed."
+    },
+    "api_post_using_vehicle_property_failed": {
+      "message": "Posting vehicle properties for Vehicle-ID {vehicle_id} failed."
+    },
+    "no_mode_provided": {
+      "message": "No modus chosen. Valid values are {valid_modes}."
+    },
+    "no_crew_provided": {
+      "message": "No crew provided. At least one user must be specified in 'add' and 'remove' modes."
+    },
+    "invalid_mode": {
+      "message": "Invalid mode '{mode}' for setting vehicle crew, must be 'add', 'remove' or 'reset'."
+    },
+    "api_post_using_vehicle_crew_failed": {
+      "message": "Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
+    },
+    "no_news_title": {
+      "message": "No title provided for the news."
+    },
+    "api_post_news_failed": {
+      "message": "Failed to post news, check logs for details."
     }
   }
 }

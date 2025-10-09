@@ -5,6 +5,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 
 from .service import async_register_services
 
@@ -24,6 +25,8 @@ from .const import (
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPI
 from .service import async_register_services
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)

@@ -202,13 +202,13 @@ class DiveraAPI:
 
     async def put_alarms(
         self,
-        alarm_id: str,
+        alarm_id: int,
         payload: dict[str, str],
     ) -> bool:
         """PUT changes for existing alarm to Divera API.
 
         Args:
-            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            alarm_id (int): Divera-Alarm-ID which had to be changed.
             payload (dict): Dictionary of data to send to Divera-API.
 
         Returns:
@@ -230,12 +230,12 @@ class DiveraAPI:
     async def post_close_alarm(
         self,
         payload: dict[str, str],
-        alarm_id: str,
+        alarm_id: int,
     ) -> bool:
         """POST to close an existing alarm to Divera API.
 
         Args:
-            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            alarm_id (int): Divera-Alarm-ID which had to be changed.
             payload (dict): Dictionary of data to send to Divera-API.
 
         Returns:

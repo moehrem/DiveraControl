@@ -404,12 +404,12 @@ post_using_vehicle_property:
   target:
     device:
       integration: diveracontrol
-  vehicle_id:
-    name: Fahrzeug-ID
-    description: (Erforderlich) Die ID des Fahrzeugs, für das die Eigenschaften aktualisiert werden sollen. Zu finden in den Attributen des Fahrzeugsensors.
-    required: true
-    example: 123456
   fields:
+    vehicle_id:
+      name: Fahrzeug-ID
+      description: (Erforderlich) Die ID des Fahrzeugs, für das die Eigenschaften aktualisiert werden sollen. Zu finden in den Attributen des Fahrzeugsensors.
+      required: true
+      example: 123456
     properties:
       name: Eigenschaften
       description: (Optional) Fahrzeugspezifische Eigenschaften als YAML-Objekt. Schlüssel müssen den Eigenschaftsnamen in Divera entsprechen (Groß-/Kleinschreibung beachten). Beispielwerte können beliebig überschrieben werden.

@@ -404,15 +404,16 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        translation = await get_translation(self.hass, "common")
-
         base_message = (
-            translation.get("component.diveracontrol.common.usergroup_message") or ""
+            get_translation(
+                self.hass,
+                "common.usergroup_message",
+                {"cluster_name": cluster_name, "ucr_id": ucr_id},
+            )
+            or ""
         )
-        base_message = base_message.format(cluster_name=cluster_name, ucr_id=ucr_id)
 
-        detail_key = f"component.diveracontrol.common.usergroup_{usergroup_id}"
-        detail_message = translation.get(detail_key)
+        detail_message = get_translation(self.hass, f"common.usergroup_{usergroup_id}")
 
         if detail_message is None:
             detail_message = (

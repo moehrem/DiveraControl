@@ -55,7 +55,7 @@ ACTION_SCHEMA = vol.Schema(
 
 async def _get_selector_options(
     hass: HomeAssistant,
-    device_id: str,
+    device_id: int,
     data_path: str,
     label_format: str | None = None,
 ) -> list[dict[str, str]]:
@@ -220,8 +220,11 @@ async def async_get_action_capabilities(
     hass: HomeAssistant, config: dict
 ) -> dict[str, vol.Schema]:
     """Return extra fields for the action."""
-    action_type = config.get("type")
-    device_id = config.get("device_id")
+    action_type: str | None = config.get("type")
+    device_id: str | None = config.get("device_id")
+
+    if action_type is None or device_id is None:
+        return {}
 
     if action_type == "post_vehicle_status":
         vehicle_options = await _get_selector_options(
@@ -242,7 +245,7 @@ async def async_get_action_capabilities(
                     )
                     if vehicle_options
                     else vol.Coerce(int),
-                    vol.Optional("status"): selector.SelectSelector(
+                    vol.Optional("fms_status"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=fms_status_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -325,7 +328,7 @@ async def async_get_action_capabilities(
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
-                    vol.Optional("scnene_object"): str,
+                    vol.Optional("scene_object"): str,
                     vol.Optional("caller"): str,
                     vol.Optional("patient"): str,
                     vol.Optional("units"): str,
@@ -368,7 +371,7 @@ async def async_get_action_capabilities(
                     if vehicle_options
                     else str,  # Comma-separated list
                     vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("status"): selector.SelectSelector(
+                    vol.Optional("user_status"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=user_status_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -398,7 +401,7 @@ async def async_get_action_capabilities(
             hass, device_id, "cluster.vehicle", "{name} / {shortname}"
         )
         alarm_options = await _get_selector_options(
-            hass, device_id, "alarm.items", "{title}"
+            hass, device_id, "alarm.items", "{title} ({id})"
         )
 
         return {
@@ -484,7 +487,7 @@ async def async_get_action_capabilities(
                     if vehicle_options
                     else str,  # Comma-separated list
                     vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("status"): selector.SelectSelector(
+                    vol.Optional("user_status"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=user_status_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -499,7 +502,7 @@ async def async_get_action_capabilities(
 
     elif action_type == "post_close_alarm":
         alarm_options = await _get_selector_options(
-            hass, device_id, "alarm.items", "{title}"
+            hass, device_id, "alarm.items", "{title} ({id})"
         )
 
         return {
@@ -521,10 +524,10 @@ async def async_get_action_capabilities(
 
     elif action_type == "post_message":
         alarm_options = await _get_selector_options(
-            hass, device_id, "alarm.items", "{title}"
+            hass, device_id, "alarm.items", "{title} ({id})"
         )
         message_channel_options = await _get_selector_options(
-            hass, device_id, "message_channel.items", "{id} - {title}"
+            hass, device_id, "message_channel.items", "{title} ({id})"
         )
 
         return {

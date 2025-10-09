@@ -17,21 +17,18 @@ import functools
 import logging
 from typing import Any
 
-import voluptuous as vol
-
-from homeassistant.helpers import device_registry as dr
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import device_registry as dr
 
-from .const import D_ALARM, D_MESSAGE_CHANNEL, D_UCR_ID, DOMAIN
-from .utils import get_api_instances, get_coordinator_data, handle_entity
+from .const import D_ALARM, D_UCR_ID, DOMAIN
 from .coordinator import DiveraCoordinator
+from .utils import get_api_instances, get_translation, handle_entity
 
 LOGGER = logging.getLogger(__name__)
 
 
-def _extract_news(data: dict, notification_type: int) -> dict:
+def _extract_news(data: dict[str, Any], notification_type: int) -> dict[str, Any]:
     """Extract news data from call-data of service 'post_news'.
 
     Args:
@@ -43,7 +40,7 @@ def _extract_news(data: dict, notification_type: int) -> dict:
 
     """
 
-    news_data: dict = {}
+    news_data: dict[str, Any] = {}
     for key, value in data.items():
         if key == "notification_type":
             news_data["notification_type"] = notification_type
@@ -63,7 +60,7 @@ def _extract_news(data: dict, notification_type: int) -> dict:
     return news_data
 
 
-def _extract_survey(data: dict) -> dict:
+def _extract_survey(data: dict[str, Any]) -> dict[str, Any]:
     """Extract survey data from call-data of service "post_news.
 
     Args:
@@ -74,7 +71,7 @@ def _extract_survey(data: dict) -> dict:
 
     """
 
-    survey_data: dict = {}
+    survey_data: dict[str, Any] = {}
     for key, value in data.items():
         if not key.startswith("NewsSurvey_"):
             continue
@@ -142,7 +139,10 @@ async def handle_post_vehicle_status(
     vehicle_id: int = call.data.get("vehicle_id") or 0
 
     if not vehicle_id:
-        raise HomeAssistantError("No vehicle_id provided.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_vehicle_id",
+        )
 
     # get api instances
     device_ids = call.data.get("device_id", [])
@@ -150,7 +150,10 @@ async def handle_post_vehicle_status(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit_found",
+        )
 
     # create payload
     payload: dict[str, Any] = {
@@ -161,8 +164,13 @@ async def handle_post_vehicle_status(
     for api_instance in api_instances:
         ok_status = await api_instance.post_vehicle_status(vehicle_id, payload)
         if not ok_status:
-            error_msg = f"Failed to set vehicle status for vehicle {vehicle_id}, check logs for details."
+            error_msg = await get_translation(
+                hass,
+                "exceptions.api_post_vehicle_status_failed",
+                {"vehicle_id": vehicle_id},
+            )
             LOGGER.error(error_msg)
+            continue
 
         await handle_entity(
             hass, call, "post_vehicle_status", api_instance.ucr_id, vehicle_id
@@ -189,9 +197,15 @@ async def handle_post_alarm(
     notification_type = call.data.get("notification_type") or 0
 
     if not title:
-        raise HomeAssistantError("No title provided for alarm.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_alarm_title",
+        )
     if not notification_type:
-        raise HomeAssistantError("No notification type provided for alarm.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_notification_type",
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -199,7 +213,10 @@ async def handle_post_alarm(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # create payload
     payload: dict[str, Any] = {
@@ -213,8 +230,13 @@ async def handle_post_alarm(
     for api_instance in api_instances:
         ok_status = await api_instance.post_alarms(payload)
         if not ok_status:
-            error_msg = "Failed to post alarm, please check logs for details."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_alarm_failed",
+                {"title": title},
+            )
             LOGGER.error(error_msg)
+            continue
 
         # no handle_entity(), as data needs to be updated from Divera first
 
@@ -235,16 +257,25 @@ async def handle_put_alarm(
     """
 
     # check mandatory fields
-    alarm_id: str = call.data.get("alarm_id") or ""
+    alarm_id: int = call.data.get("alarm_id") or 0
     title: str = call.data.get("title") or ""
     notification_type: int = call.data.get("notification_type") or 0
 
     if not alarm_id:
-        raise HomeAssistantError("No alarm_id provided for update.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_alarm_id",
+        )
     if not title:
-        raise HomeAssistantError("No title provided for update.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_alarm_title",
+        )
     if not notification_type:
-        raise HomeAssistantError("No notification type provided for update.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_notification_type",
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -252,7 +283,10 @@ async def handle_put_alarm(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # create payload
     payload: dict[str, Any] = {
@@ -267,7 +301,11 @@ async def handle_put_alarm(
     for api_instance in api_instances:
         ok_status = await api_instance.put_alarms(alarm_id, payload)
         if not ok_status:
-            error_msg = f"Failed to change alarm {alarm_id}, check logs for details"
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_put_alarm_failed",
+                {"alarm_id": alarm_id},
+            )
             LOGGER.error(error_msg)
 
         await handle_entity(hass, call, "put_alarm", api_instance.ucr_id, alarm_id)
@@ -289,9 +327,12 @@ async def handle_post_close_alarm(
     """
 
     # check mandatory fields
-    alarm_id: str = call.data.get("alarm_id") or ""
+    alarm_id: int = call.data.get("alarm_id") or 0
     if not alarm_id:
-        raise HomeAssistantError("No alarm_id provided for closing.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_alarm_id",
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -299,7 +340,10 @@ async def handle_post_close_alarm(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # create payload
     payload: dict[str, Any] = {
@@ -312,8 +356,13 @@ async def handle_post_close_alarm(
     for api_instance in api_instances:
         ok_status = await api_instance.post_close_alarm(payload, alarm_id)
         if not ok_status:
-            error_msg = f"Failed to close alarm {alarm_id}, check logs for details."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_close_alarm_failed",
+                {"alarm_id": alarm_id},
+            )
             LOGGER.error(error_msg)
+            continue
 
         await handle_entity(
             hass, call, "post_close_alarm", api_instance.ucr_id, alarm_id
@@ -337,16 +386,18 @@ async def handle_post_message(
 
     # check mandatory fields
     message_channel_id: int = call.data.get("message_channel_id") or 0
-    alarm_id: str = str(call.data.get("alarm_id")) or ""
+    alarm_id: int = call.data.get("alarm_id") or 0
 
     if message_channel_id and alarm_id:
-        raise HomeAssistantError(
-            "Either 'message channel id' or 'alarm id' must be provided, not both."
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="both_message_channel_and_alarm_id",
         )
 
     if not message_channel_id and not alarm_id:
-        raise HomeAssistantError(
-            "Either 'message channel id' or 'alarm id' must be provided."
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_message_channel_or_alarm_id",
         )
 
     # Determine message_channel_id from alarm_id if not given
@@ -366,9 +417,11 @@ async def handle_post_message(
 
     # If still no valid message_channel_id, abort
     if not message_channel_id:
-        error_msg = f"No message channel found for alarm id '{alarm_id}'. Check if there is a message channel for that alarm."
-        LOGGER.error(error_msg)
-        raise HomeAssistantError(error_msg) from None
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_message_channel",
+            translation_placeholders={"alarm_id": str(alarm_id)},
+        )
 
     # get api instances
     device_ids = call.data.get("device_id", [])
@@ -376,7 +429,10 @@ async def handle_post_message(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # create payload
     payload: dict[str, Any] = {
@@ -390,8 +446,13 @@ async def handle_post_message(
     for api_instance in api_instances:
         ok_status = await api_instance.post_message(payload)
         if not ok_status:
-            error_msg = "Failed to send message, please check logs."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_message_failed",
+                {"message_channel_id": message_channel_id},
+            )
             LOGGER.error(error_msg)
+            continue
 
         # no handle entity as new data needs to be fetched from Divera first
 
@@ -413,11 +474,14 @@ async def handle_post_using_vehicle_property(
 
     """
 
-    vehicle_id = call.data.get("vehicle")
-    payload = call.data.get("properties", {})  # ✅ Automatisch als dict geparst
+    vehicle_id = call.data.get("vehicle_id")
+    payload: dict[str, Any] = call.data.get("properties", {})
 
-    if not isinstance(payload, dict):
-        raise ServiceValidationError("Properties must be a dictionary")
+    if not vehicle_id:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_vehicle_id",
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -425,21 +489,22 @@ async def handle_post_using_vehicle_property(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
-
-    # create payload
-    # payload: dict[str, Any] = {
-    #     k: v
-    #     for k, v in properties.items()
-    #     if k not in {"device_id", "entity_id"} and v is not None
-    # }
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # call api function and handle entity
     for api_instance in api_instances:
         ok_status = await api_instance.post_using_vehicle_property(vehicle_id, payload)
         if not ok_status:
-            error_msg = f"Failed to post vehicle properties for Vehicle-ID {vehicle_id}, check logs for details."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_using_vehicle_property_failed",
+                {"vehicle_id": vehicle_id},
+            )
             LOGGER.error(error_msg)
+            continue
 
         await handle_entity(
             hass, call, "post_using_vehicle_property", api_instance.ucr_id, vehicle_id
@@ -468,7 +533,11 @@ async def handle_post_using_vehicle_crew(
     vehicle_id: int = call.data.get("vehicle")
 
     if not mode:
-        raise HomeAssistantError("No mode provided for setting vehicle crew.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_mode_provided",
+            translation_placeholders={"valid_modes": "add, remove, reset"},
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -476,11 +545,18 @@ async def handle_post_using_vehicle_crew(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # check modes and input
     if mode in {"add", "remove"} and not call.data.get("crew"):
-        raise HomeAssistantError(f"No crew provided for mode '{mode}'.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_crew_provided",
+            translation_placeholders={"mode": mode},
+        )
 
     # create payload
     payload: dict[str, Any] = {}
@@ -495,8 +571,10 @@ async def handle_post_using_vehicle_crew(
             payload = {}
 
         case _:
-            raise HomeAssistantError(
-                f"Invalid mode '{mode}' for setting vehicle crew, must be 'add', 'remove' or 'reset'."
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_mode",
+                translation_placeholders={"mode": mode},
             )
 
     for api_instance in api_instances:
@@ -504,9 +582,15 @@ async def handle_post_using_vehicle_crew(
             vehicle_id, mode, payload
         )
         if not ok_status:
-            error_msg = f"Failed to post vehicle crew for Vehicle-ID {vehicle_id}, check logs for details."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_using_vehicle_crew_failed",
+                {"vehicle_id": vehicle_id},
+            )
             LOGGER.error(error_msg)
+            continue
 
+        # TODO adding entity handling
         # await handle_entity(
         #     hass, call, "post_using_vehicle_crew", api_instance.ucr_id, vehicle_id
         # )
@@ -531,8 +615,17 @@ async def handle_post_news(
     title: str = call.data.get("title", "")
     notification_type: int = call.data.get("notification_type", 0)
 
-    if not title and not notification_type:
-        raise HomeAssistantError("No title or notification_type provided.")
+    if not title:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_news_title",
+        )
+
+    if not notification_type:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_notification_type",
+        )
 
     # get api instance
     device_ids = call.data.get("device_id", [])
@@ -540,7 +633,10 @@ async def handle_post_news(
     api_instances = get_api_instances(hass, device_ids, entity_ids)
 
     if not api_instances:
-        raise HomeAssistantError("No Divera unit found for target.")
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_divera_unit",
+        )
 
     # create payload
     payload: dict[str, Any] = {}
@@ -565,7 +661,10 @@ async def handle_post_news(
     for api_instance in api_instances:
         ok_status = await api_instance.post_news(payload)
         if not ok_status:
-            error_msg = "Failed to post new message, check logs for details."
+            error_msg = get_translation(
+                hass,
+                "exceptions.api_post_news_failed",
+            )
             LOGGER.error(error_msg)
 
         # no handle entity as new data needs to be fetched from Divera first

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
-_translation_cache = {}
+_translation_cache: dict[str, dict[str, str]] = {}
 
 
 def permission_check(
@@ -104,7 +104,7 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
     }
 
 
-def log_execution_time(func: Callable) -> Callable:
+def log_execution_time(func: Callable[..., Any]) -> Callable[..., Any]:
     """Log execution times of function only if loglevel is DEBUG.
 
     Args:
@@ -413,27 +413,33 @@ def extract_keys(data) -> set[str]:
 
 async def get_translation(
     hass: HomeAssistant,
-    category: str,
-    language=None,
-) -> dict[str, str]:
+    key: str,
+    placeholders: dict[str, Any] | None = None,
+) -> str:
     """Load and cache translations.
 
     Args:
-        hass (HomeAssistant): Home Assistant instance
-        category (str): category of translation to be loaded
-        language (str, optional): language code, defaults to None
+        hass (HomeAssistant): Home Assistant instance.
+        key (str): Translation key to look up.
+        placeholders (dict[str, Any] | None): Optional placeholders for formatting the translation string.
+
+    Returns:
+        str: The translated string, formatted with placeholders if provided.
 
     """
 
-    if language is None:
-        language = hass.config.language
+    language = hass.config.language
 
-    cache_key = (DOMAIN, category, language)
-    if cache_key not in _translation_cache:
-        _translation_cache[cache_key] = await async_get_translations(
-            hass,
-            language,
-            category=category,
-            integrations=[DOMAIN],
-        )
-    return _translation_cache[cache_key]
+    if not _translation_cache:
+        _translation_cache = await async_get_translations(hass, language, DOMAIN)
+
+    msg = _translation_cache.get(key, "")
+    if not msg:
+        _LOGGER.debug("No translation found for %s", key)
+        msg = key
+    if placeholders:
+        try:
+            msg = msg.format(**placeholders)
+        except KeyError as ex:
+            _LOGGER.error("Placeholder %s not found in translation for %s", ex, key)
+    return msg
