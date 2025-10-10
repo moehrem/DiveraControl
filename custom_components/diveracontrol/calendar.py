@@ -44,7 +44,7 @@ async def async_setup_entry(
 
     async def async_update_events():
         """Update the calendar with new event data."""
-        cluster_data = coordinator.cluster_data
+        cluster_data = coordinator.data
         event_data = cluster_data.get(D_EVENTS, {}).get("items", {})
 
         if isinstance(event_data, dict):
@@ -73,10 +73,10 @@ class DiveraCalendar(CalendarEntity):
             None
 
         """
-        self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
+        self.cluster_name = coordinator.cluster_name
 
         self._attr_device_info = get_device_info(self.cluster_name)
-        self._attr_name = coordinator.admin_data.get(D_CLUSTER_NAME)
+        self._attr_name = coordinator.cluster_name
         self._event_list: list[dict[str, Any]] = []
         self.entity_id = f"calendar.{ucr_id}_calendar"
         self._attr_unique_id = f"{ucr_id}_calendar"

@@ -53,8 +53,7 @@ async def async_get_config_entry_diagnostics(
     """
 
     ucr_id = entry.data[D_UCR_ID]
-    cluster_data = hass.data[DOMAIN][ucr_id][D_COORDINATOR].cluster_data
-    admin_data = hass.data[DOMAIN][ucr_id][D_COORDINATOR].admin_data
+    cluster_data = hass.data[DOMAIN][ucr_id][D_COORDINATOR].data
 
     logs = await hass.async_add_executor_job(get_diveracontrol_logs, hass)
 
@@ -62,7 +61,6 @@ async def async_get_config_entry_diagnostics(
         {
             D_CLUSTER_NAME: entry.title,
             "config_entry data": entry.data,
-            "admin_data": admin_data,
             "cluster data": cluster_data,
             "logs": logs,
         },

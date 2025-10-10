@@ -6,32 +6,27 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.helpers import selector
-from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-    NumberSelectorMode,
-)
-from homeassistant.core import Context, HomeAssistant
-from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-
-from .utils import permission_check
+from homeassistant.core import Context, HomeAssistant
+from homeassistant.helpers import device_registry as dr, selector
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
 from .const import (
-    DOMAIN,
     D_UCR_ID,
+    DOMAIN,
     PERM_ALARM,
     PERM_MANAGEMENT,
     PERM_MESSAGES,
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
+from .utils import get_translation, permission_check
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -75,10 +70,77 @@ async def _get_selector_options(
     if data_path == "notification_type_options":
         # Special case for static options
         return [
-            {"value": "1", "label": "Ausgewählte Standorte (nur PRO-Version)"},
-            {"value": "2", "label": "Alle des Standortes"},
-            {"value": "3", "label": "Ausgewählte Gruppen"},
-            {"value": "4", "label": "Ausgewählte Benutzer"},
+            {
+                "value": "1",
+                "label": await get_translation(
+                    hass, "selectors", "notification_type_options.options.1"
+                ),
+            },
+            {
+                "value": "2",
+                "label": await get_translation(
+                    hass, "selectors", "notification_type_options.options.2"
+                ),
+            },
+            {
+                "value": "3",
+                "label": await get_translation(
+                    hass, "selectors", "notification_type_options.options.3"
+                ),
+            },
+            {
+                "value": "4",
+                "label": await get_translation(
+                    hass, "selectors", "notification_type_options.options.4"
+                ),
+            },
+        ]
+
+    if data_path == "mode_options":
+        return [
+            {
+                "value": "add",
+                "label": await get_translation(
+                    hass, "selectors", "mode_options.options.add"
+                ),
+            },
+            {
+                "value": "remove",
+                "label": await get_translation(
+                    hass, "selectors", "mode_options.options.remove"
+                ),
+            },
+            {
+                "value": "reset",
+                "label": await get_translation(
+                    hass, "selectors", "mode_options.options.reset"
+                ),
+            },
+        ]
+
+    if data_path in [
+        "newssurvey_show_result_count_options",
+        "newssurvey_show_result_names_options",
+    ]:
+        return [
+            {
+                "value": "0",
+                "label": await get_translation(
+                    hass, "selectors", "newssurvey_result_options.options.0"
+                ),
+            },
+            {
+                "value": "1",
+                "label": await get_translation(
+                    hass, "selectors", "newssurvey_result_options.options.1"
+                ),
+            },
+            {
+                "value": "2",
+                "label": await get_translation(
+                    hass, "selectors", "newssurvey_result_options.options.2"
+                ),
+            },
         ]
 
     if not device_id:
@@ -245,7 +307,7 @@ async def async_get_action_capabilities(
                     )
                     if vehicle_options
                     else vol.Coerce(int),
-                    vol.Optional("fms_status"): selector.SelectSelector(
+                    vol.Optional("status"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=fms_status_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -308,6 +370,44 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
+                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_cluster_relation_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_cluster_relation_options
+                    else str,  # Comma-separated list als Fallback
+                    vol.Optional("group"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=group_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if group_options
+                    else str,  # Comma-separated list
+                    vol.Optional("notification_filter_vehicle"): bool,
+                    vol.Optional("vehicle"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=vehicle_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if vehicle_options
+                    else str,  # Comma-separated list
+                    vol.Optional("notification_filter_status"): bool,
+                    vol.Optional("user_status"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_status_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_status_options
+                    else str,  # Comma-separated list
                     vol.Optional("foreign_id"): str,
                     vol.Optional("priority"): bool,
                     vol.Optional("text"): str,
@@ -342,44 +442,6 @@ async def async_get_action_capabilities(
                     vol.Optional("closed"): bool,
                     vol.Optional("message_channel"): bool,
                     vol.Optional("notification_filter_access"): bool,
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.LIST,
-                            multiple=True,
-                        )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
-                    vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if vehicle_options
-                    else str,  # Comma-separated list
-                    vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("user_status"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_status_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if user_status_options
-                    else str,  # Comma-separated list
                 }
             )
         }
@@ -422,6 +484,44 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
+                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_cluster_relation_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_cluster_relation_options
+                    else str,  # Comma-separated list als Fallback
+                    vol.Optional("group"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=group_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if group_options
+                    else str,  # Comma-separated list
+                    vol.Optional("notification_filter_vehicle"): bool,
+                    vol.Optional("vehicle"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=vehicle_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if vehicle_options
+                    else str,  # Comma-separated list
+                    vol.Optional("notification_filter_status"): bool,
+                    vol.Optional("user_status"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_status_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_status_options
+                    else str,  # Comma-separated list
                     vol.Optional("foreign_id"): str,
                     vol.Optional("alarmcode_id"): vol.Coerce(int),
                     vol.Optional("priority"): bool,
@@ -458,44 +558,6 @@ async def async_get_action_capabilities(
                     vol.Optional("closed"): bool,
                     vol.Optional("ts_publish"): vol.Coerce(int),
                     vol.Optional("notification_filter_access"): bool,
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.LIST,
-                            multiple=True,
-                        )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
-                    vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if vehicle_options
-                    else str,  # Comma-separated list
-                    vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("user_status"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_status_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if user_status_options
-                    else str,  # Comma-separated list
                 }
             )
         }
@@ -562,7 +624,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle"): selector.SelectSelector(
+                    vol.Required("vehicle_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -582,6 +644,9 @@ async def async_get_action_capabilities(
         crew_options = await _get_selector_options(
             hass, device_id, "cluster.consumer", "{firstname} {lastname}"
         )
+        mode_options = await _get_selector_options(
+            hass, device_id, "mode_options", "{DUMMY}"
+        )
 
         return {
             "extra_fields": vol.Schema(
@@ -594,7 +659,12 @@ async def async_get_action_capabilities(
                     )
                     if vehicle_options
                     else str,  # Comma-separated list
-                    vol.Required("mode"): vol.In(["add", "remove", "reset"]),
+                    vol.Required("mode"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=mode_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                     vol.Optional("crew"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=crew_options,
@@ -618,16 +688,12 @@ async def async_get_action_capabilities(
         user_cluster_relation_options = await _get_selector_options(
             hass, device_id, "cluster.consumer", "{firstname} {lastname}"
         )
-        newssurvey_show_result_count_options = [
-            {"value": "0", "label": "Nur für Autor"},
-            {"value": "1", "label": "Für alle mit Schreibrecht"},
-            {"value": "2", "label": "Für alle Teilnehmer"},
-        ]
-        newssurvey_show_result_names_options = [
-            {"value": "0", "label": "Nur für Autor"},
-            {"value": "1", "label": "Für alle mit Schreibrecht"},
-            {"value": "2", "label": "Für alle Teilnehmer"},
-        ]
+        newssurvey_show_result_count_options = await _get_selector_options(
+            hass, device_id, "newssurvey_show_result_count_options"
+        )
+        newssurvey_show_result_names_options = await _get_selector_options(
+            hass, device_id, "newssurvey_show_result_names_options"
+        )
 
         return {
             "extra_fields": vol.Schema(
@@ -639,6 +705,24 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
+                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_cluster_relation_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_cluster_relation_options
+                    else str,  # Comma-separated list als Fallback
+                    vol.Optional("group"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=group_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if group_options
+                    else str,  # Comma-separated list
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
                     vol.Optional("survey"): bool,
@@ -650,25 +734,7 @@ async def async_get_action_capabilities(
                     vol.Optional("send_pager"): bool,
                     vol.Optional("archive"): bool,
                     vol.Optional("ts_archive"): selector.DateTimeSelector(),
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.LIST,
-                            multiple=True,
-                        )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
-                    # Survey-spezifische Felder
+                    # survey-specific fields
                     vol.Optional("NewsSurvey_title"): str,
                     vol.Optional(
                         "NewsSurvey_show_result_count"

@@ -79,6 +79,30 @@
     "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
     "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
   },
+  "selectors": {
+    "notification_type_options": {
+      "options": {
+        "1": "Ausgewählte Standorte (nur in der PRO-Version)",
+        "2": "Alle des Standortes",
+        "3": "Ausgewählte Gruppen",
+        "4": "Ausgewählte Benutzer"
+      }
+    },
+    "mode_options": {
+      "options": {
+        "add": "Hinzufügen",
+        "remove": "Entfernen",
+        "reset": "Zurücksetzen"
+      }
+    },
+      "newssurvey_result_options": {
+        "options": {
+          "0": "Nur für Autor sichtbar",
+          "1": "Für alle mit Schreibrechten",
+          "2": "Für alle Teilnehmer"
+        }
+      }
+  },
   "device_automation": {
     "action_type": {
       "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
@@ -92,13 +116,13 @@
     },
     "extra_fields": {
       "vehicle_id": "Fahrzeug",
-      "fms_status": "FMS-Status (0-9)",
-      "status_id": "Status-ID (1-10; 10 = Notruf)",
+      "status": "FMS-Status (0-9)",
+      "status_id": "FMS-Status-ID (1-10; 10 = Notruf)",
       "status_note": "Statusnotiz",
       "lat": "Breitengrad",
       "lng": "Längengrad",
       "title": "Stichwort",
-      "notification_type": "Empfängergruppe",
+      "notification_type": "Empfängerauswahl",
       "foreign_id": "Externe ID",
       "priority": "Priorität",
       "text": "Text",
@@ -143,18 +167,560 @@
       "units": "alarmierte Einheiten",
       "remarks": "Hinweise",
       "message_channel": "Nachrichtenkanal erstellen",
-      "user_status": "Nutzerstatus",
-      "add": "hinzufügen",
-      "remove": "entfernen",
-      "reset": "zurücksetzen"
+      "user_status": "Nutzerstatus"
     }
   },
   "exceptions": {
+    "no_vehicle_id": {
+      "message": "Keine Fahrzeug-ID angegeben."
+    },
+    "no_divera_unit": {
+      "message": "Keine Divera-Einheit gefunden."
+    },
+    "api_post_vehicle_status_failed": {
+      "message": "Ändern des Fahrzeugstatus und der Daten für {vehicle_id} fehlgeschlagen."
+    },
+    "no_alarm_title": {
+      "message": "Keine Alarmbezeichnung angegeben."
+    },
+    "no_notification_type": {
+      "message": "Keine Benachrichtigungsart angegeben."
+    },
+    "api_post_alarm_failed": {
+      "message": "Erstellen des Alarms '{title}' fehlgeschlagen."
+    },
+    "no_alarm_id": {
+      "message": "Keine Alarm-ID angegeben."
+    },
+    "api_put_alarm_failed": {
+      "message": "Aktualisierung des Alarms {alarm_id} fehlgeschlagen."
+    },
+    "api_post_close_alarm_failed": {
+      "message": "Öffnen/Schließen des Alarms {alarm_id} fehlgeschlagen."
+    },
+    "both_message_channel_and_alarm_id": {
+      "message": "Entweder 'Nachrichtenkanal-ID' oder 'Alarm-ID' muss angegeben werden, nicht beides."
+    },
+    "no_message_channel_or_alarm_id": {
+      "message": "Entweder 'Nachrichtenkanal-ID' oder 'Alarm-ID' muss angegeben werden."
+    },
+    "no_message_channel": {
+      "message": "Kein Nachrichtenkanal für Alarm-ID '{alarm_id}' gefunden. Überprüfen Sie, ob es einen Nachrichtenkanal für diesen Alarm gibt."
+    },
+    "api_post_message_failed": {
+      "message": "Senden der Nachricht an den Kanal {message_channel_id} fehlgeschlagen."
+    },
+    "api_post_using_vehicle_property_failed": {
+      "message": "Senden der Fahrzeugdaten für Fahrzeug-ID {vehicle_id} fehlgeschlagen."
+    },
     "no_mode_provided": {
       "message": "Kein Modus gewählt. Gültige Werte sind {valid_modes}."
     },
     "no_crew_provided": {
-      "message": "Keine Besatzung angegeben. Im 'add'- und 'remove'-Modus muss mindestens ein Benutzer angegeben werden."
+      "message": "Keine Besatzung angegeben. Mindestens ein Benutzer muss in den Modi 'hinzufügen' und 'entfernen' angegeben werden."
+    },
+    "invalid_mode": {
+      "message": "Ungültiger Modus '{mode}' für die Festlegung der Fahrzeugbesatzung, muss 'hinzufügen', 'entfernen' oder 'zurücksetzen' sein."
+    },
+    "api_post_using_vehicle_crew_failed": {
+      "message": "Fehler beim Senden der Fahrzeugbesatzung für Fahrzeug-ID {vehicle_id}, überprüfen Sie die Protokolle auf Details."
+    },
+    "no_news_title": {
+      "message": "Kein Titel für die Nachricht angegeben."
+    },
+    "api_post_news_failed": {
+      "message": "Fehler beim Senden der Nachricht, überprüfen Sie die Protokolle auf Details."
+    },
+    "no_groups_selected": {
+      "message": "Empfängerauswahl 'Gruppen', jedoch wurden keine Gruppen ausgewählt. Bitte wähle mindestens eine Gruppe aus."
+    },
+    "no_users_selected": {
+      "message": "Empfängerauswahl 'Benutzer', jedoch wurden keine Benutzer ausgewählt. Bitte wähle mindestens einen Benutzer aus."
+    }
+  },
+  "services": {
+    "post_vehicle_status": {
+      "name": "Fahrzeugstatus und -daten ändern",
+      "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Fahrzeug-ID",
+          "description": "(Erforderlich) ID des Ziel-Fahrzeugs."
+        },
+        "status": {
+          "name": "Status",
+          "description": "(Optional) FMS-Statusnummer (0–9)."
+        },
+        "status_id": {
+          "name": "Status-ID",
+          "description": "(Optional) Benutzerdefinierte Status-ID (1–10; 10 = Notruf)."
+        },
+        "status_note": {
+          "name": "Status-Freitext",
+          "description": "(Optional) Optionaler Freitext zur Statusänderung."
+        },
+        "lat": {
+          "name": "Breitengrad",
+          "description": "(Optional) Breitengrad in Dezimalgrad (−90 bis 90)."
+        },
+        "lng": {
+          "name": "Längengrad",
+          "description": "(Optional) Längengrad in Dezimalgrad (−180 bis 180)."
+        }
+      }
+    },
+
+    "post_alarm": {
+      "name": "Alarm erstellen",
+      "description": "Erstellt einen neuen Alarm in Divera 24/7.",
+      "fields": {
+        "title": {
+          "name": "Stichwort",
+          "description": "(Erforderlich) Alarmstichwort."
+        },
+        "notification_type": {
+          "name": "Empfängertyp",
+          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+        },
+        "foreign_id": {
+          "name": "Einsatznummer/Fremdschlüssel",
+          "description": "(Optional) externe Referenz-ID."
+        },
+        "priority": {
+          "name": "Priorität",
+          "description": "(Optional) Prioritätskennzeichen für den Alarm."
+        },
+        "text": {
+          "name": "Text",
+          "description": "(Optional) Alarmbeschreibung."
+        },
+        "address": {
+          "name": "Adresse",
+          "description": "(Optional) Adresse oder Ortsbeschreibung."
+        },
+        "lat": {
+          "name": "Breitengrad",
+          "description": "(Optional) Breitengrad in Dezimalgrad (−90 bis 90)."
+        },
+        "lng": {
+          "name": "Längengrad",
+          "description": "(Optional) Längengrad in Dezimalgrad (−180 bis 180)."
+        },
+        "scene_object": {
+          "name": "Objektinformationen",
+          "description": "(Optional) Objektinformationen."
+        },
+        "caller": {
+          "name": "Anrufer",
+          "description": "(Optional) Anruferinformationen."
+        },
+        "patient": {
+          "name": "Patient",
+          "description": "(Optional) Patienteninformationen."
+        },
+        "units": {
+          "name": "Alarmierte Einheiten",
+          "description": "(Optional) Informationen zu alarmierten Einheiten."
+        },
+        "remarks": {
+          "name": "Bemerkungen",
+          "description": "(Optional) Bemerkungen."
+        },
+        "response_time": {
+          "name": "Rückmeldezeitraum",
+          "description": "(Optional) Zeitraum für Rückmeldungen in Sekunden."
+        },
+        "send_push": {
+          "name": "Push-Benachrichtigung",
+          "description": "(Optional) Push-Benachrichtigungen senden."
+        },
+        "send_sms": {
+          "name": "SMS-Benachrichtigung",
+          "description": "(Optional) SMS-Benachrichtigungen senden."
+        },
+        "send_call": {
+          "name": "Anruf-Benachrichtigung",
+          "description": "(Optional) Telefonanrufe als Benachrichtigung auslösen."
+        },
+        "send_mail": {
+          "name": "E-Mail-Benachrichtigung",
+          "description": "(Optional) E-Mail-Benachrichtigungen senden."
+        },
+        "send_pager": {
+          "name": "Pager-Benachrichtigung",
+          "description": "(Optional) Pager-Benachrichtigungen senden."
+        },
+        "closed": {
+          "name": "Geschlossen",
+          "description": "(Optional) Alarm als geschlossen markieren."
+        },
+        "message_channel": {
+          "name": "Nachrichtenkanal erstellen",
+          "description": "(Optional) Nachrichtenkanal erstellen."
+        },
+        "notification_filter_access": {
+          "name": "Sichtbarkeit für nicht alarmierte Nutzer einschränken",
+          "description": "(Optional) Sichtbarkeit für nicht explizit alarmierte Nutzer begrenzen."
+        },
+        "group": {
+          "name": "Gruppen",
+          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere)."
+        },
+        "user_cluster_relation": {
+          "name": "Benutzer",
+          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
+        },
+        "notification_filter_vehicle": {
+          "name": "Empfänger auf Fahrzeuge beschränken",
+          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
+        },
+        "vehicle": {
+          "name": "Fahrzeuge",
+          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger."
+        },
+        "notification_filter_status": {
+          "name": "Empfänger auf Status beschränken",
+          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
+        },
+        "alarmcode_id": {
+          "name": "Alarmvorlage",
+          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+        },
+        "status":{
+          "name": "Nutzerstatus",
+          "description": "(Optional) Nutzerstatus, der alarmiert werden soll."
+        }
+      }
+    },
+
+    "put_alarm": {
+      "name": "Alarm ändern",
+      "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm-ID",
+          "description": "(Erforderlich) ID des zu ändernden Alarms."
+        },
+        "title": {
+          "name": "Stichwort",
+          "description": "(Erforderlich) Alarmstichwort."
+        },
+        "notification_type": {
+          "name": "Empfängertyp",
+          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+        },
+        "foreign_id": {
+          "name": "Einsatznummer/Fremdschlüssel",
+          "description": "(Optional) externe Referenz-ID."
+        },
+        "alarmcode_id": {
+          "name": "Alarmvorlage",
+          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+        },
+        "priority": {
+          "name": "Priorität",
+          "description": "(Optional) Prioritätskennzeichen für den Alarm."
+        },
+        "text": {
+          "name": "Text",
+          "description": "(Erforderlich) Alarmbeschreibung."
+        },
+        "address": {
+          "name": "Adresse",
+          "description": "(Optional) Adresse oder Ortsbeschreibung."
+        },
+        "lat": {
+          "name": "Breitengrad",
+          "description": "(Optional) Breitengrad in Dezimalgrad (−90 bis 90)."
+        },
+        "lng": {
+          "name": "Längengrad",
+          "description": "(Optional) Längengrad in Dezimalgrad (−180 bis 180)."
+        },
+        "scene_object": {
+          "name": "Objektinformationen",
+          "description": "(Optional) Objektinformationen."
+        },
+        "caller": {
+          "name": "Anrufer",
+          "description": "(Optional) Anruferinformationen."
+        },
+        "patient": {
+          "name": "Patient",
+          "description": "(Optional) Patienteninformationen."
+        },
+        "report": {
+          "name": "Einsatzbericht",
+          "description": "(Optional) Einsatzbericht."
+        },
+        "private_mode": {
+          "name": "Sichtbarkeit privat",
+          "description": "(Optional) Sichtbarkeit des Alarms einschränken."
+        },
+        "response_time": {
+          "name": "Rückmeldezeitraum",
+          "description": "(Optional) Zeitraum für Rückmeldungen in Sekunden."
+        },
+        "send_push": {
+          "name": "Push-Benachrichtigung",
+          "description": "(Optional) Push-Benachrichtigungen senden."
+        },
+        "send_sms": {
+          "name": "SMS-Benachrichtigung",
+          "description": "(Optional) SMS-Benachrichtigungen senden."
+        },
+        "send_call": {
+          "name": "Anruf-Benachrichtigung",
+          "description": "(Optional) Telefonanrufe als Benachrichtigung auslösen."
+        },
+        "send_mail": {
+          "name": "E-Mail-Benachrichtigung",
+          "description": "(Optional) E-Mail-Benachrichtigungen senden."
+        },
+        "send_pager": {
+          "name": "Pager-Benachrichtigung",
+          "description": "(Optional) Pager-Benachrichtigungen senden."
+        },
+        "closed": {
+          "name": "Geschlossen",
+          "description": "(Optional) Alarm als geschlossen markieren."
+        },
+        "message_channel": {
+          "name": "Nachrichtenkanal erstellen",
+          "description": "(Optional) Nachrichtenkanal erstellen."
+        },
+        "ts_publish": {
+          "name": "Veröffentlichungszeitpunkt",
+          "description": "(Optional) Datum und Uhrzeit der Veröffentlichung."
+        },
+        "notification_filter_access": {
+          "name": "Sichtbarkeit für nicht alarmierte Nutzer einschränken",
+          "description": "(Optional) Sichtbarkeit für nicht alarmierte Nutzer einschränken."
+        },
+        "group": {
+          "name": "Gruppen",
+          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere)."
+        },
+        "user_cluster_relation": {
+          "name": "Benutzer",
+          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
+        },
+        "notification_filter_vehicle": {
+          "name": "Empfänger auf Fahrzeuge beschränken",
+          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
+        },
+        "vehicle": {
+          "name": "Fahrzeuge",
+          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger."
+        },
+        "notification_filter_status": {
+          "name": "Empfänger auf Status beschränken",
+          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
+        },
+        "status":{
+          "name": "Nutzerstatus",
+          "description": "(Optional) Nutzerstatus, der alarmiert werden soll."
+        }
+      }
+    },
+
+    "post_close_alarm": {
+      "name": "Alarm öffnen/schließen",
+      "description": "Öffnet oder schließt einen bestehenden Alarm und übermittelt optional einen Bericht.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm-ID",
+          "description": "(Erforderlich) ID des zu öffnenden oder zu schließenden Alarms."
+        },
+        "closed": {
+          "name": "Geschlossen",
+          "description": "(Erforderlich) Auf wahr setzen, um den Alarm zu schließen; falsch, um ihn zu öffnen."
+        },
+        "report": {
+          "name": "Bericht",
+          "description": "(Optional) Einsatzbericht."
+        }
+      }
+    },
+
+    "post_message": {
+      "name": "Nachricht senden",
+      "description": "Sendet eine Nachricht an einen Kanal oder den dem Alarm zugeordneten Kanal.",
+      "fields": {
+        "message_channel_id": {
+          "name": "Nachrichtenkanal-ID",
+          "description": "(Entweder) ID des Kanals, in den die Nachricht gesendet wird."
+        },
+        "alarm_id": {
+          "name": "Alarm-ID",
+          "description": "(Oder) Alarm-ID, dessen Nachrichtenkanal verwendet werden soll."
+        },
+        "text": {
+          "name": "Nachricht",
+          "description": "(Optional) Textinhalt der Nachricht."
+        },
+        "scene_object": {
+          "name": "Objektinformationen",
+          "description": "(Optional) Objektinformationen."
+        },
+        "caller": {
+          "name": "Anrufer",
+          "description": "(Optional) Anruferinformationen."
+        },
+        "patient": {
+          "name": "Patient",
+          "description": "(Optional) Patienteninformationen."
+        },
+        "units": {
+          "name": "Alarmierte Einheiten",
+          "description": "(Optional) Liste alarmierter Einheiten."
+        },
+        "remarks": {
+          "name": "Bemerkungen",
+          "description": "(Optional) Bemerkungen."
+        },
+        "message_channel": {
+          "name": "Nachrichtenkanal erstellen",
+          "description": "(Optional) Nachrichtenkanal erstellen, falls keiner für den Alarm existiert."
+        }
+      }
+    },
+
+    "post_using_vehicle_property": {
+      "name": "Fahrzeugeigenschaften ändern",
+      "description": "Setzt beliebige Schlüssel-Wert-Paare für ein bestimmtes Fahrzeug.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Fahrzeug-ID",
+          "description": "(Erforderlich) ID des Fahrzeugs, dessen Eigenschaften geändert werden."
+        },
+        "properties": {
+          "name": "Eigenschaften",
+          "description": "(Optional) Fahrzeugeigenschaften als YAML-Objekt."
+        }
+      }
+    },
+
+    "post_using_vehicle_crew": {
+      "name": "Fahrzeugbesatzung ändern",
+      "description": "Fügt Besatzung hinzu, entfernt sie oder setzt sie zurück (reset) für ein bestimmtes Fahrzeug.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Fahrzeug-ID",
+          "description": "(Erforderlich) ID des Fahrzeugs, dessen Besatzung geändert wird."
+        },
+        "mode": {
+          "name": "Modus",
+          "description": "(Erforderlich) Operation: add, remove oder reset."
+        },
+        "crew": {
+          "name": "Besatzung",
+          "description": "(Optional) Hinzu- oder zu entfernende Nutzer (Liste oder kommagetrennt). Pflicht bei add/remove."
+        }
+      }
+    },
+
+    "post_news": {
+      "name": "Mitteilung erstellen",
+      "description": "Veröffentlicht eine Mitteilung mit optionalen Empfängern und optionaler Umfrage.",
+      "fields": {
+        "title": {
+          "name": "Titel",
+          "description": "(Erforderlich) Titel der Mitteilung."
+        },
+        "notification_type": {
+          "name": "Empfängertyp",
+          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+        },
+        "text": {
+          "name": "Text",
+          "description": "(Optional) Inhalt der Mitteilung."
+        },
+        "address": {
+          "name": "Adresse",
+          "description": "(Optional) Adresse oder Ortsbeschreibung."
+        },
+        "survey": {
+          "name": "Umfrage aktivieren",
+          "description": "(Optional) Eine Umfrage an diese Mitteilung anhängen."
+        },
+        "private_mode": {
+          "name": "Private Sichtbarkeit",
+          "description": "(Optional) Sichtbarkeit der Mitteilung einschränken."
+        },
+        "send_push": {
+          "name": "Push-Benachrichtigung",
+          "description": "(Optional) Push-Benachrichtigungen senden."
+        },
+        "send_sms": {
+          "name": "SMS-Benachrichtigung",
+          "description": "(Optional) SMS-Benachrichtigungen senden."
+        },
+        "send_call": {
+          "name": "Anruf-Benachrichtigung",
+          "description": "(Optional) Telefonanrufe als Benachrichtigung auslösen."
+        },
+        "send_mail": {
+          "name": "E-Mail-Benachrichtigung",
+          "description": "(Optional) E-Mail-Benachrichtigungen senden."
+        },
+        "send_pager": {
+          "name": "Pager-Benachrichtigung",
+          "description": "(Optional) Pager-Benachrichtigungen senden."
+        },
+        "archive": {
+          "name": "Archivieren",
+          "description": "(Optional) Mitteilung archivieren."
+        },
+        "ts_archive": {
+          "name": "Archivierungszeitpunkt",
+          "description": "(Optional) Datum und Uhrzeit der Archivierung."
+        },
+        "group": {
+          "name": "Gruppen",
+          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere)."
+        },
+        "user_cluster_relation": {
+          "name": "Benutzer",
+          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
+        },
+        "NewsSurvey_title": {
+          "name": "Umfrage-Titel",
+          "description": "(Optional) Titel der angehängten Umfrage."
+        },
+        "NewsSurvey_show_result_count": {
+          "name": "Sichtbarkeit der Antwortanzahl",
+          "description": "(Optional) Wer die Anzahl der Antworten sehen darf."
+        },
+        "NewsSurvey_show_result_names": {
+          "name": "Sichtbarkeit der Namen",
+          "description": "(Optional) Wer die Namen der Teilnehmenden sehen darf."
+        },
+        "NewsSurvey_multiple_answers": {
+          "name": "Mehrfachantworten erlauben",
+          "description": "(Optional) Erlaubt das Auswählen mehrerer Antworten."
+        },
+        "NewsSurvey_custom_answers": {
+          "name": "Eigene Antworten erlauben",
+          "description": "(Optional) Teilnehmende dürfen eigene Antworten hinzufügen."
+        },
+        "NewsSurvey_response_until": {
+          "name": "Antwortfrist aktivieren",
+          "description": "(Optional) Eine Frist für Antworten festlegen."
+        },
+        "NewsSurvey_ts_response": {
+          "name": "Antwortfrist (Datum/Uhrzeit)",
+          "description": "(Optional) Datum und Uhrzeit bis zu der Antworten möglich sind."
+        },
+        "NewsSurvey_answers": {
+          "name": "Antwortoptionen",
+          "description": "(Optional) Liste der Antwortoptionen (YAML-Liste)."
+        },
+        "NewsSurvey_sorting": {
+          "name": "Sortierung",
+          "description": "(Optional) Optionale Sortierdefinition (YAML-Objekt/Liste)."
+        }
+      }
     }
   }
 }

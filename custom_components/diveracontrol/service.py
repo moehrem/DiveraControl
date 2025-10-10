@@ -166,7 +166,8 @@ async def handle_post_vehicle_status(
         if not ok_status:
             error_msg = await get_translation(
                 hass,
-                "exceptions.api_post_vehicle_status_failed",
+                "exceptions",
+                "api_post_vehicle_status_failed.message",
                 {"vehicle_id": vehicle_id},
             )
             LOGGER.error(error_msg)
@@ -207,6 +208,17 @@ async def handle_post_alarm(
             translation_key="no_notification_type",
         )
 
+    if notification_type == 3 and not call.data.get("group"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_groups_selected",
+        )
+    if notification_type == 4 and not call.data.get("user_cluster_relation"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_users_selected",
+        )
+
     # get api instance
     device_ids = call.data.get("device_id", [])
     entity_ids = call.data.get("entity_id", [])
@@ -232,7 +244,8 @@ async def handle_post_alarm(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_alarm_failed",
+                "exceptions",
+                "api_post_alarm_failed.message",
                 {"title": title},
             )
             LOGGER.error(error_msg)
@@ -277,6 +290,17 @@ async def handle_put_alarm(
             translation_key="no_notification_type",
         )
 
+    if notification_type == 3 and not call.data.get("group"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_groups_selected",
+        )
+    if notification_type == 4 and not call.data.get("user_cluster_relation"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_users_selected",
+        )
+
     # get api instance
     device_ids = call.data.get("device_id", [])
     entity_ids = call.data.get("entity_id", [])
@@ -303,7 +327,8 @@ async def handle_put_alarm(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_put_alarm_failed",
+                "exceptions",
+                "api_put_alarm_failed.message",
                 {"alarm_id": alarm_id},
             )
             LOGGER.error(error_msg)
@@ -358,7 +383,8 @@ async def handle_post_close_alarm(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_close_alarm_failed",
+                "exceptions",
+                "api_post_close_alarm_failed.message",
                 {"alarm_id": alarm_id},
             )
             LOGGER.error(error_msg)
@@ -448,7 +474,8 @@ async def handle_post_message(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_message_failed",
+                "exceptions",
+                "api_post_message_failed.message",
                 {"message_channel_id": message_channel_id},
             )
             LOGGER.error(error_msg)
@@ -500,7 +527,8 @@ async def handle_post_using_vehicle_property(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_using_vehicle_property_failed",
+                "exceptions",
+                "api_post_using_vehicle_property_failed.message",
                 {"vehicle_id": vehicle_id},
             )
             LOGGER.error(error_msg)
@@ -584,7 +612,8 @@ async def handle_post_using_vehicle_crew(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_using_vehicle_crew_failed",
+                "exceptions",
+                "api_post_using_vehicle_crew_failed.message",
                 {"vehicle_id": vehicle_id},
             )
             LOGGER.error(error_msg)
@@ -627,6 +656,17 @@ async def handle_post_news(
             translation_key="no_notification_type",
         )
 
+    if notification_type == 3 and not call.data.get("group"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_groups_selected",
+        )
+    if notification_type == 4 and not call.data.get("user_cluster_relation"):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_users_selected",
+        )
+
     # get api instance
     device_ids = call.data.get("device_id", [])
     entity_ids = call.data.get("entity_id", [])
@@ -663,7 +703,8 @@ async def handle_post_news(
         if not ok_status:
             error_msg = get_translation(
                 hass,
-                "exceptions.api_post_news_failed",
+                "exceptions",
+                "api_post_news_failed.message",
             )
             LOGGER.error(error_msg)
 

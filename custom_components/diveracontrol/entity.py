@@ -39,10 +39,9 @@ class BaseDiveraEntity(CoordinatorEntity):
         super().__init__(coordinator)
 
         self.coordinator = coordinator
-        self.cluster_data = coordinator.cluster_data
-        self.ucr_id = coordinator.admin_data[D_UCR_ID]
-        self.cluster_name = coordinator.admin_data[D_CLUSTER_NAME]
-        self.config_entry_id = coordinator.admin_data.get(D_ENTRY_ID)
+        self.cluster_data = coordinator.data
+        self.ucr_id = coordinator.ucr_id
+        self.cluster_name = coordinator.cluster_name
 
         self._attr_device_info = get_device_info(self.cluster_name)
         self._attr_should_poll = False

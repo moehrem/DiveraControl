@@ -57,7 +57,7 @@ async def async_setup_entry(
             None
 
         """
-        cluster_data = coordinator.cluster_data
+        cluster_data = coordinator.data
         new_sensors = []
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items"))
@@ -106,7 +106,7 @@ async def async_setup_entry(
             None
 
         """
-        cluster_data = coordinator.cluster_data
+        cluster_data = coordinator.data
 
         new_alarm_data = extract_keys(cluster_data.get(D_ALARM, {}).get("items"))
         new_vehicle_data = extract_keys(cluster_data.get(D_CLUSTER, {}).get(D_VEHICLE))

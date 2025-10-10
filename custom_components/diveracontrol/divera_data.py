@@ -11,11 +11,7 @@ from .divera_api import DiveraAPI
 _LOGGER = logging.getLogger(__name__)
 
 
-async def update_data(
-    api: DiveraAPI,
-    cluster_data: dict[str, Any],
-    admin_data: dict[str, Any],
-) -> None:
+async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates
@@ -24,7 +20,6 @@ async def update_data(
     Args:
         api (DiveraAPI): The API instance used to communicate with Divera.
         cluster_data (dict): A dictionary to store and update Divera operational data.
-        admin_data (dict): A dictionary to store and update Divera admin data.
 
     Exceptions:
         Logs errors for network issues, invalid data, or missing keys in API responses.

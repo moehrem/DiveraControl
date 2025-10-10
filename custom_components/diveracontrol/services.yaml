@@ -1,418 +1,260 @@
 post_vehicle_status:
-  name: Fahrzeugstatus und -daten ändern
-  description: Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.
   target:
     device:
       integration: diveracontrol
   fields:
     vehicle_id:
-      name: Fahrzeug-ID
-      description: (Erforderlich) Die ID des Fahrzeugs, für das der Status aktualisiert werden soll. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
       example: 123456
     status:
-      name: Status
-      description: (Optional) Reguläre Nummer des Status 0 bis 9 entsprechen dem bekannten Status (0 = Notruf, 1 = Einsatzbereit über Funk, 2 = Einsatzbereit auf Wache, 3 = Einsatz übernommen, 4 = Einsatzstelle an, 5 = Sprechwunsch, 6 = Nicht einsatzbereit, 7 = Patient aufgenommen, 8 = Am Transportziel, 9 = Sonstiger Status nach örtlicher Verwendung)
       required: false
       example: 123456
     status_id:
-      name: Status-ID
-      description: (Optional) 1 bis 9 entsprechen dem jeweiligen FMS-Status (z.B. ID 5 = 'Status 5 - Sprechwunsch'), ID 10 bedeutet 'Status 0' (Notruf); Alternative zu 'status'
       required: false
       example: 67890
     status_note:
-      name: Status-Freitext
-      description: (Optional) Freitext-Rückmeldung
       required: false
       example: "Stärke 1/8"
     lat:
-      name: Breitengrad
-      description: (Optional) Breitengrad
       required: false
       example: 51.2584996
     lng:
-      name: Längengrad
-      description: (Optional) Längengrad
       required: false
       example: 7.2309561
 
 
 post_alarm:
-  name: Alarm erstellen
-  description: Erstellt einen neuen Alarm in Divera 24/7.
   target:
     device:
       integration: diveracontrol
   fields:
     title:
-      name: Stichwort
-      description: (Erforderlich) Alarmstichwort
       required: true
       example: FEU
     notification_type:
-      name: Empfänger
-      description: (Erforderlich) Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
       required: true
       example: 2
     foreign_id:
-      name: Einsatznummer/Fremdschlüssel
-      description: (Optional) Eine frei wählbare optinale Einsatznummer.
       required: false
       example: 2025-123
     priority:
-      name: Sonderrechte
-      description: (Optional) Freigabe für den Einsatz von Sonderrechten.
       required: false
       example: false
     text:
-      name: Meldung
-      description: (Optional) Zusatztext zur Alarmierung
       required: false
       example: '"Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"'
     address:
-      name: Adresse
-      description: (Optional) Einsatzort. Damit die Adresse im Kartenplugin des Dachboards korrekt angezeigt wird, muss sie vollständig mit Strasse, PLZ, Ort und Land angegeben werden.
       required: false
       example: '"Hauptstraße 247, 12345 Musterstadt, Deutschland"'
     lat:
-      name: Breitengrad
-      description: (Optional) Breitengrad
       required: false
       example: 51.2584996
     lng:
-      name: Längengrad
-      description: (Optional) Längengrad
       required: false
       example: 7.2309561
     scene_object:
-      name: Objektdetails
-      description: (Optional) Angaben zum Objekt/Gebäude
       required: false
       example: "Hinterhof, 2ter Aufgang"
     caller:
-      name: Anrufer
-      description: (Optional) Angaben zur meldenden Person
       required: false
       example: "Max Mustermann, 01234 567890"
     patient:
-      name: Patient
-      description: (Optional) Angaben zum Patienten
       required: false
       example: "Erika Mustermann, 45 Jahre, bekannte Allergie gegen Penicillin"
     units:
-      name: Beteiligte Einsatzmittel
-      description: (Optional) Beteiligte Einsatzmittel
       required: false
       example: "Musterdorf, Beispielstadt"
     remarks:
-      name: Bemerkungen
-      description: (Optional) Bemerkungen/Hinweise für die Einsatzkräfte
       required: false
       example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
     response_time:
-      name: Rückmeldezeit
-      description: (Optional) Zeitraum in Sekunden in dem eine Rückmeldung zulässig ist.
       required: false
       example: 3600
     send_push:
-      name: Pushbenachrichtigung
-      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
       required: false
       example: true
     send_sms:
-      name: SMS-Benachrichtigung (kostenpflichtig!)
-      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_call:
-      name: Sprachanruf (kostenpflichtig!)
-      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_mail:
-      name: Email-Benachrichtigung
-      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
       required: false
       example: false
     send_pager:
-      name: Pager-Benachrichtigung
-      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
       required: false
       example: false
     closed:
-      name: Einsatz beendet
-      description: (Optional) Einsatz beendet
       required: false
       example: false
     message_channel:
-      name: Nachrichtenkanal erstellen
-      description: (Optional) Nachrichtenkanal für den Einsatz erstellen
       required: false
       example: true
     notification_filter_access:
-      name: Einsatzsichtbarkeit
-      description: (Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen
       required: false
       example: true
     group:
-      name: zu alarmierende Gruppen
-      description: (Optional) Liste mit IDs der zu alarmierenden Gruppen. Kann leer sein, wenn nicht benötigt. Wird übersteuert, wenn "zu alarmierende Benutzer" ebenfalls gesetzt ist.
       required: false
       example: 1, 2, 3, 4
     user_cluster_relation:
-      name: zu alarmierende Benutzer
-      description: (Optional) Liste mit IDs der zu alarmierenden Benutzer. Kann leer sein, wenn nicht benötigt. Übersteuert "zu alarmierende Gruppen".
       required: false
       example: 1, 2, 3, 4
     notification_filter_vehicle:
-      name: Alarmierung für bestimmte Fahrzeuge
-      description: (Optional) Nur Personen alarmieren, die sich auf einem zugeteilten Fahrzeuge befinden
       required: false
       example: false
     vehicle:
-      name: Liste der zu alarmierende Fahrzeuge
-      description: (Optional) IDs der Fahrzeuge/Einsatzmittel. "Alarmierung für bestimmte Fahrzeuge" muss gesetzt sein.
       required: false
       example: 1, 2, 3, 4
     notification_filter_status:
-      name: Alarmierung für bestimmte Status
-      description: (Optional) Nur Personen alarmieren, die sich in einem bestimmten Status befinden
       required: false
       example: false
     status:
-      name: Liste mit zu alarmierenden Status
-      description: (Optional) IDs der ausgewählten Status. "Alarmierung für bestimmte Status" muss gesetzt sein. Status-IDs finden sich in den Attributen des Statussensors.
       required: false
       example: 1, 2, 3, 4
 
 
 put_alarm:
-  name: Alarm ändern
-  description: Ändert einen bestehenden Alarm in Divera 24/7. Es ist ausreichend, die zu ändernden Parameter mitzugeben.
   target:
     device:
       integration: diveracontrol
   fields:
     alarm_id:
-      name: Alarm-ID
-      description: (Erforderlich) Die ID des Alarms, der verändert werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
       required: true
       example: 54321
     title:
-      name: Stichwort
-      description: (Erforderlich) Alarmstichwort
       required: true
       example: FEU G
     notification_type:
-      name: Empfänger
-      description: (Erforderlich) Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
       required: true
       example: 2
     foreign_id:
-      name: Einsatznummer/Fremdschlüssel
-      description: (Optional) Eine frei wählbare optinale Einsatznummer.
       required: false
       example: 2025-123
     alarmcode_id:
-      name: Alarmvorlage
-      description: (Optional) ID der Alarmvorlage (Achtung, die Vorgaben der Vorlage werden nicht automatisch auf den Alarm übertragen)
       required: false
       example: 123456789
     priority:
-      name: Sonderrechte
-      description: (Optional) Freigabe für den Einsatz von Sonderrechten.
       required: false
       example: false
     text:
-      name: Meldung
-      description: (Optional) Zusatztext zur Alarmierung
       required: false
       example: 'Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt'
     address:
-      name: Adresse
-      description: (Optional) Einsatzort. Damit die Adresse im Kartenplugin des Dachboards korrekt angezeigt wird, muss sie vollständig mit Strasse, PLZ, Ort und Land angegeben werden.
       required: false
       example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
     lat:
-      name: Breitengrad
-      description: (Optional) Breitengrad
       required: false
       example: 51.2584996
     lng:
-      name: Längengrad
-      description: (Optional) Längengrad
       required: false
       example: 7.2309561
     scene_object:
-      name: Objektdetails
-      description: (Optional) Details zum betroffenen Objekt
       required: false
       example: "PKW, rot, 4 Türen"
     caller:
-      name: Anrufer
-      description: (Optional) Name des Anrufers
       required: false
       example: "Max Mustermann"
     patient:
-      name: Patient
-      description: (Optional) Name des Patienten
       required: false
       example: "Max Mustermann"
     report:
-      name: Einsatzbericht
-      description: (Optional) Einsatzbericht
       required: false
       example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
     private_mode:
-      name: Sichtbarkeit privat
-      description: (Optional) Einsatz ist nur für alarmierte Personen oder Gruppen sichtbar.
       required: false
       example: false
     send_push:
-      name: Pushbenachrichtigung
-      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
       required: false
       example: true
     send_sms:
-      name: SMS-Benachrichtigung (kostenpflichtig!)
-      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_call:
-      name: Sprachanruf (kostenpflichtig!)
-      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_mail:
-      name: Email-Benachrichtigung
-      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
       required: false
       example: false
     send_pager:
-      name: Pager-Benachrichtigung
-      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
       required: false
       example: false
     response_time:
-      name: Rückmeldezeit
-      description: (Optional) Zeitraum in Sekunden in dem eine Rückmeldung zulässig ist.
       required: false
       example: 3600
     closed:
-      name: Einsatz beendet
-      description: (Optional) Einsatz beendet
       required: false
       example: false
     message_channel:
-      name: Nachrichtenkanal erstellen
-      description: (Optional) Nachrichtenkanal für den Einsatz erstellen
       required: false
       example: true
     ts_publish:
-      name: Alarmierungszeit
-      description: (Optional) Alarmierung zeitgesteuert auslösen nach UNIX-Timestamp
       required: false
       example: 1717755979
     notification_filter_access:
-      name: Einsatzsichtbarkeit
-      description: (Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen
       required: false
       example: true
     group:
-      name: zu alarmierende Gruppen
-      description: (Optional) Liste mit IDs der zu alarmierenden Gruppen. Kann leer sein, wenn nicht benötigt. Wird übersteuert, wenn "zu alarmierende Benutzer" ebenfalls gesetzt ist.
       required: false
       example: 1, 2, 3, 4
     user_cluster_relation:
-      name: zu alarmierende Benutzer
-      description: (Optional) Liste mit IDs der zu alarmierenden Benutzer. Kann leer sein, wenn nicht benötigt. Übersteuert "zu alarmierende Gruppen".
       required: false
       example: 1, 2, 3, 4
     notification_filter_vehicle:
-      name: Alarmierung für bestimmte Fahrzeuge
-      description: (Optional) Nur Personen alarmieren, die sich auf einem zugeteilten Fahrzeuge befinden
       required: false
       example: false
     vehicle:
-      name: Liste der zu alarmierende Fahrzeuge
-      description: (Optional) IDs der Fahrzeuge/Einsatzmittel. "Alarmierung für bestimmte Fahrzeuge" muss gesetzt sein.
       required: false
       example: 1, 2, 3, 4
     notification_filter_status:
-      name: Alarmierung für bestimmte Status
-      description: (Optional) Nur Personen alarmieren, die sich in einem bestimmten Status befinden
       required: false
       example: false
     status:
-      name: Liste mit zu alarmierenden Status
-      description: (Optional) IDs der ausgewählten Status. "Alarmierung für bestimmte Status" muss gesetzt sein. Status-IDs finden sich in den Attributen des Statussensors.
       required: false
       example: 1, 2, 3, 4
 
 
 post_close_alarm:
-  name: Alarm öffnen/schließen
-  description: Schließt einen offenen Alarm (je nach Setup um den Einsatz im Monitor zu verbergen und die Rückmeldung einzuschränken).
   target:
     device:
       integration: diveracontrol
   fields:
     alarm_id:
-      name: Alarm-ID
-      description: (Erforderlich) Die ID des Alarms, der geschlossen werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails.
       required: true
       example: 54321
     closed:
-      name: Geschlossen
-      description: (Optional) Status des Alarms; offen=false, geschlossen=true
       required: true
       example: true
     report:
-      name: Einsatzbericht
-      description: (Optional) Einsatzbericht
       required: false
       example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
 
 
 post_message:
-  name: Nachricht senden
-  description: Ermöglicht das Senden einer Nachricht in einen bestimmten Kanal.
   target:
     device:
       integration: diveracontrol
   fields:
     message_channel_id:
-      name: Nachrichtenkanal-ID
-      description: (Entweder) Die ID des Kanals, in den die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Alarm-ID müssen übergeben werden!
       required: false
       example: 54321
     alarm_id:
-      name: Alarm-ID
-      description: (Oder) Die ID des Alarms, in dessen Kanal die Nachricht gesenden werden soll. Zu finden in den Attributen des Sensors mit den Alarmdetails. Dieser Wert oder die Nachrichtenkanal-ID müssen übergeben werden!
       required: false
       example: 54321
     text:
-      name: Nachricht
-      description: (Optional) Text der Nachricht.
       required: false
       example: 'Dies ist eine Testnachricht.'
 
 
 post_using_vehicle_property:
-  name: Fahrzeugeigenschaften ändern
-  description: Aktualisiert die Werte der individuelle Fahrzeugeigenschaften in Divera 24/7. Es können nur Werte zu existierenden Eigenschaften gesetzt werden. Die Eigenschaften müssen vorab in Divera eingerichtet und dem Fahrzeug zugewiesen sein. Es können beliebige Schlüssel-Wert-Paare ergänzt werden.
   target:
     device:
       integration: diveracontrol
   fields:
     vehicle_id:
-      name: Fahrzeug-ID
-      description: (Erforderlich) Die ID des Fahrzeugs, für das die Eigenschaften aktualisiert werden sollen. Zu finden in den Attributen des Fahrzeugsensors.
       required: true
       example: 123456
     properties:
-      name: Eigenschaften
-      description: (Optional) Fahrzeugspezifische Eigenschaften als YAML-Objekt. Schlüssel müssen den Eigenschaftsnamen in Divera entsprechen (Groß-/Kleinschreibung beachten). Beispielwerte können beliebig überschrieben werden.
       required: false
       example: |
         bat: 85.5
@@ -420,147 +262,94 @@ post_using_vehicle_property:
         funk: 1
 
 post_using_vehicle_crew:
-  name: Fahrzeugbesatzung ändern
-  description: Ergänzt einzelne, entfernt einzelne oder entfernt alle Besatzungsmitglieder eines Fahrzeuges in Divera 24/7.
   target:
     device:
       integration: diveracontrol
   fields:
+    vehicle_id:
+      required: true
+      example: 123456
     mode:
-      name: Modus
-      description: (Erforderlich) Muss einer von drei Werten sein - hinzufügen = 'add'; entfernen = 'remove'; zurücksetzen = 'reset'
       required: true
       example: add
     crew:
-      name: Fahrzeugbesatzung
-      description: (Optional) Liste der Benutzer-IDs, die hinzugefügt oder entfernt werden sollen. Muss eine Liste von Benutzer-IDs sein und darf nur für Modus 'Zurücksetzen'(reset) leer sein.
       required: false
       example: 123, 456, 789
 
 post_news:
-  name: Mitteilung erstellen
-  description: Methode zur Erstellung einer neuen Mitteilung.
   target:
     device:
       integration: diveracontrol
   fields:
     title:
-      name: Titel
-      description: (Erforderlich) Titel
       required: true
       example: Neue Dienstanweisung
     notification_type:
-      name: Empfänger-Auswahl
-      description: (Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)
       required: true
       example: 2
     text:
-      name: Meldung
-      description: (Optional) Meldungstext
       required: false
       example: Rückwärtsfahren nur mit Einweiser
     address:
-      name: Adresse
-      description: (Optional) Ort/Adresse
       required: false
       example: Raum 1.23
     survey:
-      name: Umfrage
-      description: (Optional) Umfrage hinzufügen, Parameter siehe unten alle mit "survey_" beginnend
       required: false
       example: True
     private_mode:
-      name: Sichtbarkeit privat
-      description: (Optional) Mitteilung nur für adressierte Personen sichtbr
       required: false
       example: False
     send_push:
-      name: Pushbenachrichtigung
-      description: (Optional) Push-Nachricht an die App senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt)
       required: false
       example: true
     send_sms:
-      name: SMS-Benachrichtigung (kostenpflichtig!)
-      description: (Optional) SMS senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_call:
-      name: Sprachanruf (kostenpflichtig!)
-      description: (Optional) Sprachanruf senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, kostenpflichtig!)
       required: false
       example: false
     send_mail:
-      name: Email-Benachrichtigung
-      description: (Optional) E-Mail senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, Adresse muss zuvor durch den Benutzer bestätigt werden)
       required: false
       example: false
     send_pager:
-      name: Pager-Benachrichtigung
-      description: (Optional) An verknüpfte Pager senden (der Wert wird nach dem Versand auf FALSE zurückgesetzt, je nach Setup e*Message-/UNITRONIC-/TETRA-Pager)
       required: false
       example: false
     archive:
-      name: Mitteilung zeitgesteuert archivieren
-      description: (Optional) Mitteilung zeitgesteuert archivieren
       required: false
       example: True
     ts_archive:
-      name: Zeitstempel, zu dem die Mitteilung archiviert werden soll
-      description: (Optional) Mitteilung zeitgesteuert archivieren nach UNIX-Timestamp, bei leerem Wert keine automatische Archivierung
       required: false
       example: 4902061253
     group:
-      name: Gruppen für Benachrichtigung
-      description: (Optional) IDs der Gruppen (bedingt 'notification_type' = 1 oder 3).
       required: false
       example: [ 1, 2, 3, 4 ]
     user_cluster_relation:
-      name: Nutzer für Benachrichtigung
-      description: (Optional) IDs der Benutzer (bedingt 'notification_type' = 1 oder 4).
       required: false
       example: [ 1, 2, 3, 4 ]
     NewsSurvey_title:
-      name: Titel/Frage
-      description: (Optional) Titel oder Frage der Umfrage
       required: false
       example: Mit wie vielen Personen nehmt ihr am Sommerfest teil?
     NewsSurvey_show_result_count:
-      name: Sichtbarkeit der Rückmeldungen
-      description: (Optional) Sichtbarkeit der anonymen Rückmeldungen (0 = Nur für Autor, 1 = Für alle mit Schreibrecht, 2 = Sichtbar für alle)
       required: false
       example: 2
     NewsSurvey_show_result_names:
-      name: Sichtbarkeit der Namen
-      description: (Optional) Sichtbarkeit der Rückmeldungen mit Name und Freitext-Antwort (0 = Nur für Autor, 1 = Für alle mit Schreibrecht, 2 = Sichtbar für alle)
       required: false
       example: 2
     NewsSurvey_multiple_answers:
-      name: Mehrere Antworten
-      description: (Optional) Mehrere Antworten zulassen
       required: false
       example: True
     NewsSurvey_custom_answers:
-      name: Freitext-Antwort
-      description: (Optional) Freitext-Antwort zulassen
       required: false
       example: True
     NewsSurvey_response_until:
-      name: Rückmeldung zeitlich begrenzen
-      description: (Optional) Rückmeldung zeitlich begrenzen
       required: false
       example: True
     NewsSurvey_ts_response:
-      name: Rückmeldungsende
-      description: (Optional) Rückmeldung endet, als UNIX-Timestamp
       required: false
       example: 4902061253
     NewsSurvey_answers:
-      name: Umfrageantworten
-      description: (Optional) Kommagetrennte Antwort-Optionen
       required: false
       example: Trupp,Staffel,Gruppe,Zug
     NewsSurvey_sorting:
-      name: Anzeigereihenfolge der Antworten
-      description: (Optional) Kommagetrennte Reihenfolge der einzelnen Antwort-Optionen
       required: false
       example: Zug,Gruppe,Staffel,Trupp

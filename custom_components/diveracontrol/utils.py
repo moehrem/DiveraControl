@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import translation
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers import device_registry as dr
@@ -25,6 +26,7 @@ from .const import (
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USER,
+    D_OPEN_ALARMS,
     D_VEHICLE,
     DOMAIN,
     MANUFACTURER,
@@ -39,7 +41,6 @@ if TYPE_CHECKING:
     from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
-_translation_cache: dict[str, dict[str, str]] = {}
 
 
 def permission_check(
@@ -61,20 +62,13 @@ def permission_check(
 
     success = False
 
-    coordinator_data = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {})
-
-    if coordinator_data is not None and perm_key is not None:
-        cluster_name = coordinator_data.admin_data[D_CLUSTER_NAME]
-        management = (
-            coordinator_data.cluster_data.get(D_USER, {})
-            .get(D_ACCESS, {})
-            .get(PERM_MANAGEMENT)
-        )
-        permission = (
-            coordinator_data.cluster_data.get(D_USER, {})
-            .get(D_ACCESS, {})
-            .get(perm_key)
-        )
+    cluster_data = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {}).data
+    cluster_name = (
+        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {}).cluster_name
+    )
+    if cluster_data is not None:
+        management = cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(PERM_MANAGEMENT)
+        permission = cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(perm_key)
 
         if management:
             success = management
@@ -311,17 +305,12 @@ async def handle_entity(
     """
 
     entity_id = str(entity_id)
+    coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
 
     match service:
         case "put_alarm" | "post_close_alarm":
-            coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
-
-            if not coordinator:
-                _LOGGER.error("Can't find coordinator for unit %s", ucr_id)
-                return
-
             alarm_data = (
-                coordinator.cluster_data.get(D_ALARM, {})
+                coordinator.data.get(D_ALARM, {})
                 .get("items", {})
                 .get(str(entity_id), {})
             )
@@ -331,17 +320,11 @@ async def handle_entity(
                     alarm_data[key] = call.data[key]
 
             # updating coordinator data
-            coordinator.async_set_updated_data(coordinator.cluster_data)
+            coordinator.async_set_updated_data(coordinator.data)
 
         case "post_vehicle_status" | "post_using_vehicle_property":
-            coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
-
-            if not coordinator:
-                _LOGGER.error("Can't find coordinator for unit %s", ucr_id)
-                return
-
             vehicle_data = (
-                coordinator.cluster_data.get(D_CLUSTER, {})
+                coordinator.data.get(D_CLUSTER, {})
                 .get(D_VEHICLE, {})
                 .get(str(entity_id), {})
             )
@@ -354,7 +337,7 @@ async def handle_entity(
                     vehicle_data[key] = call.data[key]
 
             # updating coordinator data
-            coordinator.async_set_updated_data(coordinator.cluster_data)
+            coordinator.async_set_updated_data(coordinator.data)
 
         case "post_using_vehicle_crew":
             # TODO add entity update with crew
@@ -366,28 +349,37 @@ async def handle_entity(
 
 
 def set_update_interval(
+    cluster_data: dict[str, Any],
+    intervall_data: dict[str, Any],
     old_interval: timedelta | None,
-    open_alarms: int,
-    admin_data: dict[str, Any],
 ) -> timedelta:
     """Set update interval based on open alarms.
 
     Args:
-        old_interval (timedelta | None): current update interval.
-        open_alarms (int): number of open alarms.
-        admin_data (dict): admin data of coordinator containing update interval configuration.
+        cluster_data (dict): cluster data of coordinator containing update interval configuration.
 
     Returns:
         timedelta: new update interval.
 
     """
+    alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
+    cluster_name = cluster_data.get(D_CLUSTER_NAME, "Unknown")
+
+    if alarm_items:
+        open_alarms = sum(
+            1
+            for alarm_details in alarm_items.values()
+            if not alarm_details.get("closed", True)
+        )
+        cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+    else:
+        open_alarms = 0
 
     new_interval = (
-        admin_data[D_UPDATE_INTERVAL_ALARM]
+        intervall_data.get(D_UPDATE_INTERVAL_ALARM)
         if open_alarms > 0
-        else admin_data[D_UPDATE_INTERVAL_DATA]
+        else intervall_data.get(D_UPDATE_INTERVAL_DATA)
     )
-    cluster_name = admin_data[D_CLUSTER_NAME]
 
     if old_interval is None or old_interval != new_interval:
         _LOGGER.debug(
@@ -411,15 +403,52 @@ def extract_keys(data) -> set[str]:
     return set(data.keys()) if isinstance(data, dict) else set()
 
 
+# async def get_translation(
+#     hass: HomeAssistant,
+#     category: str,
+#     placeholders: dict[str, Any] | None = None,
+# ) -> str:
+#     """Load and cache translations.
+
+#     Args:
+#         hass (HomeAssistant): Home Assistant instance.
+#         category (str): Translation category to look up.
+#         placeholders (dict[str, Any] | None): Optional placeholders for formatting the translation string.
+
+#     Returns:
+#         str: The translated string, formatted with placeholders if provided.
+
+#     """
+
+#     language = hass.config.language
+#     translation: dict[str, str] = await async_get_translations(
+#         hass, language, category, integrations={DOMAIN}
+#     )
+
+#     if not translation:
+#         _LOGGER.debug("No translation found for %s", category)
+#         translation = category
+#     if placeholders:
+#         try:
+#             translation = translation.format(**placeholders)
+#         except KeyError as ex:
+#             _LOGGER.error(
+#                 "Placeholder %s not found in translation for %s", ex, category
+#             )
+#     return translation
+
+
 async def get_translation(
     hass: HomeAssistant,
+    category: str,
     key: str,
     placeholders: dict[str, Any] | None = None,
 ) -> str:
-    """Load and cache translations.
+    """Get translated message.
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
+        category (str): Translation category to look up.
         key (str): Translation key to look up.
         placeholders (dict[str, Any] | None): Optional placeholders for formatting the translation string.
 
@@ -428,18 +457,19 @@ async def get_translation(
 
     """
 
-    language = hass.config.language
+    translation_cat = await async_get_translations(
+        hass, hass.config.language, category, {DOMAIN}
+    )
 
-    if not _translation_cache:
-        _translation_cache = await async_get_translations(hass, language, DOMAIN)
+    key = f"component.{DOMAIN}.{category}.{key}"
 
-    msg = _translation_cache.get(key, "")
-    if not msg:
-        _LOGGER.debug("No translation found for %s", key)
-        msg = key
+    translation_str = translation_cat.get(key, key)
     if placeholders:
         try:
-            msg = msg.format(**placeholders)
+            translation_str = translation_str.format(**placeholders)
         except KeyError as ex:
-            _LOGGER.error("Placeholder %s not found in translation for %s", ex, key)
-    return msg
+            _LOGGER.error(
+                "Placeholder %s not found in translation for %s", ex, category
+            )
+
+    return translation_str

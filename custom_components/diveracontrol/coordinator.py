@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
     D_ALARM,
@@ -19,7 +19,6 @@ from .const import (
     D_MESSAGE_CHANNEL,
     D_MONITOR,
     D_NEWS,
-    D_OPEN_ALARMS,
     D_STATUS,
     D_STATUSPLAN,
     D_TS,
@@ -59,23 +58,25 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         """
 
+        self.cluster_name: str = config_entry.get(D_CLUSTER_NAME)
+        self.ucr_id: str = config_entry.get(
+            D_UCR_ID,
+        )
+        self.interval_alarm: timedelta = timedelta(
+            seconds=config_entry.get(D_UPDATE_INTERVAL_ALARM)
+        )
+        self.interval_data: timedelta = timedelta(
+            seconds=config_entry.get(D_UPDATE_INTERVAL_DATA)
+        )
+
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DiveraCoordinator_{config_entry.get(D_UCR_ID)}",
+            name=f"DiveraCoordinator_{self.ucr_id}",
+            update_interval=self.interval_data,
         )
+
         self.api = api
-        self.cluster_data = {}
-        self.admin_data = {
-            D_CLUSTER_NAME: config_entry.get(D_CLUSTER_NAME, "Unknown"),
-            D_UCR_ID: config_entry.get(D_UCR_ID),
-            D_UPDATE_INTERVAL_ALARM: timedelta(
-                seconds=config_entry[D_UPDATE_INTERVAL_ALARM]
-            ),
-            D_UPDATE_INTERVAL_DATA: timedelta(
-                seconds=config_entry[D_UPDATE_INTERVAL_DATA]
-            ),
-        }
 
         self._listeners = {}
 
@@ -91,8 +92,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
             None
 
         """
-        if not self.cluster_data:
-            self.cluster_data = {
+
+    @log_execution_time
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from Divera API."""
+
+        # Initialisiere Struktur beim ersten Aufruf
+        if not self.data:
+            cluster_data: dict[str, Any] = {
                 D_UCR: {},
                 D_UCR_DEFAULT: {},
                 D_UCR_ACTIVE: {},
@@ -110,48 +117,31 @@ class DiveraCoordinator(DataUpdateCoordinator):
                 D_LOCALMONITOR: {},
                 D_STATUSPLAN: {},
             }
-
-        if not self.admin_data:
-            self.admin_data = {
-                D_CLUSTER_NAME: "Unknown",
-                D_UCR_ID: "Unknown",
-                D_UPDATE_INTERVAL_ALARM: 0,
-                D_UPDATE_INTERVAL_DATA: 0,
-            }
-
-    @log_execution_time
-    async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from Divera API and update cache on a regular basis.
-
-        Returns:
-            self.cluster_data (dict): all new data, freshly requested from Divera.
-
-        """
-
-        if not self.cluster_data or not self.admin_data:
-            self.init_cluster_data_structure()
+        else:
+            cluster_data = self.data
 
         try:
-            await update_data(self.api, self.cluster_data, self.admin_data)
+            intervall_data = {
+                D_UPDATE_INTERVAL_ALARM: self.interval_alarm,
+                D_UPDATE_INTERVAL_DATA: self.interval_data,
+            }
 
+            await update_data(self.api, cluster_data)
+
+            # dynamically change update interval
             self.update_interval = set_update_interval(
-                self.update_interval,
-                self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0),
-                self.admin_data,
+                cluster_data, intervall_data, self.update_interval
             )
 
             _LOGGER.debug(
-                "Successfully updated data for unit '%s' ",
-                self.admin_data[D_CLUSTER_NAME],
+                "Successfully updated data for unit '%s'",
+                self.cluster_name,
             )
 
+            return cluster_data
+
         except Exception as err:
-            self.async_set_update_error(err)
-
-        # update entities
-        self.async_set_updated_data(self.cluster_data)
-
-        return self.cluster_data
+            raise UpdateFailed(f"Error fetching data: {err}") from err
 
     def async_add_listener(
         self,
@@ -200,4 +190,4 @@ class DiveraCoordinator(DataUpdateCoordinator):
             self._listeners.pop(listener_id, None)
             self._removers.pop(listener_id, None)
 
-        _LOGGER.debug("Removed update listeners for HUB: %s", self.admin_data[D_UCR_ID])
+        _LOGGER.debug("Removed update listeners for HUB: %s", self.ucr_id)

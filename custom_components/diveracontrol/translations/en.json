@@ -210,5 +210,397 @@
     "api_post_news_failed": {
       "message": "Failed to post news, check logs for details."
     }
+  },
+  "services": {
+    "post_vehicle_status": {
+      "name": "Change vehicle status and data",
+      "description": "Change the status and data of a vehicle.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Vehicle ID",
+          "description": "ID of the target vehicle."
+        },
+        "fms_status": {
+          "name": "FMS status",
+          "description": "FMS status number (0–9)."
+        },
+        "status_id": {
+          "name": "Status ID",
+          "description": "Custom status ID (1–10; 10 = emergency call)."
+        },
+        "status_note": {
+          "name": "Status note",
+          "description": "Optional note for the status change."
+        },
+        "lat": {
+          "name": "Latitude",
+          "description": "Latitude in decimal degrees (−90 to 90)."
+        },
+        "lng": {
+          "name": "Longitude",
+          "description": "Longitude in decimal degrees (−180 to 180)."
+        }
+      }
+    },
+    "post_alarm": {
+      "name": "Create alarm",
+      "description": "Create a new alarm.",
+      "fields": {
+        "title": {
+          "name": "Title",
+          "description": "Alarm title or keyword."
+        },
+        "notification_type": {
+          "name": "Recipient group",
+          "description": "Target audience selection (e.g., all users of the unit, selected groups, or selected users)."
+        },
+        "foreign_id": {
+          "name": "External ID",
+          "description": "Optional external reference ID."
+        },
+        "priority": {
+          "name": "Priority",
+          "description": "Priority flag for the alarm."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Alarm description."
+        },
+        "address": {
+          "name": "Address",
+          "description": "Address or location description."
+        },
+        "lat": {
+          "name": "Latitude",
+          "description": "Latitude in decimal degrees (−90 to 90)."
+        },
+        "lng": {
+          "name": "Longitude",
+          "description": "Longitude in decimal degrees (−180 to 180)."
+        },
+        "response_time": {
+          "name": "Response deadline",
+          "description": "Response window in seconds."
+        },
+        "send_push": {
+          "name": "Push notification",
+          "description": "Send push notifications."
+        },
+        "send_sms": {
+          "name": "SMS notification",
+          "description": "Send SMS notifications."
+        },
+        "send_call": {
+          "name": "Call notification",
+          "description": "Place phone call notifications."
+        },
+        "send_mail": {
+          "name": "Email notification",
+          "description": "Send email notifications."
+        },
+        "send_pager": {
+          "name": "Pager notification",
+          "description": "Send pager notifications."
+        },
+        "notification_filter_access": {
+          "name": "Visibility for non-alerted users",
+          "description": "Limit visibility for users not explicitly alerted."
+        },
+        "group": {
+          "name": "Groups",
+          "description": "Target group IDs (one or multiple)."
+        },
+        "user_cluster_relation": {
+          "name": "Users",
+          "description": "Target user IDs (one or multiple)."
+        },
+        "notification_filter_vehicle": {
+          "name": "Only alert people on specific vehicles",
+          "description": "Restrict alerts to users assigned to selected vehicles."
+        },
+        "vehicle": {
+          "name": "Vehicles",
+          "description": "Vehicle IDs to restrict the audience."
+        },
+        "notification_filter_status": {
+          "name": "Only alert people with specific status",
+          "description": "Restrict alerts to users with specific user status."
+        },
+        "alarmcode_id": {
+          "name": "Alarm template",
+          "description": "Template to prefill alarm fields."
+        }
+      }
+    },
+
+    "put_alarm": {
+      "name": "Update alarm",
+      "description": "Update an existing alarm.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "ID of the alarm to update."
+        },
+        "title": {
+          "name": "Title",
+          "description": "Alarm title or keyword."
+        },
+        "notification_type": {
+          "name": "Recipient group",
+          "description": "Target audience selection (e.g., all users of the unit, selected groups, or selected users)."
+        },
+        "foreign_id": {
+          "name": "External ID",
+          "description": "Optional external reference ID."
+        },
+        "priority": {
+          "name": "Priority",
+          "description": "Priority flag for the alarm."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Alarm description."
+        },
+        "address": {
+          "name": "Address",
+          "description": "Address or location description."
+        },
+        "lat": {
+          "name": "Latitude",
+          "description": "Latitude in decimal degrees (−90 to 90)."
+        },
+        "lng": {
+          "name": "Longitude",
+          "description": "Longitude in decimal degrees (−180 to 180)."
+        },
+        "response_time": {
+          "name": "Response deadline",
+          "description": "Response window in seconds."
+        },
+        "send_push": {
+          "name": "Push notification",
+          "description": "Send push notifications."
+        },
+        "send_sms": {
+          "name": "SMS notification",
+          "description": "Send SMS notifications."
+        },
+        "send_call": {
+          "name": "Call notification",
+          "description": "Place phone call notifications."
+        },
+        "send_mail": {
+          "name": "Email notification",
+          "description": "Send email notifications."
+        },
+        "send_pager": {
+          "name": "Pager notification",
+          "description": "Send pager notifications."
+        },
+        "closed": {
+          "name": "Closed",
+          "description": "Mark the alarm as closed."
+        }
+      }
+    },
+
+    "post_close_alarm": {
+      "name": "Open/close alarm",
+      "description": "Open or close an existing alarm and optionally submit a report.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "ID of the alarm to open or close."
+        },
+        "closed": {
+          "name": "Closed",
+          "description": "Set to true to close the alarm, false to open it."
+        },
+        "report": {
+          "name": "Report",
+          "description": "Optional incident report text."
+        }
+      }
+    },
+
+    "post_message": {
+      "name": "Send message",
+      "description": "Send a message to a channel or the channel linked to an alarm.",
+      "fields": {
+        "message_channel_id": {
+          "name": "Message channel ID",
+          "description": "Channel ID to post the message to."
+        },
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "Alarm ID whose message channel should be used."
+        },
+        "text": {
+          "name": "Message",
+          "description": "Text content of the message."
+        },
+        "scene_object": {
+          "name": "Object information",
+          "description": "Optional object information to include."
+        },
+        "caller": {
+          "name": "Caller",
+          "description": "Optional caller information."
+        },
+        "patient": {
+          "name": "Patient",
+          "description": "Optional patient information."
+        },
+        "units": {
+          "name": "Alerted units",
+          "description": "Optional list of alerted units."
+        },
+        "remarks": {
+          "name": "Remarks",
+          "description": "Optional remarks to include."
+        },
+        "message_channel": {
+          "name": "Create message channel",
+          "description": "Create a message channel if none exists for the alarm."
+        }
+      }
+    },
+
+    "post_using_vehicle_property": {
+      "name": "Change vehicle properties",
+      "description": "Set arbitrary key-value properties for a specific vehicle.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Vehicle ID",
+          "description": "ID of the vehicle whose properties will be changed."
+        },
+        "properties": {
+          "name": "Properties",
+          "description": "Key-value mapping of vehicle properties (YAML/object)."
+        }
+      }
+    },
+
+    "post_using_vehicle_crew": {
+      "name": "Change vehicle crew",
+      "description": "Add, remove, or reset the crew assigned to a specific vehicle.",
+      "fields": {
+        "vehicle_id": {
+          "name": "Vehicle ID",
+          "description": "ID of the vehicle whose crew will be changed."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Operation to perform: add, remove, or reset."
+        },
+        "crew": {
+          "name": "Crew",
+          "description": "Users to add/remove (list or comma-separated). Required for add/remove."
+        }
+      }
+    },
+
+    "post_news": {
+      "name": "Create news",
+      "description": "Publish a news item with optional recipients and an optional survey.",
+      "fields": {
+        "title": {
+          "name": "Title",
+          "description": "News title."
+        },
+        "notification_type": {
+          "name": "Recipient group",
+          "description": "Target audience selection (e.g., all users of the unit, selected groups, or selected users)."
+        },
+        "text": {
+          "name": "Text",
+          "description": "News content."
+        },
+        "address": {
+          "name": "Address",
+          "description": "Optional address or location description."
+        },
+        "survey": {
+          "name": "Enable survey",
+          "description": "Attach a survey to this news item."
+        },
+        "private_mode": {
+          "name": "Private visibility",
+          "description": "Limit visibility of the news."
+        },
+        "send_push": {
+          "name": "Push notification",
+          "description": "Send push notifications."
+        },
+        "send_sms": {
+          "name": "SMS notification",
+          "description": "Send SMS notifications."
+        },
+        "send_call": {
+          "name": "Call notification",
+          "description": "Place phone call notifications."
+        },
+        "send_mail": {
+          "name": "Email notification",
+          "description": "Send email notifications."
+        },
+        "send_pager": {
+          "name": "Pager notification",
+          "description": "Send pager notifications."
+        },
+        "archive": {
+          "name": "Archive",
+          "description": "Archive the news item."
+        },
+        "ts_archive": {
+          "name": "Archive time",
+          "description": "Date and time when the news should be archived."
+        },
+        "group": {
+          "name": "Groups",
+          "description": "Target group IDs (one or multiple)."
+        },
+        "user_cluster_relation": {
+          "name": "Users",
+          "description": "Target user IDs (one or multiple)."
+        },
+        "NewsSurvey_title": {
+          "name": "Survey title",
+          "description": "Title of the attached survey."
+        },
+        "NewsSurvey_show_result_count": {
+          "name": "Response visibility",
+          "description": "Who can see response counts."
+        },
+        "NewsSurvey_show_result_names": {
+          "name": "Name visibility",
+          "description": "Who can see responder names."
+        },
+        "NewsSurvey_multiple_answers": {
+          "name": "Allow multiple answers",
+          "description": "Allow participants to select multiple answers."
+        },
+        "NewsSurvey_custom_answers": {
+          "name": "Allow custom answers",
+          "description": "Allow participants to add their own answers."
+        },
+        "NewsSurvey_response_until": {
+          "name": "Enable response deadline",
+          "description": "Enable a deadline for responses."
+        },
+        "NewsSurvey_ts_response": {
+          "name": "Response deadline (date/time)",
+          "description": "Date and time until which responses are accepted."
+        },
+        "NewsSurvey_answers": {
+          "name": "Answer options",
+          "description": "List of answer options (YAML list)."
+        },
+        "NewsSurvey_sorting": {
+          "name": "Sorting",
+          "description": "Optional sorting definition (YAML object/list)."
+        }
+      }
+    }
   }
 }
