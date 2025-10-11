@@ -101,47 +101,68 @@ class DiveraAlarmSensor(BaseDiveraEntity):
         self.entity_id = f"sensor.{self.ucr_id}_alarm_{self.alarm_id}"
         self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
 
+    def _get_alarm_data(self) -> dict[str, Any] | None:
+        """Get alarm data safely, return None if alarm doesn't exist."""
+        try:
+            alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
+            return alarm_items.get(self.alarm_id)
+        except Exception:
+            return None
+
     # dynamic entity attributes
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return super().available and self._get_alarm_data() is not None
+
     @property
     def state(self) -> str:  # type: ignore[override]
         """Return the state of the alarm."""
-        return (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("title", "Unknown")
-        )
+        if self._get_alarm_data():
+            return (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("title", "Unknown")
+            )
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the extra state attributes of the alarm."""
-        return (
-            self.cluster_data.get(D_ALARM, {}).get("items", {}).get(self.alarm_id, {})
-        )
+        if self._get_alarm_data():
+            return (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+            )
+        return None
 
     @property
     def icon(self) -> str:  # type: ignore[override]
         """Return the icon of the alarm."""
-        _closed = (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("closed", False)
-        )
-        _priority = (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("priority", False)
-        )
+        if self._get_alarm_data():
+            _closed = (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("closed", False)
+            )
+            _priority = (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("priority", False)
+            )
 
-        return (
-            I_CLOSED_ALARM
-            if _closed
-            else I_OPEN_ALARM
-            if _priority
-            else I_OPEN_ALARM_NOPRIO
-        )
+            return (
+                I_CLOSED_ALARM
+                if _closed
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
+            )
+        return None
 
 
 class DiveraVehicleSensor(BaseDiveraEntity):
@@ -162,44 +183,62 @@ class DiveraVehicleSensor(BaseDiveraEntity):
         self._attr_unique_id = f"{self.ucr_id}_vehicle_{self.vehicle_id}"
         self._attr_icon = I_VEHICLE
 
+    def _get_vehicle_data(self) -> dict[str, Any] | None:
+        """Get vehicle data safely, return None if vehicle doesn't exist."""
+        try:
+            vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+            return vehicle_items.get(self.vehicle_id)
+        except Exception:
+            return None
+
     # dynamic entity attributes
     @property
+    def availability(self) -> str:  # type: ignore[override]
+        """Return availability of the vehicle."""
+        return super().available and self._get_vehicle_data() is not None
+
+    @property
     def state(self) -> str:  # type: ignore[override]
-        """Return ste of the vehidle."""
-        return (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("fmsstatus_id", "Unknown")
-        )
+        """Return state of the vehicle."""
+        if self._get_vehicle_data():
+            return (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("fmsstatus_id", "Unknown")
+            )
+        return None
 
     @property
     def name(self) -> str:  # type: ignore[override]
         """Return name of the vehicle."""
-        _shortname = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("shortname", "Unknown")
-        )
-        _veh_name = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("name", "Unknown")
-        )
-        return f"{_shortname} / {_veh_name}"
+        if self._get_vehicle_data():
+            _shortname = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("shortname", "Unknown")
+            )
+            _veh_name = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("name", "Unknown")
+            )
+            return f"{_shortname} / {_veh_name}"
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
         """Return extra state attributes of the vehicle."""
         _extra_state_attributes = {}
-        _extra_state_attributes["vehicle_id"] = self.vehicle_id
-        _extra_state_attributes.update(
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-        )
+        if self._get_vehicle_data():
+            _extra_state_attributes["vehicle_id"] = self.vehicle_id
+            _extra_state_attributes.update(
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+            )
         return _extra_state_attributes
 
 
@@ -243,7 +282,6 @@ class DiveraOpenAlarmsSensor(BaseDiveraEntity):
         self._attr_unique_id = f"{self.ucr_id}_open_alarms"
         self._attr_icon = I_COUNTER_ACTIVE_ALARMS
 
-    # dynamic entity attributes
     @property
     def state(self) -> int:  # type: ignore[override]
         """Return number of open alarms."""
@@ -269,7 +307,8 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
         # static entity attributes
         self._attr_name = f"Status: {self.status_name}"
         self.entity_id = f"sensor.{self.ucr_id}_status_{self.status_id}"
-        self._attr_unique_id = f"{self.ucr_id}_status_{self.status_id}"
+        # self._attr_unique_id = f"{self.ucr_id}_status_{self.status_id}"
+        self._attr_unique_id = f"{self.ucr_id}_availability_{status_id}"
         self._attr_icon = I_AVAILABILITY
 
     # dynamic entity attributes
@@ -316,49 +355,68 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         self.entity_id = f"device_tracker.{self.ucr_id}_alarmtracker_{self.alarm_id}"
         self._attr_unique_id = f"{self.ucr_id}_alarmtracker_{self.alarm_id}"
 
+    def _get_alarm_data(self) -> dict[str, Any] | None:
+        """Get alarm data safely, return None if alarm doesn't exist."""
+        try:
+            alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
+            return alarm_items.get(self.alarm_id)
+        except Exception:
+            return None
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return super().available and self._get_alarm_data() is not None
+
     # dynamic state attributes
     @property
     def latitude(self) -> float | None:  # type: ignore[override]
         "Return latitude of the alarm location."
-        return (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("lat", 0)
-        )
+        if self._get_alarm_data():
+            return (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("lat", 0)
+            )
+        return None
 
     @property
     def longitude(self) -> float | None:  # type: ignore[override]
         "Return longitude of the alarm location."
-        return (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("lng", 0)
-        )
+        if self._get_alarm_data():
+            return (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("lng", 0)
+            )
+        return None
 
     @property
     def icon(self) -> str:  # type: ignore[override]
         """Return icon of the alarm."""
-        _closed = (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("closed", False)
-        )
-        _priority = (
-            self.cluster_data.get(D_ALARM, {})
-            .get("items", {})
-            .get(self.alarm_id, {})
-            .get("priority", False)
-        )
-        return (
-            I_CLOSED_ALARM
-            if _closed
-            else I_OPEN_ALARM
-            if _priority
-            else I_OPEN_ALARM_NOPRIO
-        )
+        if self._get_alarm_data():
+            _closed = (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("closed", False)
+            )
+            _priority = (
+                self.cluster_data.get(D_ALARM, {})
+                .get("items", {})
+                .get(self.alarm_id, {})
+                .get("priority", False)
+            )
+            return (
+                I_CLOSED_ALARM
+                if _closed
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
+            )
+        return None
 
 
 class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
@@ -376,74 +434,100 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         )
         self._attr_unique_id = f"{self.ucr_id}_vehicletracker_{self.vehicle_id}"
 
+    def _get_vehicle_data(self) -> dict[str, Any] | None:
+        """Get vehicle data safely, return None if vehicle doesn't exist."""
+        try:
+            vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+            return vehicle_items.get(self.vehicle_id)
+        except Exception:
+            return None
+
     # dynamic state attributes
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return super().available and self._get_vehicle_data() is not None
+
     @property
     def name(self) -> str:  # type: ignore[override]
         """Return name of the vehicle."""
-        _shortname = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("shortname", "Unknown")
-        )
-        _veh_name = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("name", "Unknown")
-        )
-        return f"{_shortname} / {_veh_name}"
+        if self._get_vehicle_data():
+            _shortname = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("shortname", "Unknown")
+            )
+            _veh_name = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("name", "Unknown")
+            )
+            return f"{_shortname} / {_veh_name}"
+        return None
 
     @property
     def latitude(self) -> float | None:  # type: ignore[override]
         """Return the latitude of the vehicle position."""
-        return (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("lat", 0)
-        )
+        if self._get_vehicle_data():
+            return (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("lat", 0)
+            )
+        return None
 
     @property
     def longitude(self) -> float | None:  # type: ignore[override]
         """Return the longitude of the vehicle position."""
-        return (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("lng", 0)
-        )
+        if self._get_vehicle_data():
+            return (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("lng", 0)
+            )
+        return None
 
     @property
     def icon(self) -> str:  # type: ignore[override]
         """Return icon of the vehicle tracker."""
-        _veh_status = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("fmsstatus_id", "unknown")
-        )
-        return (
-            "mdi:help-box"
-            if _veh_status == "unknown"
-            else f"mdi:numeric-{_veh_status}-box"
-        )
+        if self._get_vehicle_data():
+            _veh_status = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("fmsstatus_id", "unknown")
+            )
+            return (
+                "mdi:help-box"
+                if _veh_status == "unknown"
+                else f"mdi:numeric-{_veh_status}-box"
+            )
+        return None
 
     @property
     def extra_state_attributes(self):  # type: ignore[override]
         """Return extra state attributes for vehicle tracker."""
-        extra_state_attributes = {}
-        _fms_items = (
-            self.cluster_data.get(D_CLUSTER, {}).get(D_FMS_STATUS, {}).get("items", {})
-        )
-        _veh_status = (
-            self.cluster_data.get(D_CLUSTER, {})
-            .get(D_VEHICLE, {})
-            .get(self.vehicle_id, {})
-            .get("fmsstatus_id", "unknown")
-        )
-        extra_state_attributes["icon_color"] = _fms_items.get(str(_veh_status), {}).get(
-            "color_hex", "#000000"
-        )
+        if not self._get_vehicle_data():
+            extra_state_attributes = {}
+            _fms_items = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_FMS_STATUS, {})
+                .get("items", {})
+            )
+            _veh_status = (
+                self.cluster_data.get(D_CLUSTER, {})
+                .get(D_VEHICLE, {})
+                .get(self.vehicle_id, {})
+                .get("fmsstatus_id", "unknown")
+            )
+            extra_state_attributes["icon_color"] = _fms_items.get(
+                str(_veh_status), {}
+            ).get("color_hex", "#FF0000")
 
-        return extra_state_attributes
+            return extra_state_attributes
+
+        return None

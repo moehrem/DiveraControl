@@ -157,7 +157,7 @@
       "message": "No Divera unit found."
     },
     "api_post_vehicle_status_failed": {
-      "message": "Changing vehicle status and data for {vehicle_id} failed."
+      "message": "Changing vehicle status and data for {vehicle_id} failed, error: {err}."
     },
     "no_alarm_title": {
       "message": "No alarm title provided."
@@ -172,7 +172,7 @@
       "message": "No alarm ID provided."
     },
     "api_put_alarm_failed": {
-      "message": "Updating alarm {alarm_id} failed."
+      "message": "Updating alarm {alarm_id} failed, error: {err}."
     },
     "api_post_close_alarm_failed": {
       "message": "Opening/closing alarm {alarm_id} failed."
