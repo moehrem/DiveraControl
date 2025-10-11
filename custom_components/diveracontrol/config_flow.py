@@ -200,7 +200,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _validate_and_proceed(
         self,
-        validation_method: Callable,
+        validation_method: Callable[[dict[str, str], Any, dict[str, Any]], Any],
         user_input: dict[str, Any],
     ) -> ConfigFlowResult:
         """Validate user input and decide next steps.
@@ -226,7 +226,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.errors:
             return self._show_api_key_form()
 
-        # check and delete dubliucate clusters
+        # check and delete duplicate clusters
         self._handle_duplicates()
 
         if len(self.clusters) > 1:

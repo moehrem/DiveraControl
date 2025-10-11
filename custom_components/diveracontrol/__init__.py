@@ -66,7 +66,7 @@ async def async_setup_entry(
         coordinator = DiveraCoordinator(
             hass,
             api,
-            dict(config_entry.data),
+            config_entry,
         )
 
         hass.data.setdefault(DOMAIN, {})[ucr_id] = {

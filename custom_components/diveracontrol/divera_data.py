@@ -6,13 +6,33 @@ from typing import Any
 from aiohttp import ClientError
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_VEHICLE
-from .divera_api import DiveraAPI
+from .const import (
+    D_ALARM,
+    D_CLUSTER,
+    D_DM,
+    D_EVENTS,
+    D_LOCALMONITOR,
+    D_MESSAGE,
+    D_MESSAGE_CHANNEL,
+    D_MONITOR,
+    D_NEWS,
+    D_STATUS,
+    D_STATUSPLAN,
+    D_TS,
+    D_UCR,
+    D_UCR_ACTIVE,
+    D_UCR_DEFAULT,
+    D_USER,
+    D_VEHICLE,
+    D_DATA,
+    D_OPEN_ALARMS,
+)
+from .divera_api import D_UCR, DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
+async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str, Any]:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates
@@ -27,9 +47,30 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
         Sets alarm and vehicle data to empty if any issues occur.
 
     Returns:
-        None
+        cluster_data (dict): The updated data dictionary with the latest Divera information.
 
     """
+
+    # init structure on first call
+    if not cluster_data:
+        cluster_data = {
+            D_UCR: {},
+            D_UCR_DEFAULT: {},
+            D_UCR_ACTIVE: {},
+            D_TS: {},
+            D_USER: {},
+            D_STATUS: {},
+            D_CLUSTER: {},
+            D_MONITOR: {},
+            D_ALARM: {},
+            D_NEWS: {},
+            D_EVENTS: {},
+            D_DM: {},
+            D_MESSAGE_CHANNEL: {},
+            D_MESSAGE: {},
+            D_LOCALMONITOR: {},
+            D_STATUSPLAN: {},
+        }
 
     # request divera data
     try:
@@ -40,14 +81,14 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
                 "Unexpected data format or API request failed: %s",
                 raw_ucr_data,
             )
-            return
+            return cluster_data
 
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
-        return
+        return cluster_data
 
     # set local data
-    cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
+    raw_cluster: dict[str, Any] = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
 
     # update data if new data available
     key = None
@@ -65,7 +106,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
 
     # adding properties to vehicle
     try:
-        for key in cluster.get(D_VEHICLE, {}):
+        for key in raw_cluster.get(D_VEHICLE, {}):
             try:
                 raw_vehicle_property = await api.get_vehicle_property(key)
             except HomeAssistantError as e:
@@ -122,3 +163,5 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
         _LOGGER.error("Error processing alarm data: %s", e)
     except Exception:
         _LOGGER.exception("Unexpected error while processing alarms")
+
+    return cluster_data
