@@ -5,7 +5,7 @@ import logging
 from aiohttp import ClientError, ClientTimeout
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -155,7 +155,7 @@ class DiveraAPI:
         self,
         vehicle_id: int,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """POST vehicle status and data to Divera API.
 
         Args:
@@ -168,19 +168,24 @@ class DiveraAPI:
         """
         LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
-            method = "POST"
-            parameters = {D_UCR: self.ucr_id}
-            await self.api_request(url, method, parameters=parameters, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
+            raise HomeAssistantError(
+                f"Permission denied for vehicle status update on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        # check for success
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def post_alarms(
         self,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """POST new alarm to Divera API.
 
         Args:
@@ -192,19 +197,25 @@ class DiveraAPI:
         """
         LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_ALARM):
+            raise HomeAssistantError(
+                f"Permission denied for alarm creation on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        # check for success
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def put_alarms(
         self,
         alarm_id: int,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """PUT changes for existing alarm to Divera API.
 
         Args:
@@ -219,61 +230,76 @@ class DiveraAPI:
             "Putting changes to alarm %s for cluster %s", alarm_id, self.ucr_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
-            method = "PUT"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_ALARM):
+            raise HomeAssistantError(
+                f"Permission denied for alarm update on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
+        method = "PUT"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def post_close_alarm(
         self,
         payload: dict[str, str],
         alarm_id: int,
-    ) -> bool:
+    ) -> None:
         """POST to close an existing alarm to Divera API.
 
         Args:
             alarm_id (int): Divera-Alarm-ID which had to be changed.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
+        Raises:
+            HomeAssistantError: If permission is denied or API call fails.
         """
+
         LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_ALARM):
+            raise HomeAssistantError(
+                f"Permission denied for alarm close on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def post_message(
         self,
         payload: dict[str, str],
-    ) -> bool:
-        """POSt to close an existing alarm to Divera API.
+    ) -> None:
+        """POST to close an existing alarm to Divera API.
 
         Args:
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
+        Raises:
+            HomeAssistantError: If permission is denied or API call fails.
 
         """
         LOGGER.debug("Posting message for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
+            raise HomeAssistantError(
+                f"Permission denied for posting message on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def get_vehicle_property(
         self,
@@ -292,46 +318,63 @@ class DiveraAPI:
             "Getting individual vehicle properties for vehicle id %s", vehicle_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
-            method = "GET"
-            return await self.api_request(url, method)
+        if not permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
+            raise HomeAssistantError(
+                f"Permission denied for getting vehicle properties on cluster {self.ucr_id}"
+            )
 
-        return {}
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
+        )
+        method = "GET"
+
+        response = await self.api_request(url, method)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
+
+        return response
 
     async def post_using_vehicle_property(
         self,
         vehicle_id: int,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """POST individual vehicle poroperties for vehicle from Divera API.
 
         Args:
             vehicle_id (int): ID of the vehicle to fetch property data from.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
+        Raises:
+            HomeAssistantError: If API-call fails.
 
         """
         LOGGER.debug(
             "Posting individual vehicle properties for cluster %s", self.ucr_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
+            raise HomeAssistantError(
+                f"Permission denied for posting vehicle properties on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
+        )
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def post_using_vehicle_crew(
         self,
         vehicle_id: int,
         mode: str,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """POST add one or more crew to a vehicle.
 
         Args:
@@ -342,8 +385,8 @@ class DiveraAPI:
                         "reset" - resetting all crew from vehicle.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
+        Raises:
+            HomeAssistantError: If API-call fails.
 
         """
 
@@ -354,28 +397,32 @@ class DiveraAPI:
             self.ucr_id,
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
-            if mode in {"add", "remove"}:
-                method = "POST"
-            elif mode == "reset":
-                method = "DELETE"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
+            raise HomeAssistantError(
+                f"Permission denied for posting vehicle crew on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
+        if mode in {"add", "remove"}:
+            method = "POST"
+        elif mode == "reset":
+            method = "DELETE"
+
+        response = await self.api_request(url, method, payload=payload)
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")
 
     async def post_news(
         self,
         payload: dict[str, str],
-    ) -> bool:
+    ) -> None:
         """POST news to Divera.
 
         Args:
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
+        Raises:
+            HomeAssistantError: If API-call fails.
 
         """
         LOGGER.debug(
@@ -383,10 +430,15 @@ class DiveraAPI:
             self.ucr_id,
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_NEWS):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        if not permission_check(self.hass, self.ucr_id, PERM_NEWS):
+            raise HomeAssistantError(
+                f"Permission denied for posting news on cluster {self.ucr_id}"
+            )
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
+        method = "POST"
+
+        response = await self.api_request(url, method, payload=payload)
+
+        if not response or response.get("success") is False:
+            raise HomeAssistantError(f"{response.get('error', 'Unknown error')}")

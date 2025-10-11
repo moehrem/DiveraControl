@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from aiohttp import ClientError
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_VEHICLE
 from .divera_api import DiveraAPI
@@ -65,7 +66,13 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> None:
     # adding properties to vehicle
     try:
         for key in cluster.get(D_VEHICLE, {}):
-            raw_vehicle_property = await api.get_vehicle_property(key)
+            try:
+                raw_vehicle_property = await api.get_vehicle_property(key)
+            except HomeAssistantError as e:
+                _LOGGER.error(
+                    "Error fetching vehicle property for vehicle id '%s': %s", key, e
+                )
+                continue
 
             if raw_vehicle_property is not False:
                 vehicle_property = raw_vehicle_property.get(D_DATA, {})

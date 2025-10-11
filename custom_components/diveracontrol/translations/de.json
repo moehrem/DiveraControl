@@ -178,7 +178,7 @@
       "message": "Keine Divera-Einheit gefunden."
     },
     "api_post_vehicle_status_failed": {
-      "message": "Ändern des Fahrzeugstatus und der Daten für {vehicle_id} fehlgeschlagen."
+      "message": "Ändern des Fahrzeugstatus und der Daten für {vehicle_id} fehlgeschlagen: {err}"
     },
     "no_alarm_title": {
       "message": "Keine Alarmbezeichnung angegeben."
@@ -193,7 +193,7 @@
       "message": "Keine Alarm-ID angegeben."
     },
     "api_put_alarm_failed": {
-      "message": "Aktualisierung des Alarms {alarm_id} fehlgeschlagen."
+      "message": "Aktualisierung des Alarms {alarm_id} fehlgeschlagen. Fehler: {err}"
     },
     "api_post_close_alarm_failed": {
       "message": "Öffnen/Schließen des Alarms {alarm_id} fehlgeschlagen."
@@ -236,7 +236,23 @@
     },
     "no_users_selected": {
       "message": "Empfängerauswahl 'Benutzer', jedoch wurden keine Benutzer ausgewählt. Bitte wähle mindestens einen Benutzer aus."
+    },
+    "no_survey_sorting": {
+      "message": "Umfrage aktiviert und Antworten vorhanden, aber keine Sortierung angegeben. Bitte gib eine Sortierung an."
+    },
+    "api_device_not_found": {
+      "message": "Gerät mit ID '{device_id}' nicht gefunden."
+    },
+    "api_config_entry_not_found": {
+      "message": "Konfigurationseintrag zum Gerät mit ID '{device_id}' nicht gefunden."
+    },
+    "api_ucr_id_not_found": {
+      "message": "Keine Divera-Einheit für den Konfigurationseintrag mit ID '{entry_id}' gefunden."
+    },
+    "api_instance_not_found": {
+      "message": "Keine Divera-Instanz für Gerät mit ID '{device_id}' gefunden."
     }
+
   },
   "services": {
     "post_vehicle_status": {

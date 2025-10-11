@@ -33,7 +33,7 @@
 
 **DiveraControl** is an integration of [Divera 24/7](https://www.divera247.com) into [Home Assistant](https://www.home-assistant.io/). It enables local administrators or unit owners to exchange data between Home Assistant and Divera 24/7.
 
-In fire stations and emergency vehicles, a wide variety of data is generated that can be highly valuable during missions. Unfortunately, affordable integrated solutions for managing and controlling such data are rare. **Home Assistant** offers a low-cost central hub for controlling:
+In stations, vehicles and operations, numerous data points accumulate that could be meaningfully and effectively used to make processes more efficient and automated. Unfortunately, affordable integrated solutions for managing and controlling such data are rare. **Home Assistant** offers a low-cost central hub for controlling:
 
 - Lighting, doors & gates
 - Monitors & voice output
@@ -47,7 +47,7 @@ This is where **DiveraControl** comes in: it provides the interface to the alert
 - **Owners** and **administrators** of a Divera unit
 - **Curious users** who want to explore the Divera API
 
-> **Note:** The integration also works with limited permissions but with reduced functionality. For regular users of a unit, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) is recommended.
+> **Note:** The integration also works with limited permissions but with reduced functionality. For regular users of a unit without any additional permissions, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) is recommended.
 
 ---
 

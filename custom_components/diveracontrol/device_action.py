@@ -26,7 +26,7 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_translation, permission_check
+from .utils import get_translation, permission_check, get_coordinator_from_device
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -66,6 +66,8 @@ async def _get_selector_options(
     Returns:
         List of option dictionaries with value and label
     """
+
+    coordinator = await get_coordinator_from_device(hass, device_id)
 
     if data_path == "notification_type_options":
         # Special case for static options
@@ -146,22 +148,6 @@ async def _get_selector_options(
     if not device_id:
         return []
 
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
-
-    if not device:
-        return []
-
-    entry_id = next(iter(device.config_entries), None)
-    if not entry_id:
-        return []
-
-    entry = hass.config_entries.async_get_entry(entry_id)
-    if not entry or entry.domain != DOMAIN:
-        return []
-
-    coordinator = hass.data[DOMAIN][entry.data.get("ucr_id")]["coordinator"]
-
     # Navigate data path
     data = coordinator.data
     for key in data_path.split("."):
@@ -175,10 +161,6 @@ async def _get_selector_options(
 
     if not isinstance(data, dict):
         return []
-
-    # Default label format
-    if label_format is None:
-        label_format = "{name}"
 
     return [
         {
@@ -260,7 +242,7 @@ async def async_call_action_from_config(
         if key not in ["domain", "type", "device_id", "data"]:
             service_data[key] = value
 
-    # Optional: data-Dictionary hinzufügen falls vorhanden
+    # optional: add data dict if available
     if data := validated_config.get("data"):
         service_data.update(data)
 
@@ -303,6 +285,7 @@ async def async_get_action_capabilities(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
                         )
                     )
                     if vehicle_options

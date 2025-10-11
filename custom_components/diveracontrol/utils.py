@@ -169,17 +169,14 @@ def _normalize_id_list(value: Any) -> list[str]:
     return [str(value)]
 
 
-def get_api_instances(
-    hass: HomeAssistant,
-    device_ids: list[str],
-    entity_ids: list[str],
+def get_api_instance_per_device(
+    hass: HomeAssistant, device_id: list[str]
 ) -> list["DiveraAPI"]:
     """Fetch api-instance of devices based on device_ids and/or entity_ids given from user input. Raises exception if not found. Handles duplicates by using a dict.
 
     Args:
         hass: HomeAssistant instance
         device_ids: List of device IDs to search for
-        entity_ids: List of entity IDs to search for
 
     Returns:
         api_instances: API instances as list of classes of DiveraAPI
@@ -188,60 +185,53 @@ def get_api_instances(
         HomeAssistantError: If integration data or API instance is missing or not found
     """
 
-    api_instances_dict: dict[str, DiveraAPI] = {}
     device_registry = dr.async_get(hass)
 
     # handle device_ids
-    if device_ids:
-        device_ids = _normalize_id_list(device_ids)
+    device = device_registry.devices.get(device_id)
+    if not device:
+        msg = get_translation(
+            hass,
+            "exceptions",
+            "api_device_not_found.message",
+            {"device_id": device_id},
+        )
+        raise HomeAssistantError(msg)
 
-        for device_id in device_ids:
-            device = device_registry.devices.get(device_id)
-            if not device:
-                raise HomeAssistantError(f"Device {device_id} not found")
+    entry_id = next(iter(device.config_entries))
+    config_entry = hass.config_entries.async_get_entry(entry_id)
 
-            entry_id = next(iter(device.config_entries))
-            config_entry = hass.config_entries.async_get_entry(entry_id)
+    if not config_entry:
+        msg = get_translation(
+            hass,
+            "exceptions",
+            "api_config_entry_not_found.message",
+            {"device_id": device_id},
+        )
+        raise HomeAssistantError(msg)
 
-            if not config_entry:
-                raise HomeAssistantError(f"No config entry for device {device_id}")
+    ucr_id = config_entry.data.get(D_UCR_ID)
 
-            ucr_id = config_entry.data.get(D_UCR_ID)
+    if not ucr_id:
+        msg = get_translation(
+            hass,
+            "exceptions",
+            "api_ucr_id_not_found.message",
+            {"entry_id": entry_id},
+        )
+        raise HomeAssistantError(msg)
 
-            if not ucr_id:
-                raise HomeAssistantError(f"No ucr_id found for device {device_id}")
+    api_instance = hass.data[DOMAIN][ucr_id]["api"]
+    if not api_instance:
+        msg = get_translation(
+            hass,
+            "exceptions",
+            "api_instance_not_found.message",
+            {"device_id": device_id},
+        )
+        raise HomeAssistantError(msg)
 
-            api_instance = hass.data["diveracontrol"][ucr_id]["api"]
-
-            api_instances_dict[ucr_id] = api_instance
-
-    # handle entity_ids
-    if entity_ids:
-        entity_ids = _normalize_id_list(entity_ids)
-        entity_registry = er.async_get(hass)
-        for entity_id in entity_ids:
-            entity_entry = entity_registry.entities.get(entity_id)
-            if not entity_entry:
-                raise HomeAssistantError(f"Entity {entity_id} not found")
-
-            entry_id = entity_entry.config_entry_id
-            config_entry = hass.config_entries.async_get_entry(entry_id)
-
-            if not config_entry:
-                raise HomeAssistantError(f"No config entry for entity {entity_id}")
-
-            ucr_id = config_entry.data.get(D_UCR_ID)
-
-            if not ucr_id:
-                raise HomeAssistantError(
-                    f"No user cluster relation found for entity {entity_id}"
-                )
-
-            api_instance = hass.data["diveracontrol"][ucr_id]["api"]
-
-            api_instances_dict[ucr_id] = api_instance
-
-    return list(api_instances_dict.values())
+    return api_instance
 
 
 def get_coordinator_data(
@@ -403,41 +393,6 @@ def extract_keys(data) -> set[str]:
     return set(data.keys()) if isinstance(data, dict) else set()
 
 
-# async def get_translation(
-#     hass: HomeAssistant,
-#     category: str,
-#     placeholders: dict[str, Any] | None = None,
-# ) -> str:
-#     """Load and cache translations.
-
-#     Args:
-#         hass (HomeAssistant): Home Assistant instance.
-#         category (str): Translation category to look up.
-#         placeholders (dict[str, Any] | None): Optional placeholders for formatting the translation string.
-
-#     Returns:
-#         str: The translated string, formatted with placeholders if provided.
-
-#     """
-
-#     language = hass.config.language
-#     translation: dict[str, str] = await async_get_translations(
-#         hass, language, category, integrations={DOMAIN}
-#     )
-
-#     if not translation:
-#         _LOGGER.debug("No translation found for %s", category)
-#         translation = category
-#     if placeholders:
-#         try:
-#             translation = translation.format(**placeholders)
-#         except KeyError as ex:
-#             _LOGGER.error(
-#                 "Placeholder %s not found in translation for %s", ex, category
-#             )
-#     return translation
-
-
 async def get_translation(
     hass: HomeAssistant,
     category: str,
@@ -455,6 +410,8 @@ async def get_translation(
     Returns:
         str: The translated string, formatted with placeholders if provided.
 
+    Raises:
+        KeyError: If a placeholder in the translation string is not found in the provided placeholders.
     """
 
     translation_cat = await async_get_translations(
@@ -473,3 +430,39 @@ async def get_translation(
             )
 
     return translation_str
+
+
+async def get_coordinator_from_device(
+    hass: HomeAssistant, device_id: str
+) -> "DiveraCoordinator":
+    """Get the DiveraCoordinator instance associated with a given device ID.
+
+    Args:
+        hass (HomeAssistant): The Home Assistant instance.
+        device_id (str): The device ID to look up.
+
+    Returns:
+        DiveraCoordinator: The associated DiveraCoordinator instance.
+
+    Raises:
+        HomeAssistantError: If the device or coordinator is not found.
+    """
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
+
+    if not device or not device.config_entries:
+        raise HomeAssistantError(f"Device not found: {device_id}")
+
+    config_entry_id = next(iter(device.config_entries), None)
+    if not config_entry_id:
+        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
+
+    entry = hass.config_entries.async_get_entry(config_entry_id)
+    if not entry or entry.domain != DOMAIN:
+        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
+
+    coordinator = hass.data[DOMAIN][entry.data.get(D_UCR_ID)]["coordinator"]
+    if not coordinator:
+        raise HomeAssistantError(f"Coordinator not found for device: {device_id}")
+
+    return coordinator
