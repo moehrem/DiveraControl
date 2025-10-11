@@ -10,13 +10,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     D_ALARM,
     D_CLUSTER,
-    D_CLUSTER_NAME,
-    D_ENTRY_ID,
     D_FMS_STATUS,
     D_MONITOR,
     D_OPEN_ALARMS,
     D_STATUS,
-    D_UCR_ID,
     D_VEHICLE,
     I_AVAILABILITY,
     I_CLOSED_ALARM,
