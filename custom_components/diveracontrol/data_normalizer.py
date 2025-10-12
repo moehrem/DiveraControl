@@ -406,7 +406,7 @@ class ServiceDataNormalizer:
             # Datetime fields
             "ts_archive": DateTimeNormalizer("ts_archive"),
             "ts_publish": DateTimeNormalizer("ts_publish"),
-            "NewsSurvey_ts_response": DateTimeNormalizer("NewsSurvey_ts_response"),
+            "newssurvey_ts_response": DateTimeNormalizer("newssurvey_ts_response"),
         }
 
     def normalize(self, data: dict[str, Any]) -> dict[str, Any]:

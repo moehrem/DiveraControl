@@ -627,13 +627,13 @@ post_news:
       selector:
         text:
           multiline: false
-    NewsSurvey_title:
+    newssurvey_title:
       required: false
       example: Mit wie vielen Personen nehmt ihr am Sommerfest teil?
       selector:
         text:
           multiline: false
-    NewsSurvey_show_result_count:
+    newssurvey_show_result_count:
       required: false
       example: "2"
       selector:
@@ -644,7 +644,7 @@ post_news:
             - "1"
             - "2"
           mode: dropdown
-    NewsSurvey_show_result_names:
+    newssurvey_show_result_names:
       required: false
       example: "2"
       selector:
@@ -655,33 +655,33 @@ post_news:
             - "1"
             - "2"
           mode: dropdown
-    NewsSurvey_multiple_answers:
+    newssurvey_multiple_answers:
       required: false
       example: True
       selector:
         boolean:
-    NewsSurvey_custom_answers:
+    newssurvey_custom_answers:
       required: false
       example: True
       selector:
         boolean:
-    NewsSurvey_response_until:
+    newssurvey_response_until:
       required: false
       example: True
       selector:
         boolean:
-    NewsSurvey_ts_response:
+    newssurvey_ts_response:
       required: false
       example: 4902061253
       selector:
         datetime:
-    NewsSurvey_answers:
+    newssurvey_answers:
       required: false
       example: Trupp,Staffel,Gruppe,Zug
       selector:
         text:
           multiline: false
-    NewsSurvey_sorting:
+    newssurvey_sorting:
       required: false
       example: Zug,Gruppe,Staffel,Trupp
       selector:

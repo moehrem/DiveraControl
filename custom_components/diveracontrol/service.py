@@ -50,7 +50,7 @@ def _extract_news(data: dict[str, Any], notification_type: int) -> dict[str, Any
 
     news_data: dict[str, Any] = {}
     for key, value in data.items():
-        if key.startswith("NewsSurvey_"):
+        if key.startswith("newssurvey_"):
             continue
         news_data[key] = value
     return news_data
@@ -69,9 +69,9 @@ def _extract_survey(data: dict[str, Any]) -> dict[str, Any]:
 
     survey_data: dict[str, Any] = {}
     for key, value in data.items():
-        if not key.startswith("NewsSurvey_"):
+        if not key.startswith("newssurvey_"):
             continue
-        survey_key = key[len("NewsSurvey_") :]
+        survey_key = key[len("newssurvey_") :]
         survey_data[survey_key] = value
     return survey_data
 
@@ -609,8 +609,8 @@ async def handle_post_news(
     notification_type: int = data.get("notification_type", 0)
 
     survey: bool = data.get("survey", False)
-    news_survey_answers: list[dict[str, Any]] = data.get("NewsSurvey_answers", [])
-    news_survey_sorting: list[int] = data.get("NewsSurvey_sorting", [])
+    news_survey_answers: list[dict[str, Any]] = data.get("newssurvey_answers", [])
+    news_survey_sorting: list[int] = data.get("newssurvey_sorting", [])
 
     if not title:
         raise ServiceValidationError(
@@ -667,7 +667,7 @@ async def handle_post_news(
 
     payload = {
         "News": news_data,
-        "NewsSurvey": survey_data,
+        "newssurvey": survey_data,
     }
 
     # call api function and handle entity

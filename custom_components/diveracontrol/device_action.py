@@ -718,9 +718,9 @@ async def async_get_action_capabilities(
                     vol.Optional("archive"): bool,
                     vol.Optional("ts_archive"): selector.DateTimeSelector(),
                     # survey-specific fields
-                    vol.Optional("NewsSurvey_title"): str,
+                    vol.Optional("newssurvey_title"): str,
                     vol.Optional(
-                        "NewsSurvey_show_result_count"
+                        "newssurvey_show_result_count"
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=newssurvey_show_result_count_options,
@@ -730,7 +730,7 @@ async def async_get_action_capabilities(
                     if newssurvey_show_result_count_options
                     else vol.Coerce(int),
                     vol.Optional(
-                        "NewsSurvey_show_result_names"
+                        "newssurvey_show_result_names"
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=newssurvey_show_result_names_options,
@@ -739,12 +739,12 @@ async def async_get_action_capabilities(
                     )
                     if newssurvey_show_result_names_options
                     else vol.Coerce(int),
-                    vol.Optional("NewsSurvey_multiple_answers"): bool,
-                    vol.Optional("NewsSurvey_custom_answers"): bool,
-                    vol.Optional("NewsSurvey_response_until"): bool,
-                    vol.Optional("NewsSurvey_ts_response"): selector.DateTimeSelector(),
-                    vol.Optional("NewsSurvey_answers"): selector.ObjectSelector(),
-                    vol.Optional("NewsSurvey_sorting"): selector.ObjectSelector(),
+                    vol.Optional("newssurvey_multiple_answers"): bool,
+                    vol.Optional("newssurvey_custom_answers"): bool,
+                    vol.Optional("newssurvey_response_until"): bool,
+                    vol.Optional("newssurvey_ts_response"): selector.DateTimeSelector(),
+                    vol.Optional("newssurvey_answers"): selector.ObjectSelector(),
+                    vol.Optional("newssurvey_sorting"): selector.ObjectSelector(),
                 }
             )
         }

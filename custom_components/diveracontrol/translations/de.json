@@ -151,15 +151,15 @@
       "survey": "Umfrage aktivieren",
       "archive": "Archivieren",
       "ts_archive": "Archivierungszeitpunkt",
-      "NewsSurvey_title": "Umfrage-Titel",
-      "NewsSurvey_show_result_count": "Sichtbarkeit Rückmeldungen",
-      "NewsSurvey_show_result_names": "Sichtbarkeit Namen",
-      "NewsSurvey_multiple_answers": "Mehrfachantworten erlauben",
-      "NewsSurvey_custom_answers": "Benutzerdefinierte Antworten erlauben",
-      "NewsSurvey_response_until": "Antwortfrist aktivieren",
-      "NewsSurvey_ts_response": "Antwortfrist (Datum/Uhrzeit)",
-      "NewsSurvey_answers": "Antwortoptionen (kommagetrennt)",
-      "NewsSurvey_sorting": "Sortierung (kommagetrennt)",
+      "newssurvey_title": "Umfrage-Titel",
+      "newssurvey_show_result_count": "Sichtbarkeit Rückmeldungen",
+      "newssurvey_show_result_names": "Sichtbarkeit Namen",
+      "newssurvey_multiple_answers": "Mehrfachantworten erlauben",
+      "newssurvey_custom_answers": "Benutzerdefinierte Antworten erlauben",
+      "newssurvey_response_until": "Antwortfrist aktivieren",
+      "newssurvey_ts_response": "Antwortfrist (Datum/Uhrzeit)",
+      "newssurvey_answers": "Antwortoptionen (kommagetrennt)",
+      "newssurvey_sorting": "Sortierung (kommagetrennt)",
       "scene_object": "Infos zum Objekt",
       "caller": "Anrufer",
       "patient": "Patient",
@@ -730,39 +730,39 @@
           "name": "Benutzer",
           "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
         },
-        "NewsSurvey_title": {
+        "newssurvey_title": {
           "name": "Umfrage-Titel",
           "description": "(Optional) Titel der angehängten Umfrage."
         },
-        "NewsSurvey_show_result_count": {
+        "newssurvey_show_result_count": {
           "name": "Sichtbarkeit der Antwortanzahl",
           "description": "(Optional) Wer die Anzahl der Antworten sehen darf."
         },
-        "NewsSurvey_show_result_names": {
+        "newssurvey_show_result_names": {
           "name": "Sichtbarkeit der Namen",
           "description": "(Optional) Wer die Namen der Teilnehmenden sehen darf."
         },
-        "NewsSurvey_multiple_answers": {
+        "newssurvey_multiple_answers": {
           "name": "Mehrfachantworten erlauben",
           "description": "(Optional) Erlaubt das Auswählen mehrerer Antworten."
         },
-        "NewsSurvey_custom_answers": {
+        "newssurvey_custom_answers": {
           "name": "Eigene Antworten erlauben",
           "description": "(Optional) Teilnehmende dürfen eigene Antworten hinzufügen."
         },
-        "NewsSurvey_response_until": {
+        "newssurvey_response_until": {
           "name": "Antwortfrist aktivieren",
           "description": "(Optional) Eine Frist für Antworten festlegen."
         },
-        "NewsSurvey_ts_response": {
+        "newssurvey_ts_response": {
           "name": "Antwortfrist (Datum/Uhrzeit)",
           "description": "(Optional) Datum und Uhrzeit bis zu der Antworten möglich sind."
         },
-        "NewsSurvey_answers": {
+        "newssurvey_answers": {
           "name": "Antwortoptionen",
           "description": "(Optional) Liste der kommagetrennten Antwortoptionen."
         },
-        "NewsSurvey_sorting": {
+        "newssurvey_sorting": {
           "name": "Sortierung",
           "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
         }
