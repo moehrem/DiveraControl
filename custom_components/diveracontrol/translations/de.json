@@ -79,7 +79,7 @@
     "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
     "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
   },
-  "selectors": {
+  "selector": {
     "notification_type_options": {
       "options": {
         "1": "Ausgewählte Standorte (nur in der PRO-Version)",
@@ -138,7 +138,6 @@
       "group": "Gruppen",
       "user_cluster_relation": "Benutzer",
       "notification_filter_vehicle": "Nur Personen auf bestimmten Fahrzeugen alarmieren",
-      "vehicle": "Fahrzeuge",
       "notification_filter_status": "Nur Personen in bestimmtem Status alarmieren",
       "alarm_id": "Alarm",
       "alarmcode_id": "Alarmvorlage",
@@ -171,6 +170,9 @@
     }
   },
   "exceptions": {
+    "no_device_id": {
+      "message": "Keine Geräte-ID angegeben, bitte wähle ein Gerät aus."
+    },
     "no_vehicle_id": {
       "message": "Keine Fahrzeug-ID angegeben."
     },
@@ -251,6 +253,42 @@
     },
     "api_instance_not_found": {
       "message": "Keine Divera-Instanz für Gerät mit ID '{device_id}' gefunden."
+    },
+    "service_wrong_devices_count": {
+      "message": "Der Dienst unterstützt nur die Angabe genau einer einzigen Gerät-ID. {num_devices} wurden angegeben."
+    },
+    "invalid_id_list_format": {
+      "message": "Ungültiges Format für '{field}', es muss sich um eine Liste von Ganzzahlen handeln."
+    },
+    "invalid_id_format": {
+      "message": "Ungültiges Format für '{field}', es muss sich um eine Ganzzahl handeln."
+    },
+    "invalid_field_type": {
+      "message": "Ungültiger Typ für '{field}', es muss sich um {expected_type} handeln, nicht um {type}."
+    },
+    "invalid_vehicle_id_format": {
+      "message": "Ungültiges Format für Fahrzeug-ID '{vehicle_id}', es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+    },
+    "no_vehicles_selected": {
+      "message": "Empfängerauswahl 'Fahrzeuge', jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
+    },
+    "no_status_selected": {
+      "message": "Empfängerauswahl 'Nutzerstatus', jedoch wurden keine Nutzerstatus ausgewählt. Bitte wähle mindestens einen Status aus."
+    },
+    "invalid_datetime_format": {
+      "message": "Ungültiges Datums-/Uhrzeitformat für '{field}', es muss sich um einen ISO 8601-Zeitstempel handeln."
+    },
+    "invalid_datetime_type": {
+      "message": "Ungültiger Typ für '{field}', es muss sich um einen ISO 8601-Zeitstempel oder ein datetime-Objekt handeln, nicht um {type}."
+    },
+    "coordinator_not_found": {
+      "message": "Coordinator not found for UCR ID: {ucr_id}"
+    },
+    "unknown_service": {
+      "message": "Unknown service: {service}"
+    },
+    "invalid_number_of_vehicles": {
+      "message": "Ungültige Anzahl von Fahrzeugen angegeben. Es muss genau ein Fahrzeug angegeben werden, es wurden {num_vehicles} angegeben."
     }
 
   },
@@ -380,19 +418,19 @@
         },
         "group": {
           "name": "Gruppen",
-          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere)."
+          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere, durch Komma getrennt)."
         },
         "user_cluster_relation": {
           "name": "Benutzer",
-          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
+          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere, durch Komma getrennt)."
         },
         "notification_filter_vehicle": {
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle": {
+        "vehicle_id": {
           "name": "Fahrzeuge",
-          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger."
+          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
         },
         "notification_filter_status": {
           "name": "Empfänger auf Status beschränken",
@@ -404,7 +442,7 @@
         },
         "status":{
           "name": "Nutzerstatus",
-          "description": "(Optional) Nutzerstatus, der alarmiert werden soll."
+          "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
         }
       }
     },
@@ -515,19 +553,19 @@
         },
         "group": {
           "name": "Gruppen",
-          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere)."
+          "description": "(Optional) Ziel-Gruppen-IDs (eine oder mehrere, durch Kommas getrennt)."
         },
         "user_cluster_relation": {
           "name": "Benutzer",
-          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere)."
+          "description": "(Optional) Ziel-Benutzer-IDs (eine oder mehrere, durch Kommas getrennt)."
         },
         "notification_filter_vehicle": {
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle": {
+        "vehicle_id": {
           "name": "Fahrzeuge",
-          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger."
+          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (eine oder mehrere, durch Kommas getrennt)."
         },
         "notification_filter_status": {
           "name": "Empfänger auf Status beschränken",
@@ -546,7 +584,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu öffnenden oder zu schließenden Alarms."
+          "description": "(Erforderlich) ID des zu öffnenden oder zu schließenden Alarms. Nur genau eine ID zulässig!"
         },
         "closed": {
           "name": "Geschlossen",
@@ -627,7 +665,7 @@
         },
         "mode": {
           "name": "Modus",
-          "description": "(Erforderlich) Operation: add, remove oder reset."
+          "description": "(Erforderlich) Operation: 'Hinzufügen', 'Entfernen' oder 'Zurücksetzen' der Mannschaft."
         },
         "crew": {
           "name": "Besatzung",
@@ -730,11 +768,11 @@
         },
         "NewsSurvey_answers": {
           "name": "Antwortoptionen",
-          "description": "(Optional) Liste der Antwortoptionen (YAML-Liste)."
+          "description": "(Optional) Liste der kommagetrennten Antwortoptionen."
         },
         "NewsSurvey_sorting": {
           "name": "Sortierung",
-          "description": "(Optional) Optionale Sortierdefinition (YAML-Objekt/Liste)."
+          "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
         }
       }
     }

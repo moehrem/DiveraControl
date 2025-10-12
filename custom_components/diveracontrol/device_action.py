@@ -75,25 +75,25 @@ async def _get_selector_options(
             {
                 "value": "1",
                 "label": await get_translation(
-                    hass, "selectors", "notification_type_options.options.1"
+                    hass, "selector", "notification_type_options.options.1"
                 ),
             },
             {
                 "value": "2",
                 "label": await get_translation(
-                    hass, "selectors", "notification_type_options.options.2"
+                    hass, "selector", "notification_type_options.options.2"
                 ),
             },
             {
                 "value": "3",
                 "label": await get_translation(
-                    hass, "selectors", "notification_type_options.options.3"
+                    hass, "selector", "notification_type_options.options.3"
                 ),
             },
             {
                 "value": "4",
                 "label": await get_translation(
-                    hass, "selectors", "notification_type_options.options.4"
+                    hass, "selector", "notification_type_options.options.4"
                 ),
             },
         ]
@@ -103,19 +103,19 @@ async def _get_selector_options(
             {
                 "value": "add",
                 "label": await get_translation(
-                    hass, "selectors", "mode_options.options.add"
+                    hass, "selector", "mode_options.options.add"
                 ),
             },
             {
                 "value": "remove",
                 "label": await get_translation(
-                    hass, "selectors", "mode_options.options.remove"
+                    hass, "selector", "mode_options.options.remove"
                 ),
             },
             {
                 "value": "reset",
                 "label": await get_translation(
-                    hass, "selectors", "mode_options.options.reset"
+                    hass, "selector", "mode_options.options.reset"
                 ),
             },
         ]
@@ -128,19 +128,19 @@ async def _get_selector_options(
             {
                 "value": "0",
                 "label": await get_translation(
-                    hass, "selectors", "newssurvey_result_options.options.0"
+                    hass, "selector", "newssurvey_result_options.options.0"
                 ),
             },
             {
                 "value": "1",
                 "label": await get_translation(
-                    hass, "selectors", "newssurvey_result_options.options.1"
+                    hass, "selector", "newssurvey_result_options.options.1"
                 ),
             },
             {
                 "value": "2",
                 "label": await get_translation(
-                    hass, "selectors", "newssurvey_result_options.options.2"
+                    hass, "selector", "newssurvey_result_options.options.2"
                 ),
             },
         ]
@@ -353,15 +353,6 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
                     vol.Optional("group"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=group_options,
@@ -371,8 +362,17 @@ async def async_get_action_capabilities(
                     )
                     if group_options
                     else str,  # Comma-separated list
+                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_cluster_relation_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if user_cluster_relation_options
+                    else str,  # Comma-separated list als Fallback
                     vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle"): selector.SelectSelector(
+                    vol.Optional("vehicle_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -486,7 +486,7 @@ async def async_get_action_capabilities(
                     if group_options
                     else str,  # Comma-separated list
                     vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle"): selector.SelectSelector(
+                    vol.Optional("vehicle_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -634,7 +634,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle"): selector.SelectSelector(
+                    vol.Required("vehicle_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,

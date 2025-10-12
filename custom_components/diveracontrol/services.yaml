@@ -2,248 +2,480 @@ post_vehicle_status:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
+      domain: sensor
   fields:
     vehicle_id:
       required: true
       example: 123456
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
     status:
       required: false
       example: 123456
+      selector:
+        number:
+          min: 0
+          max: 9
     status_id:
       required: false
       example: 67890
+      selector:
+        number:
+          min: 1
+          max: 10
     status_note:
       required: false
       example: "Stärke 1/8"
+      selector:
+        text:
+          multiline: false
     lat:
       required: false
       example: 51.2584996
+      selector:
+        number:
+          min: -90
+          max: 90
     lng:
       required: false
       example: 7.2309561
+      selector:
+        number:
+          min: -180
+          max: 180
 
 
 post_alarm:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     title:
       required: true
       example: FEU
+      selector:
+        text:
+          multiline: false
     notification_type:
       required: true
       example: 2
+      selector:
+        select:
+          translation_key: notification_type_options
+          mode: dropdown
+          options:
+            - "1"
+            - "2"
+            - "3"
+            - "4"
+    alarmcode_id:
+      required: false
+      example: 123456789
+      selector:
+        number:
     foreign_id:
       required: false
       example: 2025-123
-    priority:
-      required: false
-      example: false
-    text:
-      required: false
-      example: '"Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"'
-    address:
-      required: false
-      example: '"Hauptstraße 247, 12345 Musterstadt, Deutschland"'
-    lat:
-      required: false
-      example: 51.2584996
-    lng:
-      required: false
-      example: 7.2309561
-    scene_object:
-      required: false
-      example: "Hinterhof, 2ter Aufgang"
-    caller:
-      required: false
-      example: "Max Mustermann, 01234 567890"
-    patient:
-      required: false
-      example: "Erika Mustermann, 45 Jahre, bekannte Allergie gegen Penicillin"
-    units:
-      required: false
-      example: "Musterdorf, Beispielstadt"
-    remarks:
-      required: false
-      example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
-    response_time:
-      required: false
-      example: 3600
-    send_push:
-      required: false
-      example: true
-    send_sms:
-      required: false
-      example: false
-    send_call:
-      required: false
-      example: false
-    send_mail:
-      required: false
-      example: false
-    send_pager:
-      required: false
-      example: false
-    closed:
-      required: false
-      example: false
-    message_channel:
-      required: false
-      example: true
-    notification_filter_access:
-      required: false
-      example: true
+      selector:
+        text:
+          multiline: false
     group:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     user_cluster_relation:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     notification_filter_vehicle:
       required: false
       example: false
-    vehicle:
+      selector:
+        boolean:
+    vehicle_id:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     notification_filter_status:
       required: false
       example: false
+      selector:
+        boolean:
     status:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
+    priority:
+      required: false
+      example: false
+      selector:
+        boolean:
+    text:
+      required: false
+      example: '"Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"'
+      selector:
+        text:
+          multiline: true
+    address:
+      required: false
+      example: '"Hauptstraße 247, 12345 Musterstadt, Deutschland"'
+      selector:
+        text:
+          multiline: false
+    lat:
+      required: false
+      example: 51.2584996
+      selector:
+        number:
+          min: -90
+          max: 90
+          unit_of_measurement: degrees
+          mode: box
+    lng:
+      required: false
+      example: 7.2309561
+      selector:
+        number:
+          min: -180
+          max: 180
+          unit_of_measurement: degrees
+          mode: box
+    scene_object:
+      required: false
+      example: "Hinterhof, 2ter Aufgang"
+      selector:
+        text:
+          multiline: false
+    caller:
+      required: false
+      example: "Max Mustermann, 01234 567890"
+      selector:
+        text:
+          multiline: false
+    patient:
+      required: false
+      example: "Erika Mustermann, 45 Jahre, bekannte Allergie gegen Penicillin"
+      selector:
+        text:
+          multiline: false
+    units:
+      required: false
+      example: "Musterdorf, Beispielstadt"
+      selector:
+        text:
+          multiline: true
+    remarks:
+      required: false
+      example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
+      selector:
+        text:
+          multiline: false
+    response_time:
+      required: false
+      example: 3600
+      selector:
+        number:
+          min: 0
+          max: 86400
+          unit_of_measurement: seconds
+    send_push:
+      required: false
+      example: true
+      selector:
+        boolean:
+    send_sms:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_call:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_mail:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_pager:
+      required: false
+      example: false
+      selector:
+        boolean:
+    closed:
+      required: false
+      example: false
+      selector:
+        boolean:
+    message_channel:
+      required: false
+      example: true
+      selector:
+        boolean:
+    notification_filter_access:
+      required: false
+      example: true
+      selector:
+        boolean:
 
 
 put_alarm:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     alarm_id:
       required: true
       example: 54321
+      selector:
+        number:
     title:
       required: true
       example: FEU G
+      selector:
+        text:
+          multiline: false
     notification_type:
       required: true
       example: 2
-    foreign_id:
-      required: false
-      example: 2025-123
+      selector:
+        select:
+          translation_key: notification_type_options
+          mode: dropdown
+          options:
+            - "1"
+            - "2"
+            - "3"
+            - "4"
     alarmcode_id:
       required: false
       example: 123456789
-    priority:
+      selector:
+        number:
+    foreign_id:
       required: false
-      example: false
-    text:
-      required: false
-      example: 'Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt'
-    address:
-      required: false
-      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
-    lat:
-      required: false
-      example: 51.2584996
-    lng:
-      required: false
-      example: 7.2309561
-    scene_object:
-      required: false
-      example: "PKW, rot, 4 Türen"
-    caller:
-      required: false
-      example: "Max Mustermann"
-    patient:
-      required: false
-      example: "Max Mustermann"
-    report:
-      required: false
-      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
-    private_mode:
-      required: false
-      example: false
-    send_push:
-      required: false
-      example: true
-    send_sms:
-      required: false
-      example: false
-    send_call:
-      required: false
-      example: false
-    send_mail:
-      required: false
-      example: false
-    send_pager:
-      required: false
-      example: false
-    response_time:
-      required: false
-      example: 3600
-    closed:
-      required: false
-      example: false
-    message_channel:
-      required: false
-      example: true
-    ts_publish:
-      required: false
-      example: 1717755979
-    notification_filter_access:
-      required: false
-      example: true
+      example: 2025-123
+      selector:
+        text:
+          multiline: false
     group:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     user_cluster_relation:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     notification_filter_vehicle:
       required: false
       example: false
-    vehicle:
+      selector:
+        boolean:
+    vehicle_id:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     notification_filter_status:
       required: false
       example: false
+      selector:
+        boolean:
     status:
       required: false
       example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
+    priority:
+      required: false
+      example: false
+      selector:
+        boolean:
+    text:
+      required: false
+      example: 'Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt'
+      selector:
+        text:
+          multiline: true
+    address:
+      required: false
+      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
+      selector:
+        text:
+          multiline: false
+    lat:
+      required: false
+      example: 51.2584996
+      selector:
+        number:
+          min: -90
+          max: 90
+          mode: box
+          unit_of_measurement: degrees
+    lng:
+      required: false
+      example: 7.2309561
+      selector:
+        number:
+          min: -180
+          max: 180
+          mode: box
+          unit_of_measurement: degrees
+    scene_object:
+      required: false
+      example: "PKW, rot, 4 Türen"
+      selector:
+        text:
+          multiline: false
+    caller:
+      required: false
+      example: "Max Mustermann"
+      selector:
+        text:
+          multiline: false
+    patient:
+      required: false
+      example: "Max Mustermann"
+      selector:
+        text:
+          multiline: false
+    report:
+      required: false
+      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
+      selector:
+        text:
+          multiline: true
+    private_mode:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_push:
+      required: false
+      example: true
+      selector:
+        boolean:
+    send_sms:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_call:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_mail:
+      required: false
+      example: false
+      selector:
+        boolean:
+    send_pager:
+      required: false
+      example: false
+      selector:
+        boolean:
+    response_time:
+      required: false
+      example: 3600
+      selector:
+        number:
+          min: 0
+          max: 86400
+          unit_of_measurement: seconds
+    closed:
+      required: false
+      example: false
+      selector:
+        boolean:
+    message_channel:
+      required: false
+      example: true
+      selector:
+        boolean:
+    ts_publish:
+      required: false
+      example: 1717755979
+      selector:
+        datetime:
+    notification_filter_access:
+      required: false
+      example: true
+      selector:
+        boolean:
+
 
 
 post_close_alarm:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     alarm_id:
       required: true
       example: 54321
+      selector:
+        number:
     closed:
       required: true
       example: true
+      selector:
+        boolean:
     report:
       required: false
       example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
+      selector:
+        text:
+          multiline: true
 
 
 post_message:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     message_channel_id:
       required: false
       example: 54321
+      selector:
+        number:
     alarm_id:
       required: false
       example: 54321
     text:
       required: false
       example: 'Dies ist eine Testnachricht.'
+      selector:
+        text:
+          multiline: true
 
 
 post_using_vehicle_property:
@@ -254,102 +486,204 @@ post_using_vehicle_property:
     vehicle_id:
       required: true
       example: 123456
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
     properties:
       required: false
       example: |
         bat: 85.5
         zünd: 1
         funk: 1
+      selector:
+        object:
 
 post_using_vehicle_crew:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     vehicle_id:
       required: true
       example: 123456
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
     mode:
       required: true
       example: add
+      selector:
+        select:
+          translation_key: mode_options
+          options:
+            - "add"
+            - "remove"
+            - "reset"
+          mode: dropdown
     crew:
       required: false
-      example: 123, 456, 789
+      example: 123456, 456789, 789123
+      selector:
+        text:
+          multiline: false
 
 post_news:
   target:
     device:
       integration: diveracontrol
+    entity:
+      integration: diveracontrol
   fields:
     title:
       required: true
       example: Neue Dienstanweisung
+      selector:
+        text:
+          multiline: false
     notification_type:
       required: true
-      example: 2
+      example: "2"
+      selector:
+        select:
+          translation_key: notification_type_options
+          mode: dropdown
+          options:
+            - "1"
+            - "2"
+            - "3"
+            - "4"
     text:
       required: false
       example: Rückwärtsfahren nur mit Einweiser
+      selector:
+        text:
+          multiline: true
     address:
       required: false
       example: Raum 1.23
+      selector:
+        text:
+          multiline: false
     survey:
       required: false
       example: True
+      selector:
+        boolean:
     private_mode:
       required: false
       example: False
+      selector:
+        boolean:
     send_push:
       required: false
       example: true
+      selector:
+        boolean:
     send_sms:
       required: false
       example: false
+      selector:
+        boolean:
     send_call:
       required: false
       example: false
+      selector:
+        boolean:
     send_mail:
       required: false
       example: false
+      selector:
+        boolean:
     send_pager:
       required: false
       example: false
+      selector:
+        boolean:
     archive:
       required: false
       example: True
+      selector:
+        boolean:
     ts_archive:
       required: false
       example: 4902061253
+      selector:
+        datetime:
     group:
       required: false
-      example: [ 1, 2, 3, 4 ]
+      example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     user_cluster_relation:
       required: false
-      example: [ 1, 2, 3, 4 ]
+      example: 1, 2, 3, 4
+      selector:
+        text:
+          multiline: false
     NewsSurvey_title:
       required: false
       example: Mit wie vielen Personen nehmt ihr am Sommerfest teil?
+      selector:
+        text:
+          multiline: false
     NewsSurvey_show_result_count:
       required: false
-      example: 2
+      example: "2"
+      selector:
+        select:
+          translation_key: newssurvey_result_options
+          options:
+            - "0"
+            - "1"
+            - "2"
+          mode: dropdown
     NewsSurvey_show_result_names:
       required: false
-      example: 2
+      example: "2"
+      selector:
+        select:
+          translation_key: newssurvey_result_options
+          options:
+            - "0"
+            - "1"
+            - "2"
+          mode: dropdown
     NewsSurvey_multiple_answers:
       required: false
       example: True
+      selector:
+        boolean:
     NewsSurvey_custom_answers:
       required: false
       example: True
+      selector:
+        boolean:
     NewsSurvey_response_until:
       required: false
       example: True
+      selector:
+        boolean:
     NewsSurvey_ts_response:
       required: false
       example: 4902061253
+      selector:
+        datetime:
     NewsSurvey_answers:
       required: false
       example: Trupp,Staffel,Gruppe,Zug
+      selector:
+        text:
+          multiline: false
     NewsSurvey_sorting:
       required: false
       example: Zug,Gruppe,Staffel,Trupp
+      selector:
+        text:
+          multiline: false

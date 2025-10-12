@@ -1,32 +1,27 @@
 """Contain several helper methods for DiveraControl integration."""
 
-import asyncio
-from collections.abc import Callable
 from datetime import timedelta
-from functools import wraps
 import logging
-import time
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import translation
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 
 from .const import (
+    BASE_API_URL,
     D_ACCESS,
     D_ALARM,
     D_CLUSTER,
     D_CLUSTER_NAME,
     D_COORDINATOR,
+    D_OPEN_ALARMS,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USER,
-    D_OPEN_ALARMS,
     D_VEHICLE,
     DOMAIN,
     MANUFACTURER,
@@ -94,89 +89,18 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
         "model": DOMAIN,
         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
         "entry_type": "service",  # type: ignore[misc]
-        "configuration_url": "https://app.divera247.com/session/login.html",
+        "configuration_url": f"{BASE_API_URL}session/login.html",
     }
 
 
-def log_execution_time(func: Callable[..., Any]) -> Callable[..., Any]:
-    """Log execution times of function only if loglevel is DEBUG.
-
-    Args:
-        func (callable): the function to be wrapped.
-
-    Returns:
-        callable: the wrapped function.
-
-    """
-
-    if not _LOGGER.isEnabledFor(logging.DEBUG):
-        return func
-
-    if asyncio.iscoroutinefunction(func):
-
-        @wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = await func(*args, **kwargs)
-            elapsed_time = time.time() - start_time
-            _LOGGER.debug(
-                "Execution time of %s: %.2f seconds", func.__name__, elapsed_time
-            )
-            return result
-
-        return async_wrapper
-
-    @wraps(func)
-    def sync_wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        elapsed_time = time.time() - start_time
-        _LOGGER.debug("Execution time of %s: %.2f seconds", func.__name__, elapsed_time)
-        return result
-
-    return sync_wrapper
-
-
-def _normalize_id_list(value: Any) -> list[str]:
-    """Normalize device_id or entity_id to a list of strings.
-
-    Handles:
-    - Single string: "device_123" -> ["device_123"]
-    - Comma-separated string: "device_123,device_456" -> ["device_123", "device_456"]
-    - List of strings: ["device_123", "device_456"] -> ["device_123", "device_456"]
-    - Empty/None: [] -> []
-    """
-    if not value:
-        return []
-
-    if isinstance(value, str):
-        # Handle comma-separated strings
-        return [item.strip() for item in value.split(",") if item.strip()]
-
-    if isinstance(value, list):
-        # Handle list of strings (flatten any comma-separated items)
-        result = []
-        for item in value:
-            if isinstance(item, str):
-                result.extend(
-                    subitem.strip() for subitem in item.split(",") if subitem.strip()
-                )
-            else:
-                result.append(str(item))
-        return result
-
-    # Single non-string value
-    return [str(value)]
-
-
 def get_api_instance_per_device(
-    hass: HomeAssistant, device_id: list[str]
+    hass: HomeAssistant, device_id: str
 ) -> list["DiveraAPI"]:
     """Fetch api-instance of devices based on device_ids and/or entity_ids given from user input. Raises exception if not found. Handles duplicates by using a dict.
 
     Args:
         hass: HomeAssistant instance
-        device_ids: List of device IDs to search for
+        device_id: device ID to search for
 
     Returns:
         api_instances: API instances as list of classes of DiveraAPI
@@ -275,67 +199,160 @@ def get_coordinator_data(
 
 async def handle_entity(
     hass: HomeAssistant,
-    call: ServiceCall,
+    data: dict[str, Any],
     service: str,
     ucr_id: str,
     entity_id: int | str,
 ) -> None:
-    """Update entity data based on given method.
+    """Update entity data in coordinator after service call.
 
     Args:
-        hass (HomeAssistant): Home Assistant instance
-        call (dict): Data from service call
-        service (str): Service name that was called
-        ucr_id (str): User cluster relation ID
-        entity_id (int): Entity ID if needed
+        hass: Home Assistant instance
+        call: Service call with data
+        service: Service name that was called
+        ucr_id: User cluster relation ID
+        entity_id: Entity ID to update
 
-    Returns:
-        None
+    Raises:
+        HomeAssistantError: If service is unknown or coordinator not found
 
     """
+    entity_id_str = str(entity_id)
+    coordinator: DiveraCoordinator | None = (
+        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    )
 
-    entity_id = str(entity_id)
-    coordinator = hass.data[DOMAIN].get(ucr_id, {}).get(D_COORDINATOR, None)
+    if not coordinator:
+        msg = await get_translation(
+            hass,
+            "exceptions",
+            "coordinator_not_found.message",
+            {"ucr_id": ucr_id},
+        )
+        raise HomeAssistantError(msg)
+
+    # Get current coordinator data
+    coord_data = coordinator.data.copy()
 
     match service:
         case "put_alarm" | "post_close_alarm":
-            alarm_data = (
-                coordinator.data.get(D_ALARM, {})
-                .get("items", {})
-                .get(str(entity_id), {})
-            )
+            # Update alarm data
+            alarm_items = coord_data.get(D_ALARM, {}).get("items", {})
+            if entity_id_str not in alarm_items:
+                _LOGGER.warning(
+                    "Alarm %s not found in coordinator data for service %s",
+                    entity_id_str,
+                    service,
+                )
+                return
 
-            for key in call.data:
+            alarm_data = alarm_items[entity_id_str]
+
+            # Update only relevant fields from service call
+            for key, value in data.items():
+                if key in ("device_id", "alarm_id"):
+                    continue
                 if key in alarm_data:
-                    alarm_data[key] = call.data[key]
+                    alarm_data[key] = value
 
-            # updating coordinator data
-            coordinator.async_set_updated_data(coordinator.data)
+        case "post_vehicle_status":
+            # Update vehicle FMS status
+            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+            if entity_id_str not in vehicle_items:
+                _LOGGER.warning(
+                    "Vehicle %s not found in coordinator data for service %s",
+                    entity_id_str,
+                    service,
+                )
+                return
 
-        case "post_vehicle_status" | "post_using_vehicle_property":
-            vehicle_data = (
-                coordinator.data.get(D_CLUSTER, {})
-                .get(D_VEHICLE, {})
-                .get(str(entity_id), {})
-            )
+            vehicle_data = vehicle_items[entity_id_str]
 
-            for key in call.data:
-                if key in ["status", "status_id"]:
-                    vehicle_data["fmsstatus_id"] = call.data[key]
+            # # Map status fields to fmsstatus_id
+            # if "status" in call.data:
+            #     vehicle_data["fmsstatus_id"] = call.data["status"]
+            # if "status_id" in call.data:
+            #     vehicle_data["fmsstatus_id"] = call.data["status_id"]
+
+            # Update other vehicle fields
+            for key, value in data.items():
+                if key in ("device_id", "vehicle_id", "status", "status_id"):
                     continue
                 if key in vehicle_data:
-                    vehicle_data[key] = call.data[key]
+                    vehicle_data[key] = value
 
-            # updating coordinator data
-            coordinator.async_set_updated_data(coordinator.data)
+        case "post_using_vehicle_property":
+            # Update vehicle properties
+            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+            if entity_id_str not in vehicle_items:
+                _LOGGER.warning(
+                    "Vehicle %s not found in coordinator data for service %s",
+                    entity_id_str,
+                    service,
+                )
+                return
+
+            vehicle_data = vehicle_items[entity_id_str]
+
+            # Update properties object
+            properties = data.get("properties", {})
+            if properties:
+                if "properties" not in vehicle_data:
+                    vehicle_data["properties"] = {}
+                vehicle_data["properties"].update(properties)
 
         case "post_using_vehicle_crew":
-            # TODO add entity update with crew
-            pass
+            # Update vehicle crew
+            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+            if entity_id_str not in vehicle_items:
+                _LOGGER.warning(
+                    "Vehicle %s not found in coordinator data for service %s",
+                    entity_id_str,
+                    service,
+                )
+                return
 
-        case _:  # default
-            _LOGGER.error("Service not found: %s", service)
-            raise HomeAssistantError(f"Service not found: {service}")
+            vehicle_data: dict[str, Any] = vehicle_items[entity_id_str]
+            mode: str | None = data.get("mode")
+            new_crew: list[int] = data.get("crew", [])
+
+            if "crew" not in vehicle_data:
+                vehicle_data["crew"] = []
+
+            # extract IDs for easier handling
+            current_crew: set[int] = {item["id"] for item in vehicle_data["crew"]}
+
+            match mode:
+                case "add":
+                    current_crew.update(new_crew)
+                case "remove":
+                    current_crew.difference_update(new_crew)
+                case "reset":
+                    current_crew.clear()
+                case _:
+                    _LOGGER.warning("Unknown crew mode: %s", mode)
+
+            # convert to Divera format
+            vehicle_data["crew"] = [{"id": crew_id} for crew_id in sorted(current_crew)]
+
+        case _:
+            # Unknown service
+            msg = await get_translation(
+                hass,
+                "exceptions",
+                "unknown_service.message",
+                {"service": service},
+            )
+            _LOGGER.error(msg)
+            raise HomeAssistantError(msg)
+
+    # Update coordinator with modified data
+    coordinator.async_set_updated_data(coord_data)
+    _LOGGER.debug(
+        "Updated coordinator data for %s after %s service call",
+        entity_id_str,
+        service,
+    )
 
 
 def set_update_interval(
@@ -347,6 +364,8 @@ def set_update_interval(
 
     Args:
         cluster_data (dict): cluster data of coordinator containing update interval configuration.
+        intervall_data (dict): dictionary containing update interval settings.
+        old_interval (timedelta | None): previous update interval.
 
     Returns:
         timedelta: new update interval.
@@ -365,7 +384,7 @@ def set_update_interval(
     else:
         open_alarms = 0
 
-    new_interval = (
+    new_interval: timedelta = (
         intervall_data.get(D_UPDATE_INTERVAL_ALARM)
         if open_alarms > 0
         else intervall_data.get(D_UPDATE_INTERVAL_DATA)
@@ -386,11 +405,6 @@ def set_update_interval(
     )
 
     return old_interval
-
-
-def extract_keys(data) -> set[str]:
-    """Extract keys from dictionaries."""
-    return set(data.keys()) if isinstance(data, dict) else set()
 
 
 async def get_translation(

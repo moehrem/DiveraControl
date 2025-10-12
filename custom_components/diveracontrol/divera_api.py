@@ -25,7 +25,7 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import log_execution_time, permission_check
+from .utils import permission_check
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,7 +56,6 @@ class DiveraAPI:
 
         self.session = async_get_clientsession(hass)
 
-    @log_execution_time
     async def api_request(
         self,
         url: str,

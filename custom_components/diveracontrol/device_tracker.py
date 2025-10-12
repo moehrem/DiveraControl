@@ -10,7 +10,6 @@ from homeassistant.helpers import entity_registry as er
 from .const import D_ALARM, D_CLUSTER, D_COORDINATOR, D_UCR_ID, D_VEHICLE, DOMAIN
 from .coordinator import DiveraCoordinator
 from .entity import DiveraAlarmTracker, DiveraVehicleTracker
-from .utils import extract_keys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,9 +44,9 @@ async def async_setup_entry(
         cluster_data = coordinator.data
 
         # Get current IDs from data
-        current_alarm_ids = extract_keys(cluster_data.get(D_ALARM, {}).get("items", {}))
-        current_vehicle_ids = extract_keys(
-            cluster_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+        current_alarm_ids = set(cluster_data.get(D_ALARM, {}).get("items", {}).keys())
+        current_vehicle_ids = set(
+            cluster_data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
         )
 
         # FIRST Remove archived alarm trackers

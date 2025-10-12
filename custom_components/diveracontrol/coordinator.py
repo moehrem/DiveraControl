@@ -16,7 +16,7 @@ from .const import (
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
-from .utils import log_execution_time, set_update_interval
+from .utils import set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +64,6 @@ class DiveraCoordinator(DataUpdateCoordinator):
             config_entry=config_entry,
         )
 
-    @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Divera API.
 
