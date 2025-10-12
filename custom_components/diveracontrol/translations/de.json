@@ -189,7 +189,7 @@
       "message": "Keine Benachrichtigungsart angegeben."
     },
     "api_post_alarm_failed": {
-      "message": "Erstellen des Alarms '{title}' fehlgeschlagen."
+      "message": "Erstellen des Alarms {title} fehlgeschlagen."
     },
     "no_alarm_id": {
       "message": "Keine Alarm-ID angegeben."
@@ -201,13 +201,13 @@
       "message": "Öffnen/Schließen des Alarms {alarm_id} fehlgeschlagen."
     },
     "both_message_channel_and_alarm_id": {
-      "message": "Entweder 'Nachrichtenkanal-ID' oder 'Alarm-ID' muss angegeben werden, nicht beides."
+      "message": "Entweder Nachrichtenkanal-ID oder Alarm-ID muss angegeben werden, nicht beides."
     },
     "no_message_channel_or_alarm_id": {
-      "message": "Entweder 'Nachrichtenkanal-ID' oder 'Alarm-ID' muss angegeben werden."
+      "message": "Entweder Nachrichtenkanal-ID oder Alarm-ID muss angegeben werden."
     },
     "no_message_channel": {
-      "message": "Kein Nachrichtenkanal für Alarm-ID '{alarm_id}' gefunden. Überprüfen Sie, ob es einen Nachrichtenkanal für diesen Alarm gibt."
+      "message": "Kein Nachrichtenkanal für Alarm-ID {alarm_id} gefunden. Überprüfen Sie, ob es einen Nachrichtenkanal für diesen Alarm gibt."
     },
     "api_post_message_failed": {
       "message": "Senden der Nachricht an den Kanal {message_channel_id} fehlgeschlagen."
@@ -219,10 +219,10 @@
       "message": "Kein Modus gewählt. Gültige Werte sind {valid_modes}."
     },
     "no_crew_provided": {
-      "message": "Keine Besatzung angegeben. Mindestens ein Benutzer muss in den Modi 'hinzufügen' und 'entfernen' angegeben werden."
+      "message": "Keine Besatzung angegeben. Mindestens ein Benutzer muss in den Modi hinzufügen und entfernen angegeben werden."
     },
     "invalid_mode": {
-      "message": "Ungültiger Modus '{mode}' für die Festlegung der Fahrzeugbesatzung, muss 'hinzufügen', 'entfernen' oder 'zurücksetzen' sein."
+      "message": "Ungültiger Modus {mode} für die Festlegung der Fahrzeugbesatzung, muss hinzufügen, entfernen oder zurücksetzen sein."
     },
     "api_post_using_vehicle_crew_failed": {
       "message": "Fehler beim Senden der Fahrzeugbesatzung für Fahrzeug-ID {vehicle_id}, überprüfen Sie die Protokolle auf Details."
@@ -234,52 +234,52 @@
       "message": "Fehler beim Senden der Nachricht, überprüfen Sie die Protokolle auf Details."
     },
     "no_groups_selected": {
-      "message": "Empfängerauswahl 'Gruppen', jedoch wurden keine Gruppen ausgewählt. Bitte wähle mindestens eine Gruppe aus."
+      "message": "Empfängerauswahl Gruppen, jedoch wurden keine Gruppen ausgewählt. Bitte wähle mindestens eine Gruppe aus."
     },
     "no_users_selected": {
-      "message": "Empfängerauswahl 'Benutzer', jedoch wurden keine Benutzer ausgewählt. Bitte wähle mindestens einen Benutzer aus."
+      "message": "Empfängerauswahl Benutzer, jedoch wurden keine Benutzer ausgewählt. Bitte wähle mindestens einen Benutzer aus."
     },
     "no_survey_sorting": {
       "message": "Umfrage aktiviert und Antworten vorhanden, aber keine Sortierung angegeben. Bitte gib eine Sortierung an."
     },
     "api_device_not_found": {
-      "message": "Gerät mit ID '{device_id}' nicht gefunden."
+      "message": "Gerät mit ID {device_id} nicht gefunden."
     },
     "api_config_entry_not_found": {
-      "message": "Konfigurationseintrag zum Gerät mit ID '{device_id}' nicht gefunden."
+      "message": "Konfigurationseintrag zum Gerät mit ID {device_id} nicht gefunden."
     },
     "api_ucr_id_not_found": {
-      "message": "Keine Divera-Einheit für den Konfigurationseintrag mit ID '{entry_id}' gefunden."
+      "message": "Keine Divera-Einheit für den Konfigurationseintrag mit ID {entry_id} gefunden."
     },
     "api_instance_not_found": {
-      "message": "Keine Divera-Instanz für Gerät mit ID '{device_id}' gefunden."
+      "message": "Keine Divera-Instanz für Gerät mit ID {device_id} gefunden."
     },
     "service_wrong_devices_count": {
       "message": "Der Dienst unterstützt nur die Angabe genau einer einzigen Gerät-ID. {num_devices} wurden angegeben."
     },
     "invalid_id_list_format": {
-      "message": "Ungültiges Format für '{field}', es muss sich um eine Liste von Ganzzahlen handeln."
+      "message": "Ungültiges Format für {field}, es muss sich um eine Liste von Ganzzahlen handeln."
     },
     "invalid_id_format": {
-      "message": "Ungültiges Format für '{field}', es muss sich um eine Ganzzahl handeln."
+      "message": "Ungültiges Format für {field}, es muss sich um eine Ganzzahl handeln."
     },
     "invalid_field_type": {
-      "message": "Ungültiger Typ für '{field}', es muss sich um {expected_type} handeln, nicht um {type}."
+      "message": "Ungültiger Typ für {field}, es muss sich um {expected_type} handeln, nicht um {type}."
     },
     "invalid_vehicle_id_format": {
-      "message": "Ungültiges Format für Fahrzeug-ID '{vehicle_id}', es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+      "message": "Ungültiges Format für Fahrzeug-ID {vehicle_id}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
     },
     "no_vehicles_selected": {
-      "message": "Empfängerauswahl 'Fahrzeuge', jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
+      "message": "Empfängerauswahl Fahrzeuge, jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
     },
     "no_status_selected": {
-      "message": "Empfängerauswahl 'Nutzerstatus', jedoch wurden keine Nutzerstatus ausgewählt. Bitte wähle mindestens einen Status aus."
+      "message": "Empfängerauswahl Nutzerstatus, jedoch wurden keine Nutzerstatus ausgewählt. Bitte wähle mindestens einen Status aus."
     },
     "invalid_datetime_format": {
-      "message": "Ungültiges Datums-/Uhrzeitformat für '{field}', es muss sich um einen ISO 8601-Zeitstempel handeln."
+      "message": "Ungültiges Datums-/Uhrzeitformat für {field}, es muss sich um einen ISO 8601-Zeitstempel handeln."
     },
     "invalid_datetime_type": {
-      "message": "Ungültiger Typ für '{field}', es muss sich um einen ISO 8601-Zeitstempel oder ein datetime-Objekt handeln, nicht um {type}."
+      "message": "Ungültiger Typ für {field}, es muss sich um einen ISO 8601-Zeitstempel oder ein datetime-Objekt handeln, nicht um {type}."
     },
     "coordinator_not_found": {
       "message": "Coordinator not found for UCR ID: {ucr_id}"
@@ -658,7 +658,7 @@
         },
         "mode": {
           "name": "Modus",
-          "description": "(Erforderlich) Operation: 'Hinzufügen', 'Entfernen' oder 'Zurücksetzen' der Mannschaft."
+          "description": "(Erforderlich) Operation: Hinzufügen, Entfernen oder Zurücksetzen der Mannschaft."
         },
         "crew": {
           "name": "Besatzung",

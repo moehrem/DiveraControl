@@ -189,7 +189,7 @@
       "message": "No notification type provided"
     },
     "api_post_alarm_failed": {
-      "message": "Creating alarm '{title}' failed"
+      "message": "Creating alarm {title} failed"
     },
     "no_alarm_id": {
       "message": "No alarm ID provided"
@@ -201,13 +201,13 @@
       "message": "Opening/closing alarm {alarm_id} failed"
     },
     "both_message_channel_and_alarm_id": {
-      "message": "Either 'message channel ID' or 'alarm ID' must be provided, not both"
+      "message": "Either message channel ID or alarm ID must be provided, not both"
     },
     "no_message_channel_or_alarm_id": {
-      "message": "Either 'message channel ID' or 'alarm ID' must be provided"
+      "message": "Either message channel ID or alarm ID must be provided"
     },
     "no_message_channel": {
-      "message": "No message channel found for alarm ID '{alarm_id}'. Check if a message channel exists for this alarm"
+      "message": "No message channel found for alarm ID {alarm_id}. Check if a message channel exists for this alarm"
     },
     "api_post_message_failed": {
       "message": "Sending message to channel {message_channel_id} failed"
@@ -219,10 +219,10 @@
       "message": "No mode selected. Valid values are {valid_modes}"
     },
     "no_crew_provided": {
-      "message": "No crew provided. At least one user must be specified in 'add' and 'remove' modes"
+      "message": "No crew provided. At least one user must be specified in add and remove modes"
     },
     "invalid_mode": {
-      "message": "Invalid mode '{mode}' for setting vehicle crew, must be 'add', 'remove' or 'reset'"
+      "message": "Invalid mode {mode} for setting vehicle crew, must be add, remove or reset"
     },
     "api_post_using_vehicle_crew_failed": {
       "message": "Error sending vehicle crew for vehicle ID {vehicle_id}, check logs for details"
@@ -234,52 +234,52 @@
       "message": "Error sending announcement, check logs for details"
     },
     "no_groups_selected": {
-      "message": "Recipient selection 'groups', but no groups selected. Please select at least one group"
+      "message": "Recipient selection groups, but no groups selected. Please select at least one group"
     },
     "no_users_selected": {
-      "message": "Recipient selection 'users', but no users selected. Please select at least one user"
+      "message": "Recipient selection users, but no users selected. Please select at least one user"
     },
     "no_survey_sorting": {
       "message": "Survey enabled and answers provided, but no sorting specified. Please provide sorting"
     },
     "api_device_not_found": {
-      "message": "Device with ID '{device_id}' not found"
+      "message": "Device with ID {device_id} not found"
     },
     "api_config_entry_not_found": {
-      "message": "Configuration entry for device with ID '{device_id}' not found"
+      "message": "Configuration entry for device with ID {device_id} not found"
     },
     "api_ucr_id_not_found": {
-      "message": "No Divera unit for configuration entry with ID '{entry_id}' found"
+      "message": "No Divera unit for configuration entry with ID {entry_id} found"
     },
     "api_instance_not_found": {
-      "message": "No Divera instance for device with ID '{device_id}' found"
+      "message": "No Divera instance for device with ID {device_id} found"
     },
     "service_wrong_devices_count": {
       "message": "The service only supports specifying exactly one device ID. {num_devices} were provided"
     },
     "invalid_id_list_format": {
-      "message": "Invalid format for '{field}', must be a list of integers"
+      "message": "Invalid format for {field}, must be a list of integers"
     },
     "invalid_id_format": {
-      "message": "Invalid format for '{field}', must be an integer"
+      "message": "Invalid format for {field}, must be an integer"
     },
     "invalid_field_type": {
-      "message": "Invalid type for '{field}', must be {expected_type}, not {type}"
+      "message": "Invalid type for {field}, must be {expected_type}, not {type}"
     },
     "invalid_vehicle_id_format": {
-      "message": "Invalid format for vehicle ID '{vehicle_id}', must be an integer or comma-separated list of integers"
+      "message": "Invalid format for vehicle ID {vehicle_id}, must be an integer or comma-separated list of integers"
     },
     "no_vehicles_selected": {
-      "message": "Recipient selection 'vehicles', but no vehicles selected. Please select at least one vehicle"
+      "message": "Recipient selection vehicles, but no vehicles selected. Please select at least one vehicle"
     },
     "no_status_selected": {
-      "message": "Recipient selection 'user status', but no user status selected. Please select at least one status"
+      "message": "Recipient selection user status, but no user status selected. Please select at least one status"
     },
     "invalid_datetime_format": {
-      "message": "Invalid date/time format for '{field}', must be an ISO 8601 timestamp"
+      "message": "Invalid date/time format for {field}, must be an ISO 8601 timestamp"
     },
     "invalid_datetime_type": {
-      "message": "Invalid type for '{field}', must be an ISO 8601 timestamp or datetime object, not {type}"
+      "message": "Invalid type for {field}, must be an ISO 8601 timestamp or datetime object, not {type}"
     },
     "coordinator_not_found": {
       "message": "Coordinator not found for UCR ID: {ucr_id}"
@@ -658,7 +658,7 @@
         },
         "mode": {
           "name": "Mode",
-          "description": "(Required) Operation: 'add', 'remove' or 'reset' crew"
+          "description": "(Required) Operation: add, remove or reset crew"
         },
         "crew": {
           "name": "Crew",
