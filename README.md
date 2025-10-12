@@ -37,14 +37,15 @@
 
 **DiveraControl** ist eine Integration von [Divera 24/7](https://www.divera247.com) in [HomeAssistant](https://www.home-assistant.io/). Sie ermöglicht lokalen Administratoren oder Einheitenbesitzern einen umfangreichen Datenaustausch zwischen HomeAssistant und Divera 24/7.
 
-In Wachen, Fahrzeugen und EInsätzen sammeln sich zahlreiche Daten an, die sinnvoll und effektiv genutzt werden könnten, um Abläufe effektiver und automatisierter zu gestalten. Leider gibt es kaum erschwingliche, integrierte Lösungen für die Verwaltung und Steuerung dieser Daten. **HomeAssistant** bietet hier eine kostengünstige Zentrale zur Steuerung von zum Beispiel:
+Wachen, Fahrzeuge und Geräte werden zunehmend smarter. Die daraus entstehenden Daten können sinnvoll und effektiv genutzt werden, um Einsätze und Alltag effektiver und automatisierter zu gestalten. Leider gibt es kaum erschwingliche, integrierte Lösungen für die Verwaltung und Steuerung dieser Daten. **HomeAssistant** bietet hier eine kostengünstige Zentrale zur Steuerung und Überwachung von zum Beispiel:
 
-- Beleuchtung, Türen & Toren
-- Monitoren & Sprachausgaben
-- Fahrzeugpositionen, Besatzungen & Status
-- Gerätepositionen & Akkuständen
+- Beleuchtung, Türen & Toren,
+- Monitoren & Sprachausgaben,
+- Fahrzeugpositionen, Besatzungen & Status,
+- Gerätepositionen & Akkuständen,
+- ... (theoretisch) jeder beliebige Anwendung, solange die Daten verarbeitet werden können.
 
-Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmierungssoftware bereit und ermöglicht so eine nahtlose Integration.
+Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmierungssoftware bereit und ermöglicht so eine nahtlose Integration der Divera-Einheit.
 
 **Für wen ist diese Integration gedacht?**
 
@@ -59,7 +60,7 @@ Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmier
 
 Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von HomeAssistant und dieser Integration in realen Lagen erfolgt **auf eigene Verantwortung**. Die Einhaltung der Datenschutzrichtlinien – insbesondere im Hinblick auf **Datenweitergabe, -verarbeitung und -sicherheit** – liegt vollständig beim Nutzer.
 
-> Diese Integration steht in **keiner Verbindung** zu und wird auch **nicht unterstützt** von der DIVERA GmbH.
+Diese Integration steht in **keiner Verbindung** zu und wird auch **nicht unterstützt** von der DIVERA GmbH.
 
 ---
 

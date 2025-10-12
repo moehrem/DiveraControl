@@ -33,12 +33,13 @@
 
 **DiveraControl** is an integration of [Divera 24/7](https://www.divera247.com) into [Home Assistant](https://www.home-assistant.io/). It enables local administrators or unit owners to exchange data between Home Assistant and Divera 24/7.
 
-In stations, vehicles and operations, numerous data points accumulate that could be meaningfully and effectively used to make processes more efficient and automated. Unfortunately, affordable integrated solutions for managing and controlling such data are rare. **Home Assistant** offers a low-cost central hub for controlling:
+Stations, vehicles, and equipment are becoming increasingly smart. The resulting data can be used meaningfully and effectively to make operations and daily routines more efficient and automated. Unfortunately, there are hardly any affordable, integrated solutions for managing and controlling this data. **Home Assistant** provides a cost-effective hub for controlling and monitoring, for example:
 
-- Lighting, doors & gates
-- Monitors & voice output
-- Vehicle positions, crew & statuses
-- Device locations & battery levels
+- Lighting, doors & gates,
+- Monitors & voice announcements,
+- Vehicle positions, crews & status,
+- Equipment positions & battery levels,
+- ... (theoretically) any application, as long as the data can be processed.
 
 This is where **DiveraControl** comes in: it provides the interface to the alerting software and allows seamless integration.
 
@@ -55,7 +56,7 @@ This is where **DiveraControl** comes in: it provides the interface to the alert
 
 **Data protection** is especially important in public safety (BOS) environments. The use of Home Assistant and this integration in real-world scenarios is **at your own risk**. Ensuring compliance with data protection regulations – particularly with regard to **data transfer, processing, and security** – is entirely the responsibility of the user.
 
-> This integration is **not affiliated with** nor **supported by** DIVERA GmbH.
+This integration is **not affiliated with** nor **supported by** DIVERA GmbH.
 
 ---
 
