@@ -290,7 +290,6 @@
     "invalid_number_of_vehicles": {
       "message": "Ungültige Anzahl von Fahrzeugen angegeben. Es muss genau ein Fahrzeug angegeben werden, es wurden {num_vehicles} angegeben."
     }
-
   },
   "services": {
     "post_vehicle_status": {
@@ -323,7 +322,6 @@
         }
       }
     },
-
     "post_alarm": {
       "name": "Alarm erstellen",
       "description": "Erstellt einen neuen Alarm in Divera 24/7.",
@@ -446,7 +444,6 @@
         }
       }
     },
-
     "put_alarm": {
       "name": "Alarm ändern",
       "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
@@ -577,7 +574,6 @@
         }
       }
     },
-
     "post_close_alarm": {
       "name": "Alarm öffnen/schließen",
       "description": "Öffnet oder schließt einen bestehenden Alarm und übermittelt optional einen Bericht.",
@@ -596,7 +592,6 @@
         }
       }
     },
-
     "post_message": {
       "name": "Nachricht senden",
       "description": "Sendet eine Nachricht an einen Kanal oder den dem Alarm zugeordneten Kanal.",
@@ -639,7 +634,6 @@
         }
       }
     },
-
     "post_using_vehicle_property": {
       "name": "Fahrzeugeigenschaften ändern",
       "description": "Setzt beliebige Schlüssel-Wert-Paare für ein bestimmtes Fahrzeug.",
@@ -654,7 +648,6 @@
         }
       }
     },
-
     "post_using_vehicle_crew": {
       "name": "Fahrzeugbesatzung ändern",
       "description": "Fügt Besatzung hinzu, entfernt sie oder setzt sie zurück (reset) für ein bestimmtes Fahrzeug.",
@@ -673,7 +666,6 @@
         }
       }
     },
-
     "post_news": {
       "name": "Mitteilung erstellen",
       "description": "Veröffentlicht eine Mitteilung mit optionalen Empfängern und optionaler Umfrage.",
