@@ -31,10 +31,6 @@ from .const import (
     VERSION,
 )
 
-if TYPE_CHECKING:
-    from .coordinator import DiveraCoordinator
-    from .divera_api import DiveraAPI
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -42,42 +38,42 @@ def permission_check(
     hass: HomeAssistant,
     ucr_id: str,
     perm_key: str,
-) -> bool:
+) -> None:
     """Check permission and return success.
 
     Args:
-        hass: HomeAssistant
-        ucr_id: str
-        perm_key: str
+        hass: HomeAssistant instance.
+        ucr_id: User cluster relation ID.
+        perm_key: Permission key to check.
 
     Returns:
-        bool: True if permission granted, False if denied
-
+        True if permission granted, False if denied.
     """
+    coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    if not coordinator:
+        return
 
-    success = False
+    cluster_data = coordinator.data
 
-    cluster_data = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {}).data
-    cluster_name = (
-        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR, {}).cluster_name
-    )
-    if cluster_data is not None:
-        management = cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(PERM_MANAGEMENT)
-        permission = cluster_data.get(D_USER, {}).get(D_ACCESS, {}).get(perm_key)
+    if cluster_data is None:
+        raise HomeAssistantError("No permission data available yet, permission denied")
 
-        if management:
-            success = management
-        elif permission:
-            success = permission
-        else:
-            success = False
+    user_access = cluster_data.get(D_USER, {}).get(D_ACCESS, {})
 
-        if not success:
-            _LOGGER.debug(
-                "Permission denied for %s in cluster %s", perm_key, cluster_name
-            )
+    # Management permission grants all access
+    if user_access.get(PERM_MANAGEMENT):
+        _LOGGER.debug(
+            "Management permission granted for cluster '%s'",
+            coordinator.cluster_name,
+        )
+        return
 
-    return success
+    if not user_access.get(perm_key):
+        raise HomeAssistantError(
+            f"Permission '{perm_key}' denied for cluster '{coordinator.cluster_name}'"
+        )
+
+    return
 
 
 def get_device_info(cluster_name: str) -> DeviceInfo:
@@ -93,108 +89,75 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
     }
 
 
-def get_api_instance_per_device(
-    hass: HomeAssistant, device_id: str
-) -> list["DiveraAPI"]:
-    """Fetch api-instance of devices based on device_ids and/or entity_ids given from user input. Raises exception if not found. Handles duplicates by using a dict.
+def _get_coordinator_from_device(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
+    """Get coordinator data dictionary for a device.
 
     Args:
-        hass: HomeAssistant instance
-        device_id: device ID to search for
+        hass: Home Assistant instance.
+        device_id: Device ID.
 
     Returns:
-        api_instances: API instances as list of classes of DiveraAPI
+        Integration data dictionary containing 'api' and 'coordinator'.
 
     Raises:
-        HomeAssistantError: If integration data or API instance is missing or not found
+        HomeAssistantError: If device or integration data not found.
     """
-
     device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
 
-    # handle device_ids
-    device = device_registry.devices.get(device_id)
-    if not device:
-        msg = get_translation(
-            hass,
-            "exceptions",
-            "api_device_not_found.message",
-            {"device_id": device_id},
-        )
-        raise HomeAssistantError(msg)
+    if not device or not device.config_entries:
+        raise HomeAssistantError(f"Device not found: {device_id}")
 
-    entry_id = next(iter(device.config_entries))
-    config_entry = hass.config_entries.async_get_entry(entry_id)
+    config_entry_id = next(iter(device.config_entries), None)
+    if not config_entry_id:
+        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
 
-    if not config_entry:
-        msg = get_translation(
-            hass,
-            "exceptions",
-            "api_config_entry_not_found.message",
-            {"device_id": device_id},
-        )
-        raise HomeAssistantError(msg)
+    entry = hass.config_entries.async_get_entry(config_entry_id)
+    if not entry or entry.domain != DOMAIN:
+        raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
 
-    ucr_id = config_entry.data.get(D_UCR_ID)
+    # ucr_id = entry.data.get(D_UCR_ID)
+    # if not ucr_id:
+    #     raise HomeAssistantError(f"UCR ID not found for device: {device_id}")
 
-    if not ucr_id:
-        msg = get_translation(
-            hass,
-            "exceptions",
-            "api_ucr_id_not_found.message",
-            {"entry_id": entry_id},
-        )
-        raise HomeAssistantError(msg)
+    # coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    # if not coordinator:
+    #     raise HomeAssistantError(f"Integration data not found for device: {device_id}")
 
-    api_instance = hass.data[DOMAIN][ucr_id]["api"]
-    if not api_instance:
-        msg = get_translation(
-            hass,
-            "exceptions",
-            "api_instance_not_found.message",
-            {"device_id": device_id},
-        )
-        raise HomeAssistantError(msg)
+    coordinator = entry.runtime_data
 
-    return api_instance
+    return coordinator
 
 
-def get_coordinator_data(
+def get_coordinator_key_from_device(
     hass: HomeAssistant,
-    sensor_id: str,
-) -> "DiveraCoordinator":
-    """Fetch coordinator data based on sensor id.
+    device_id: str,
+    key: str | None = None,
+) -> dict[str, Any]:
+    """Get the DiveraCoordinator instance for a device.
 
     Args:
-        hass (HomeAssistant): Home Assistant instance
-        sensor_id (str): sensor ID to search for
+        hass: Home Assistant instance.
+        device_id: Device ID to look up.
+        key: Key to retrieve from coordinator data.
 
     Returns:
-        DiveraCoordinator: DiveraControl coordinator instance of DiveraControl
+        The associated DiveraCoordinator instance.
 
+    Raises:
+        HomeAssistantError: If device or coordinator is not found.
     """
-    coordinator_data = None
+    coordinator = _get_coordinator_from_device(hass, device_id)
 
-    try:
-        # try finding ucr_id with given sensor_id
-        for ucr_id, cluster_data in hass.data[DOMAIN].items():
-            for sensor in cluster_data["sensors"]:
-                if sensor == sensor_id:
-                    coordinator_data = (
-                        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
-                    )
-                    break
-            if coordinator_data:
-                break
+    if not hasattr(coordinator, key):
+        raise HomeAssistantError(
+            f"Key {key} not found in coordinator for device: {device_id}"
+        )
 
-        if coordinator_data is None:
-            raise KeyError
+    if key is None:
+        return coordinator
 
-    except KeyError:
-        error_message = f"Coordinator data not found for Sensor-ID {sensor_id}"
-        _LOGGER.error(error_message)
-        raise HomeAssistantError(error_message) from None
-
-    return coordinator_data
+    return getattr(coordinator, key)
 
 
 async def handle_entity(
@@ -208,7 +171,7 @@ async def handle_entity(
 
     Args:
         hass: Home Assistant instance
-        call: Service call with data
+        data: Service call with data
         service: Service name that was called
         ucr_id: User cluster relation ID
         entity_id: Entity ID to update
@@ -218,9 +181,7 @@ async def handle_entity(
 
     """
     entity_id_str = str(entity_id)
-    coordinator: DiveraCoordinator | None = (
-        hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
-    )
+    coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
 
     if not coordinator:
         msg = await get_translation(
@@ -267,12 +228,6 @@ async def handle_entity(
                 return
 
             vehicle_data = vehicle_items[entity_id_str]
-
-            # # Map status fields to fmsstatus_id
-            # if "status" in call.data:
-            #     vehicle_data["fmsstatus_id"] = call.data["status"]
-            # if "status_id" in call.data:
-            #     vehicle_data["fmsstatus_id"] = call.data["status_id"]
 
             # Update other vehicle fields
             for key, value in data.items():
@@ -357,54 +312,47 @@ async def handle_entity(
 
 def set_update_interval(
     cluster_data: dict[str, Any],
-    intervall_data: dict[str, Any],
+    interval_data: dict[str, Any],
     old_interval: timedelta | None,
 ) -> timedelta:
     """Set update interval based on open alarms.
 
     Args:
-        cluster_data (dict): cluster data of coordinator containing update interval configuration.
-        intervall_data (dict): dictionary containing update interval settings.
-        old_interval (timedelta | None): previous update interval.
+        cluster_data: Cluster data of coordinator.
+        interval_data: Dictionary containing update interval settings.
+        old_interval: Previous update interval.
 
     Returns:
-        timedelta: new update interval.
-
+        New update interval.
     """
+    # Count open alarms
     alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
-    cluster_name = cluster_data.get(D_CLUSTER_NAME, "Unknown")
+    open_alarms = sum(
+        1
+        for alarm_details in alarm_items.values()
+        if not alarm_details.get("closed", True)
+    )
 
-    if alarm_items:
-        open_alarms = sum(
-            1
-            for alarm_details in alarm_items.values()
-            if not alarm_details.get("closed", True)
-        )
-        cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
-    else:
-        open_alarms = 0
+    # Store open alarm count
+    cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
 
-    new_interval: timedelta = (
-        intervall_data.get(D_UPDATE_INTERVAL_ALARM)
+    # Determine new interval
+    new_interval = (
+        interval_data[D_UPDATE_INTERVAL_ALARM]
         if open_alarms > 0
-        else intervall_data.get(D_UPDATE_INTERVAL_DATA)
+        else interval_data[D_UPDATE_INTERVAL_DATA]
     )
 
-    if old_interval is None or old_interval != new_interval:
+    # Log only if interval changed
+    if old_interval != new_interval:
         _LOGGER.debug(
-            "Update interval changed to %s for unit '%s'",
+            "Update interval changed to %s for unit '%s' (open alarms: %d)",
             new_interval,
-            cluster_name,
+            cluster_data.get(D_CLUSTER_NAME, "Unknown"),
+            open_alarms,
         )
-        return new_interval
 
-    _LOGGER.debug(
-        "Update interval not changed, still %s for unit '%s'",
-        old_interval,
-        cluster_name,
-    )
-
-    return old_interval
+    return new_interval
 
 
 async def get_translation(
@@ -416,67 +364,29 @@ async def get_translation(
     """Get translated message.
 
     Args:
-        hass (HomeAssistant): Home Assistant instance.
-        category (str): Translation category to look up.
-        key (str): Translation key to look up.
-        placeholders (dict[str, Any] | None): Optional placeholders for formatting the translation string.
+        hass: Home Assistant instance.
+        category: Translation category to look up.
+        key: Translation key to look up.
+        placeholders: Optional placeholders for formatting.
 
     Returns:
-        str: The translated string, formatted with placeholders if provided.
-
-    Raises:
-        KeyError: If a placeholder in the translation string is not found in the provided placeholders.
+        The translated string, formatted with placeholders if provided.
     """
-
-    translation_cat = await async_get_translations(
+    translations = await async_get_translations(
         hass, hass.config.language, category, {DOMAIN}
     )
 
-    key = f"component.{DOMAIN}.{category}.{key}"
+    translation_key = f"component.{DOMAIN}.{category}.{key}"
+    translation_str = translations.get(translation_key, translation_key)
 
-    translation_str = translation_cat.get(key, key)
     if placeholders:
         try:
             translation_str = translation_str.format(**placeholders)
         except KeyError as ex:
             _LOGGER.error(
-                "Placeholder %s not found in translation for %s", ex, category
+                "Missing placeholder '%s' in translation for key '%s'",
+                ex,
+                translation_key,
             )
 
     return translation_str
-
-
-async def get_coordinator_from_device(
-    hass: HomeAssistant, device_id: str
-) -> "DiveraCoordinator":
-    """Get the DiveraCoordinator instance associated with a given device ID.
-
-    Args:
-        hass (HomeAssistant): The Home Assistant instance.
-        device_id (str): The device ID to look up.
-
-    Returns:
-        DiveraCoordinator: The associated DiveraCoordinator instance.
-
-    Raises:
-        HomeAssistantError: If the device or coordinator is not found.
-    """
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
-
-    if not device or not device.config_entries:
-        raise HomeAssistantError(f"Device not found: {device_id}")
-
-    config_entry_id = next(iter(device.config_entries), None)
-    if not config_entry_id:
-        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
-
-    entry = hass.config_entries.async_get_entry(config_entry_id)
-    if not entry or entry.domain != DOMAIN:
-        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
-
-    coordinator = hass.data[DOMAIN][entry.data.get(D_UCR_ID)]["coordinator"]
-    if not coordinator:
-        raise HomeAssistantError(f"Coordinator not found for device: {device_id}")
-
-    return coordinator

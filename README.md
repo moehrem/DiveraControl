@@ -98,7 +98,7 @@ Neue Vorschläge dürfen gerne als Issue angefragt werden.
 
 ## ❌ Nicht enthalten und bisher nicht geplant
 
-Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung geplant:
+Divera bietet zahlreiche Endpunkte, folgende sind (bisher) nicht für die Umsetzung geplant:
 
 - Setzen von Nutzerstatus bzw. Rückmeldungen
 - Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
@@ -170,8 +170,8 @@ Zur Interaktion mit Divera sind verschiedene Aktionen in HomeAssistant implement
 - Alarm ändern
 - Erstellen einer neuen Mitteilung
 
-Alle Aktionen sind geräteabhängig. Das heißt, dass jeder Ausführung die anzusprechende Einheit mitgegeben werden muss. Über Automationen und im Frontend kann als Auslöser einfach eine Einhet gewählt und die gewünschte Aktion ausgeführt werden.
-In den Entwickleroptionen oder bei anderer Implementierunt der Aktionen muss ein target in Form der device_id eingegeben werden.
+Alle Aktionen sind geräteabhängig. Das heißt, dass jeder Ausführung die anzusprechende Einheit mitgegeben werden muss. Über Automationen und im Frontend kann als Auslöser einfach eine Einhet gewählt und die gewünschte Aktion ausgeführt werden. Hier sind viele Felder auch mit Auswahlhilfen versehen.
+In den Entwickleroptionen oder bei anderer Implementierunt der Aktionen muss ein target in Form der device_id eingegeben werden. Aus technischen Gründen können hier einige Felder nicht mit Auswahlhilfen versorgt werden. Das betrifft alle änderbaren Wertehilfen, zB Alarme, Fahrzeuge, Besatzung, Gruppen etc. In die Felder muss stattdessen die entsprechende ID, bei mehreren IDs durch Komma getrennt, eingegeben werden.
 
 Weitere Details zu den Aktionen, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Die Umsetzung umfasst sowohl den "YAML-Modus" als auch den "UI-Modus". Alle Aktionen beginnen mit "DiveraControl: ", gefolgt vom Namen und einer kurzen Beschreibung. Es ist dort außerdem möglich, Aktionen manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 

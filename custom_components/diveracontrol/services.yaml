@@ -175,10 +175,39 @@ post_alarm:
           multiline: false
     units:
       required: false
-      example: "Musterdorf, Beispielstadt"
+      example: "GTLF, TSF-W, LF20, DLK23-12"
       selector:
         text:
           multiline: true
+    destination:
+      required: false
+      example: True
+      selector:
+        boolean:
+    destination_address:
+      required: false
+      example: "Klinikum Musterstadt, Notaufnahme"
+      selector:
+        text:
+          multiline: false
+    destination_lat:
+      required: false
+      example: 51.2600000
+      selector:
+        number:
+          min: -90
+          max: 90
+          unit_of_measurement: degrees
+          mode: box
+    destination_lng:
+      required: false
+      example: 7.2309561
+      selector:
+        number:
+          min: -180
+          max: 180
+          unit_of_measurement: degrees
+          mode: box
     remarks:
       required: false
       example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
@@ -233,6 +262,16 @@ post_alarm:
       example: true
       selector:
         boolean:
+    ts_publish:
+      required: false
+      example: 1717755979
+      selector:
+        datetime:
+    ts_close:
+      required: false
+      example: 1717759979
+      selector:
+        datetime:
 
 
 put_alarm:
@@ -244,12 +283,13 @@ put_alarm:
   fields:
     alarm_id:
       required: true
-      example: 54321
+      example: 12345678
       selector:
         number:
+          mode: box
     title:
       required: true
-      example: FEU G
+      example: FEU
       selector:
         text:
           multiline: false
@@ -317,13 +357,13 @@ put_alarm:
         boolean:
     text:
       required: false
-      example: 'Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt'
+      example: '"Auslösung BMA, bestätigte Rauchentwicklung. Weitere alarmierte Einheiten: Musterdorf, Beispielstadt"'
       selector:
         text:
           multiline: true
     address:
       required: false
-      example: "Hauptstraße 247, 12345 Musterstadt, Deutschland"
+      example: '"Hauptstraße 247, 12345 Musterstadt, Deutschland"'
       selector:
         text:
           multiline: false
@@ -334,8 +374,8 @@ put_alarm:
         number:
           min: -90
           max: 90
-          mode: box
           unit_of_measurement: degrees
+          mode: box
     lng:
       required: false
       example: 7.2309561
@@ -343,37 +383,75 @@ put_alarm:
         number:
           min: -180
           max: 180
-          mode: box
           unit_of_measurement: degrees
+          mode: box
     scene_object:
       required: false
-      example: "PKW, rot, 4 Türen"
+      example: "Hinterhof, 2ter Aufgang"
       selector:
         text:
           multiline: false
     caller:
       required: false
-      example: "Max Mustermann"
+      example: "Max Mustermann, 01234 567890"
       selector:
         text:
           multiline: false
     patient:
       required: false
-      example: "Max Mustermann"
+      example: "Erika Mustermann, 45 Jahre, bekannte Allergie gegen Penicillin"
       selector:
         text:
           multiline: false
-    report:
+    units:
       required: false
-      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
+      example: "GTLF, TSF-W, LF20, DLK23-12"
       selector:
         text:
           multiline: true
-    private_mode:
+    destination:
       required: false
-      example: false
+      example: True
       selector:
         boolean:
+    destination_address:
+      required: false
+      example: "Klinikum Musterstadt, Notaufnahme"
+      selector:
+        text:
+          multiline: false
+    destination_lat:
+      required: false
+      example: 51.2600000
+      selector:
+        number:
+          min: -90
+          max: 90
+          unit_of_measurement: degrees
+          mode: box
+    destination_lng:
+      required: false
+      example: 7.2309561
+      selector:
+        number:
+          min: -180
+          max: 180
+          unit_of_measurement: degrees
+          mode: box
+    remarks:
+      required: false
+      example: "Zugang über Hinterhof, Schlüssel bei Nachbar Müller"
+      selector:
+        text:
+          multiline: false
+    response_time:
+      required: false
+      example: 3600
+      selector:
+        number:
+          min: 0
+          max: 86400
+          unit_of_measurement: seconds
     send_push:
       required: false
       example: true
@@ -399,14 +477,6 @@ put_alarm:
       example: false
       selector:
         boolean:
-    response_time:
-      required: false
-      example: 3600
-      selector:
-        number:
-          min: 0
-          max: 86400
-          unit_of_measurement: seconds
     closed:
       required: false
       example: false
@@ -417,16 +487,21 @@ put_alarm:
       example: true
       selector:
         boolean:
-    ts_publish:
-      required: false
-      example: 1717755979
-      selector:
-        datetime:
     notification_filter_access:
       required: false
       example: true
       selector:
         boolean:
+    ts_publish:
+      required: false
+      example: 1717755979
+      selector:
+        datetime:
+    ts_close:
+      required: false
+      example: 1717759979
+      selector:
+        datetime:
 
 
 

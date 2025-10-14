@@ -12,28 +12,164 @@ Thats why its necessary to check for mandatory fields in each function.
 
 """
 
-from datetime import datetime
+from collections.abc import Callable
 import functools
 import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ServiceValidationError, HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import D_ALARM, DOMAIN
-from .utils import (
-    get_api_instance_per_device,
-    get_translation,
-    handle_entity,
-    get_coordinator_from_device,
-    # normalize_service_call_data,
-    # normalize_device_id,
-    # normalize_vehicle_ids,
-)
 from .data_normalizer import normalize_service_call_data
+from .utils import get_coordinator_key_from_device, get_translation, handle_entity
 
-LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
+
+POST_VEHICLE_VALIDATION_RULES = {
+    "vehicle_id": {
+        "condition": lambda data: not data.get("vehicle_id"),
+        "error_key": "no_vehicle_id",
+    }
+}
+
+# Base alarm validation rules (shared)
+_ALARM_BASE_VALIDATION_RULES = {
+    "title": {
+        "condition": lambda data: not data.get("title"),
+        "error_key": "no_alarm_title",
+    },
+    "notification_type": {
+        "condition": lambda data: not data.get("notification_type"),
+        "error_key": "no_notification_type",
+    },
+    "groups_for_type_3": {
+        "condition": lambda data: data.get("notification_type") == "3"
+        and "group" not in data,
+        "error_key": "no_groups_selected",
+    },
+    "users_for_type_4": {
+        "condition": lambda data: data.get("notification_type") == "4"
+        and "user_cluster_relation" not in data,
+        "error_key": "no_users_selected",
+    },
+    "vehicles_for_filter": {
+        "condition": lambda data: data.get("notification_filter_vehicle")
+        and "vehicle" not in data,
+        "error_key": "no_vehicles_selected",
+    },
+    "status_for_filter": {
+        "condition": lambda data: data.get("notification_filter_status")
+        and "status" not in data,
+        "error_key": "no_status_selected",
+    },
+}
+
+POST_ALARM_VALIDATION_RULES = _ALARM_BASE_VALIDATION_RULES
+
+PUT_ALARM_VALIDATION_RULES = {
+    "alarm_id": {
+        "condition": lambda data: not data.get("alarm_id"),
+        "error_key": "no_alarm_id",
+    },
+    **_ALARM_BASE_VALIDATION_RULES,
+}
+
+POST_CLOSE_ALARM_VALIDATION_RULES = {
+    "alarm_id": {
+        "condition": lambda data: not data.get("alarm_id"),
+        "error_key": "no_alarm_id",
+    }
+}
+
+POST_MESSAGE_VALIDATION_RULES = {
+    "both_message_channel_and_alarm_id": {
+        "condition": lambda data: data.get("message_channel_id")
+        and data.get("alarm_id"),
+        "error_key": "both_message_channel_and_alarm_id",
+    },
+    "no_message_channel_or_alarm_id": {
+        "condition": lambda data: not data.get("message_channel_id")
+        and not data.get("alarm_id"),
+        "error_key": "no_message_channel_or_alarm_id",
+    },
+}
+
+POST_USING_VEHICLE_CREW_VALIDATION_RULES = {
+    "vehicle_id": {
+        "condition": lambda data: not data.get("vehicle_id"),
+        "error_key": "no_vehicle_id",
+    },
+    "mode": {
+        "condition": lambda data: not data.get("mode"),
+        "error_key": "no_mode_provided",
+        "translation_placeholders": {"valid_modes": "add, remove, reset"},
+    },
+    "vehicle_count": {
+        "condition": lambda data: len(data.get("vehicle_id", [])) != 1,
+        "error_key": "invalid_number_of_vehicles",
+        "translation_placeholders": lambda data: {
+            "num_vehicles": str(len(data.get("vehicle_id", [])))
+        },
+    },
+    "crew": {
+        "condition": lambda data: data.get("mode") in {"add", "remove"}
+        and not data.get("crew"),
+        "error_key": "no_crew_provided",
+        "translation_placeholders": lambda data: {"mode": data.get("mode", "")},
+    },
+}
+
+POST_NEWS_VALIDATION_RULES = {
+    "title": {
+        "condition": lambda data: not data.get("title"),
+        "error_key": "no_news_title",
+    },
+    "notification_type": {
+        "condition": lambda data: not data.get("notification_type"),
+        "error_key": "no_notification_type",
+    },
+    "groups_for_type_3": {
+        "condition": lambda data: data.get("notification_type") == 3
+        and not data.get("group"),
+        "error_key": "no_groups_selected",
+    },
+    "users_for_type_4": {
+        "condition": lambda data: data.get("notification_type") == 4
+        and not data.get("user_cluster_relation"),
+        "error_key": "no_users_selected",
+    },
+    "survey_sorting": {
+        "condition": lambda data: data.get("survey")
+        and data.get("newssurvey_answers")
+        and not data.get("newssurvey_sorting"),
+        "error_key": "no_survey_sorting",
+    },
+}
+
+
+def _validate_data(data: dict[str, Any], rules: dict[str, dict]) -> None:
+    """Validate data against rules.
+
+    Args:
+        data: Service call data to validate.
+        rules: Validation rules dictionary.
+
+    Raises:
+        ServiceValidationError: If any validation fails.
+    """
+    for rule_name, rule in rules.items():
+        if rule["condition"](data):
+            # Get translation_placeholders - can be dict or callable
+            placeholders = rule.get("translation_placeholders")
+            if callable(placeholders):
+                placeholders = placeholders(data)
+
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key=rule["error_key"],
+                translation_placeholders=placeholders,
+            )
 
 
 def _extract_news(data: dict[str, Any], notification_type: int) -> dict[str, Any]:
@@ -76,6 +212,106 @@ def _extract_survey(data: dict[str, Any]) -> dict[str, Any]:
     return survey_data
 
 
+# async def get_coordinator_key_from_device(
+#     hass: HomeAssistant, device_id: str | None
+# ) -> Any:  # Replace Any with actual API type
+#     """Get API instance for device.
+
+#     Args:
+#         hass: Home Assistant instance.
+#         device_id: Device ID.
+
+#     Returns:
+#         API instance.
+
+#     Raises:
+#         ServiceValidationError: If device not found or not loaded.
+#     """
+#     if not device_id:
+#         raise ServiceValidationError(
+#             translation_domain=DOMAIN,
+#             translation_key="no_device_id",
+#         )
+
+#     try:
+#         return get_coordinator_key_from_device(hass, device_id, "api")
+#     except KeyError as err:
+#         _LOGGER.error("Failed to get API instance: %s", err)
+#         raise ServiceValidationError(
+#             translation_domain=DOMAIN,
+#             translation_key="no_divera_unit",
+#         ) from err
+
+
+def _build_payload(
+    data: dict[str, Any],
+    keys: dict[str, dict[str, Any]] | None = None,
+    exclude_keys: set[str] | None = None,
+) -> dict[str, Any]:
+    """Build API payload from service data.
+
+    Args:
+        data: Service call data.
+        keys: Dictionary mapping top-level keys to their data sources.
+              - Key name → filtered data from `data` parameter (use empty dict {})
+              - Key name → specific data dict
+              Example: {"Alarm": {}, "Metadata": {"version": "1.0"}}
+        exclude_keys: Keys to exclude when filtering from `data`.
+
+    Returns:
+        Formatted payload dictionary.
+
+    Examples:
+        # Single key with filtered data
+        _build_payload(data, keys={"Alarm": {}})
+        # Returns: {"Alarm": {filtered_data}}
+
+        # Multiple keys
+        _build_payload(
+            data,
+            keys={"News": {}, "newssurvey": survey_data},
+            exclude_keys={k for k in data if k.startswith("newssurvey_")}
+        )
+        # Returns: {"News": {filtered_data}, "newssurvey": survey_data}
+
+        # Flat payload (no wrapper)
+        _build_payload(data)
+        # Returns: {filtered_data}
+
+        # Multiple keys with specific data
+        _build_payload(
+            data,
+            keys={
+                "Alarm": {},
+                "Metadata": {"created_at": datetime.now()},
+                "Options": {"priority": True}
+            }
+        )
+    """
+    exclude = exclude_keys or set()
+    exclude.update({"device_id", "cluster_id"})
+
+    # No keys specified = flat payload
+    if not keys:
+        return {k: v for k, v in data.items() if k not in exclude and v is not None}
+
+    # Build payload with specified keys
+    payload = {}
+    filtered_data = None  # Cache filtered data
+
+    for key_name, key_data in keys.items():
+        if not key_data:  # Empty dict = use filtered data from `data`
+            if filtered_data is None:  # Lazy evaluation
+                filtered_data = {
+                    k: v for k, v in data.items() if k not in exclude and v is not None
+                }
+            payload[key_name] = filtered_data
+        else:  # Use provided data
+            payload[key_name] = key_data
+
+    return payload
+
+
 async def handle_post_vehicle_status(
     hass: HomeAssistant,
     call: ServiceCall,
@@ -93,29 +329,17 @@ async def handle_post_vehicle_status(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id: str = data.get("device_id")
-    vehicle_ids: list[int] = data.get("vehicle_id")
-
-    if not vehicle_ids:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_vehicle_id",
-        )
+    _validate_data(data, POST_VEHICLE_VALIDATION_RULES)
 
     # get api instances
-    try:
-        api_instance = get_api_instance_per_device(hass, device_id)
-    except KeyError as err:
-        LOGGER.error(err)
-        return
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
-    payload: dict[str, Any] = {
-        k: v for k, v in data.items() if k != "cluster_id" and v is not None
-    }
+    # payload: dict[str, Any] = {k: v for k, v in data.items() if v is not None}
+    payload = _build_payload(data, keys=None)
 
     # call api function and handle entity
+    vehicle_ids: list[int] = data.get("vehicle_id")
     for vehicle in vehicle_ids:
         try:
             await api_instance.post_vehicle_status(vehicle, payload)
@@ -127,7 +351,7 @@ async def handle_post_vehicle_status(
                 "api_post_vehicle_status_failed.message",
                 {"vehicle_id": vehicle, "err": str(err)},
             )
-            LOGGER.error(error_msg)
+            _LOGGER.error(error_msg)
             continue
 
 
@@ -136,6 +360,9 @@ async def handle_post_alarm(
     call: ServiceCall,
 ) -> None:
     """POST create an alarm.
+
+    Check mandatory fields (in case of a device_actions its necessary...),
+    normalize data, build payload and trigger api call.
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
@@ -148,49 +375,15 @@ async def handle_post_alarm(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    title = data.get("title") or ""
-
-    if not title:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_alarm_title",
-        )
-    if not data.get("notification_type"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_notification_type",
-        )
-
-    if data.get("notification_type") == "3" and "group" not in data:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_groups_selected",
-        )
-    if data.get("notification_filter_vehicle") and "vehicle" not in data:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_vehicles_selected",
-        )
-
-    if data.get("notification_filter_status") and "status" not in data:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_status_selected",
-        )
+    _validate_data(data, POST_ALARM_VALIDATION_RULES)
 
     # get api instance
-    try:
-        api_instance = get_api_instance_per_device(hass, device_id)
-    except KeyError as err:
-        LOGGER.error(err)
-        return
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
-    payload: dict[str, Any] = {
-        "Alarm": {k: v for k, v in data.items() if v is not None},
-        "notification_type": data.get("notification_type"),
-    }
+    # payload: dict[str, Any] = {
+    #     "Alarm": {k: v for k, v in data.items() if v is not None},
+    # }
+    payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
     try:
@@ -202,9 +395,9 @@ async def handle_post_alarm(
             hass,
             "exceptions",
             "api_post_alarm_failed.message",
-            {"title": title, "err": str(err)},
+            {"title": data.get("title"), "err": str(err)},
         )
-        LOGGER.error(error_msg)
+        _LOGGER.error(error_msg)
 
 
 async def handle_put_alarm(
@@ -224,67 +417,30 @@ async def handle_put_alarm(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    alarm_id: int = data.get("alarm_id") or 0
-    title: str = data.get("title") or ""
-    notification_type: int = data.get("notification_type") or 0
-
-    if not alarm_id:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_alarm_id",
-        )
-    if not title:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_alarm_title",
-        )
-    if not notification_type:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_notification_type",
-        )
-
-    if notification_type == 3 and not data.get("group"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_groups_selected",
-        )
-    if notification_type == 4 and not data.get("user_cluster_relation"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_users_selected",
-        )
+    _validate_data(data, PUT_ALARM_VALIDATION_RULES)
 
     # get api instance
-    try:
-        api_instance = get_api_instance_per_device(hass, device_id)
-    except KeyError as err:
-        LOGGER.error(err)
-        return
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
-    payload: dict[str, Any] = {
-        "Alarm": {
-            key: value
-            for key, value in data.items()
-            if key != "cluster_id" and value is not None
-        }
-    }
+    # payload: dict[str, Any] = {
+    #     "Alarm": {k: v for k, v in data.items() if v is not None},
+    # }
+    payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
     try:
+        alarm_id: Any = data.get("alarm_id")
         await api_instance.put_alarms(alarm_id, payload)
         await handle_entity(hass, data, call.service, api_instance.ucr_id, alarm_id)
     except HomeAssistantError as err:
-        error_msg = get_translation(
+        error_msg = await get_translation(
             hass,
             "exceptions",
             "api_put_alarm_failed.message",
             {"alarm_id": alarm_id, "err": str(err)},
         )
-        LOGGER.error(error_msg)
+        _LOGGER.error(error_msg)
 
 
 async def handle_post_close_alarm(
@@ -304,35 +460,20 @@ async def handle_post_close_alarm(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    alarm_id: int = data.get("alarm_id") or 0
-    if not alarm_id:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_alarm_id",
-        )
+    _validate_data(data, POST_CLOSE_ALARM_VALIDATION_RULES)
 
     # get api instance
-    try:
-        api_instance = get_api_instance_per_device(hass, device_id)
-    except KeyError as err:
-        LOGGER.error(err)
-        return
-
-    if not api_instance:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_divera_unit",
-        )
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
     payload: dict[str, Any] = {
-        "Alarm": {k: v for k, v in data.items() if k != "cluster_id" and v is not None}
+        "Alarm": {k: v for k, v in data.items() if v is not None}
     }
+    payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
     try:
+        alarm_id: Any = data.get("alarm_id")
         await api_instance.post_close_alarm(payload, alarm_id)
         await handle_entity(hass, data, call.service, api_instance.ucr_id, alarm_id)
     except HomeAssistantError as err:
@@ -342,7 +483,7 @@ async def handle_post_close_alarm(
             "api_post_close_alarm_failed.message",
             {"alarm_id": alarm_id, "err": str(err)},
         )
-        LOGGER.error(error_msg)
+        _LOGGER.error(error_msg)
         return
 
 
@@ -363,33 +504,21 @@ async def handle_post_message(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
+    _validate_data(data, POST_MESSAGE_VALIDATION_RULES)
 
+    # Determine message_channel_id from alarm_id if not given
     device_id = data.get("device_id")
     message_channel_id: int = data.get("message_channel_id") or 0
     alarm_id: int = data.get("alarm_id") or 0
-
-    if message_channel_id and alarm_id:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="both_message_channel_and_alarm_id",
-        )
-
-    if not message_channel_id and not alarm_id:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_message_channel_or_alarm_id",
-        )
-
-    # Determine message_channel_id from alarm_id if not given
     if not message_channel_id and alarm_id:
-        coordinator = (
-            await get_coordinator_from_device(hass, data.get("device_id", []))
-            if data.get("device_id")
+        coord_data = (
+            get_coordinator_key_from_device(hass, device_id, "data")
+            if device_id
             else None
         )
-        if coordinator:
+        if coord_data:
             message_channel_id = (
-                coordinator.data.get(D_ALARM, {})
+                coord_data.get(D_ALARM, {})
                 .get("items", {})
                 .get(alarm_id, {})
                 .get("message_channel_id", 0)
@@ -404,21 +533,21 @@ async def handle_post_message(
         )
 
     # get api instances
-    api_instance = get_api_instance_per_device(hass, device_id)
-
-    if not api_instance:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_divera_unit",
-        )
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
-    payload: dict[str, Any] = {
-        "Message": {
-            "message_channel_id": message_channel_id,
-            "text": data["text"],
-        }
-    }
+    # payload: dict[str, Any] = {
+    #     "Message": {
+    #         "message_channel_id": message_channel_id,
+    #         "text": data["text"],
+    #     }
+    # }
+    payload = _build_payload(
+        data,
+        keys={
+            "Message": {"message_channel_id": message_channel_id, "text": data["text"]}
+        },
+    )
 
     # call api function and handle entity
     try:
@@ -431,7 +560,7 @@ async def handle_post_message(
             "api_post_message_failed.message",
             {"message_channel_id": message_channel_id, "err": str(err)},
         )
-        LOGGER.error(error_msg)
+        _LOGGER.error(error_msg)
         return
 
 
@@ -454,27 +583,17 @@ async def handle_post_using_vehicle_property(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    vehicle_ids: list[int] = data.get("vehicle_id")
-    payload: dict[str, Any] = data.get("properties", {})
-
-    if not vehicle_ids:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_vehicle_id",
-        )
+    _validate_data(data, POST_VEHICLE_VALIDATION_RULES)
 
     # get api instance
-    api_instance = get_api_instance_per_device(hass, device_id)
-
-    if not api_instance:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_divera_unit",
-        )
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # call api function and handle entity
+    vehicle_ids: list[int] = data.get("vehicle_id") or []
+
+    # payload: dict[str, Any] = data.get("properties", {})
+    payload = _build_payload(data, keys=None, exclude_keys={"vehicle_id"})
+
     for vehicle in vehicle_ids:
         try:
             await api_instance.post_using_vehicle_property(vehicle, payload)
@@ -492,7 +611,7 @@ async def handle_post_using_vehicle_property(
                 "api_post_using_vehicle_property_failed.message",
                 {"vehicle_id": vehicle, "err": str(err)},
             )
-            LOGGER.error(error_msg)
+            _LOGGER.error(error_msg)
             continue
 
 
@@ -515,54 +634,26 @@ async def handle_post_using_vehicle_crew(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    mode: str = data.get("mode", "")
-    vehicle_ids: list[int] = data.get("vehicle_id")
-
-    if not mode:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_mode_provided",
-            translation_placeholders={"valid_modes": "add, remove, reset"},
-        )
-
-    if len(vehicle_ids) != 1:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="invalid_number_of_vehicles",
-            translation_placeholders={"num_vehicles": len(vehicle_ids)},
-        )
+    _validate_data(data, POST_USING_VEHICLE_CREW_VALIDATION_RULES)
 
     # get api instance
-    api_instance = get_api_instance_per_device(hass, device_id)
-
-    if not api_instance:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_divera_unit",
-        )
-
-    # check modes and input
-    if mode in {"add", "remove"} and not data.get("crew"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_crew_provided",
-            translation_placeholders={"mode": mode},
-        )
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
-    payload: dict[str, Any] = {}
+    # payload: dict[str, Any] = {}
+    vehicle_ids: list[int] = data.get("vehicle_id")
+    mode: str = data.get("mode", "")
     match mode:
         case "add":
-            payload = {"Crew": {"add": data.get("crew")}}
+            # payload = {"Crew": {"add": data.get("crew")}}
+            payload = _build_payload(data, keys={"Crew": {"add": data.get("crew")}})
 
         case "remove":
-            payload = {"Crew": {"remove": data.get("crew")}}
+            # payload = {"Crew": {"remove": data.get("crew")}}
+            payload = _build_payload(data, keys={"Crew": {"remove": data.get("crew")}})
 
         case "reset":
-            # no changes, payload is empty already
-            pass
+            payload = {}
 
         case _:
             raise ServiceValidationError(
@@ -582,7 +673,7 @@ async def handle_post_using_vehicle_crew(
                 "api_post_using_vehicle_crew_failed.message",
                 {"vehicle_id": vehicle, "err": str(err)},
             )
-            LOGGER.error(error_msg)
+            _LOGGER.error(error_msg)
             continue
 
 
@@ -603,57 +694,14 @@ async def handle_post_news(
 
     # check mandatory fields
     data = normalize_service_call_data(call.data)
-
-    device_id = data.get("device_id")
-    title: str = data.get("title", "")
-    notification_type: int = data.get("notification_type", 0)
-
-    survey: bool = data.get("survey", False)
-    news_survey_answers: list[dict[str, Any]] = data.get("newssurvey_answers", [])
-    news_survey_sorting: list[int] = data.get("newssurvey_sorting", [])
-
-    if not title:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_news_title",
-        )
-
-    if not notification_type:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_notification_type",
-        )
-
-    if notification_type == 3 and not data.get("group"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_groups_selected",
-        )
-    if notification_type == 4 and not data.get("user_cluster_relation"):
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_users_selected",
-        )
-
-    if survey and news_survey_answers:
-        if not news_survey_sorting:
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="no_survey_sorting",
-            )
+    _validate_data(data, POST_NEWS_VALIDATION_RULES)
 
     # get api instance
-    api_instance = get_api_instance_per_device(hass, device_id)
-
-    if not api_instance:
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="no_divera_unit",
-        )
+    api_instance = get_coordinator_key_from_device(hass, data.get("device_id"), "api")
 
     # create payload
-    payload: dict[str, Any] = {}
-
+    # payload: dict[str, Any] = {}
+    notification_type: int = data.get("notification_type", 0)
     survey_flag = data.get("survey") or False
 
     news_data = {}
@@ -665,12 +713,14 @@ async def handle_post_news(
     else:
         news_data = _extract_news(data, notification_type)
 
-    payload = {
-        "News": news_data,
-        "newssurvey": survey_data,
-    }
+    # payload = {
+    #     "News": news_data,
+    #     "newssurvey": survey_data,
+    # }
+    payload = _build_payload(data, keys={"News": news_data, "newssurvey": survey_data})
 
     # call api function and handle entity
+    title: str = data.get("title", "")
     try:
         await api_instance.post_news(payload)
         # no handle entity as new data needs to be fetched from Divera first
@@ -681,25 +731,17 @@ async def handle_post_news(
             "api_post_news_failed.message",
             {"title": title, "err": str(err)},
         )
-        LOGGER.error(error_msg)
+        _LOGGER.error(error_msg)
 
 
-def async_register_services(
-    hass: HomeAssistant,
-    domain: str,
-):
-    """Register services for DiveraCotnrol.
+def async_register_services(hass: HomeAssistant, domain: str) -> None:
+    """Register services for DiveraControl.
 
     Args:
-        hass (HomeAssistant): Home Assistant instance.
-        domain (str): Domain name for services.
-
-    Returns:
-        None
-
+        hass: Home Assistant instance.
+        domain: Domain name for services.
     """
-
-    service_definitions = {
+    service_handlers: dict[str, Callable] = {
         "post_vehicle_status": handle_post_vehicle_status,
         "post_alarm": handle_post_alarm,
         "put_alarm": handle_put_alarm,
@@ -710,7 +752,7 @@ def async_register_services(
         "post_news": handle_post_news,
     }
 
-    for service_name, handler in service_definitions.items():
+    for service_name, handler in service_handlers.items():
         hass.services.async_register(
             domain,
             service_name,

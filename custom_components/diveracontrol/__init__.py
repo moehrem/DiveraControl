@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
+    D_COORDINATOR,
     D_UCR_ID,
     DEFAULT_API,
     DEFAULT_COORDINATOR,
@@ -69,19 +70,25 @@ async def async_setup_entry(
             config_entry,
         )
 
-        hass.data.setdefault(DOMAIN, {})[ucr_id] = {
-            DEFAULT_COORDINATOR: coordinator,
-            DEFAULT_API: api,
-            DEFAULT_SENSORS: {},
-            DEFAULT_DEVICE_TRACKER: {},
-        }
+        # create references in config_entry
+        # for easy access of coordinator
+        config_entry.runtime_data = coordinator
+
+        hass.data.setdefault(DOMAIN, {})
+        hass.data[DOMAIN].setdefault(ucr_id, {})
+        hass.data[DOMAIN][ucr_id][D_COORDINATOR] = coordinator
+
+        # hass.data.setdefault(DOMAIN, {})[ucr_id] = {
+        #     DEFAULT_COORDINATOR: coordinator,
+        #     DEFAULT_API: api,
+        #     DEFAULT_SENSORS: {},
+        #     DEFAULT_DEVICE_TRACKER: {},
+        # }
 
         await coordinator.async_config_entry_first_refresh()
 
         config_entry.async_on_unload(api.close)
         await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-
-        # async_register_services(hass, DOMAIN)
 
         _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
@@ -97,20 +104,43 @@ async def async_setup_entry(
     return True
 
 
+# async def async_unload_entry(
+#     hass: HomeAssistant,
+#     config_entry: ConfigEntry,
+# ) -> bool:
+#     """Unload a config entry.
+
+#     Args:
+#         hass: Home Assistance instance.
+#         config_entry: DiveraControl config entry to remove.
+
+#     Returns:
+#         bool: True, if successfully unloaded, otherwise False.
+
+#     """
+#     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
+#     ucr_id = config_entry.data.get(D_UCR_ID)
+
+#     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
+
+#     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
+#         return False
+
+#     if DOMAIN in hass.data and ucr_id in hass.data[DOMAIN]:
+#         hass.data[DOMAIN].pop(ucr_id, None)
+#         if not hass.data[DOMAIN]:
+#             hass.data.pop(DOMAIN, None)
+
+
+#     _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
+#     return True
+
+
 async def async_unload_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
 ) -> bool:
-    """Unload a config entry.
-
-    Args:
-        hass: Home Assistance instance.
-        config_entry: DiveraControl config entry to remove.
-
-    Returns:
-        bool: True, if successfully unloaded, otherwise False.
-
-    """
+    """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
     ucr_id = config_entry.data.get(D_UCR_ID)
 
@@ -119,7 +149,8 @@ async def async_unload_entry(
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
 
-    if DOMAIN in hass.data and ucr_id in hass.data[DOMAIN]:
+    # ✅ Cleanup hass.data
+    if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(ucr_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN, None)

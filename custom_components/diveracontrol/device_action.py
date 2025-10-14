@@ -26,7 +26,12 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_translation, permission_check, get_coordinator_from_device
+from .utils import get_translation, permission_check
+
+# if TYPE_CHECKING:
+#     from .utils import (
+#         get_coordinator_key_from_device,
+#     )
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -67,7 +72,9 @@ async def _get_selector_options(
         List of option dictionaries with value and label
     """
 
-    coordinator = await get_coordinator_from_device(hass, device_id)
+    from .utils import get_coordinator_key_from_device
+
+    coor_data = get_coordinator_key_from_device(hass, device_id, "data")
 
     if data_path == "notification_type_options":
         # Special case for static options
@@ -149,7 +156,7 @@ async def _get_selector_options(
         return []
 
     # Navigate data path
-    data = coordinator.data
+    data = coor_data
     for key in data_path.split("."):
         data = data.get(key, {})
         if not data:
@@ -326,7 +333,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type == "post_alarm":
+    elif action_type in ["post_alarm", "put_alarm"]:
         notification_type_options = await _get_selector_options(
             hass, device_id, "notification_type_options"
         )
@@ -342,10 +349,30 @@ async def async_get_action_capabilities(
         user_status_options = await _get_selector_options(
             hass, device_id, "cluster.status", "{name}"
         )
+        alarmcode_options = await _get_selector_options(
+            hass, device_id, "cluster.alarmcode", "{name}"
+        )
+        alarm_options = await _get_selector_options(
+            hass, device_id, "alarm.items", "{title} ({id})"
+        )
 
         return {
             "extra_fields": vol.Schema(
                 {
+                    **(
+                        {
+                            vol.Required("alarm_id"): selector.SelectSelector(
+                                selector.SelectSelectorConfig(
+                                    options=alarm_options,
+                                    mode=selector.SelectSelectorMode.DROPDOWN,
+                                )
+                            )
+                            if alarm_options
+                            else vol.Coerce(int)
+                        }
+                        if action_type == "put_alarm"
+                        else {}
+                    ),
                     vol.Required("title"): str,
                     vol.Required("notification_type"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
@@ -353,6 +380,15 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
+                    vol.Optional("alarmcode_id"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=alarmcode_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                    if alarmcode_options
+                    else str,  # fallback: list of commeseparated string
+                    vol.Optional("foreign_id"): str,
                     vol.Optional("group"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=group_options,
@@ -382,7 +418,7 @@ async def async_get_action_capabilities(
                     if vehicle_options
                     else str,  # Comma-separated list
                     vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("user_status"): selector.SelectSelector(
+                    vol.Optional("status"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=user_status_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -391,7 +427,6 @@ async def async_get_action_capabilities(
                     )
                     if user_status_options
                     else str,  # Comma-separated list
-                    vol.Optional("foreign_id"): str,
                     vol.Optional("priority"): bool,
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
@@ -415,6 +450,24 @@ async def async_get_action_capabilities(
                     vol.Optional("caller"): str,
                     vol.Optional("patient"): str,
                     vol.Optional("units"): str,
+                    vol.Optional("destination"): bool,
+                    vol.Optional("destination_address"): str,
+                    vol.Optional("destination_lat"): NumberSelector(
+                        NumberSelectorConfig(
+                            min=-90.0,
+                            max=90.0,
+                            step="any",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Optional("destination_lng"): NumberSelector(
+                        NumberSelectorConfig(
+                            min=-180.0,
+                            max=180.0,
+                            step="any",
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
                     vol.Optional("remarks"): str,
                     vol.Optional("response_time"): vol.Coerce(int),
                     vol.Optional("send_push"): bool,
@@ -425,125 +478,127 @@ async def async_get_action_capabilities(
                     vol.Optional("closed"): bool,
                     vol.Optional("message_channel"): bool,
                     vol.Optional("notification_filter_access"): bool,
+                    vol.Optional("ts_publish"): selector.DateTimeSelector(),
+                    vol.Optional("ts_close"): selector.DateTimeSelector(),
                 }
             )
         }
 
-    elif action_type == "put_alarm":
-        notification_type_options = await _get_selector_options(
-            hass, device_id, "notification_type_options"
-        )
-        group_options = await _get_selector_options(
-            hass, device_id, "cluster.group", "{name}"
-        )
-        user_cluster_relation_options = await _get_selector_options(
-            hass, device_id, "cluster.consumer", "{firstname} {lastname}"
-        )
-        user_status_options = await _get_selector_options(
-            hass, device_id, "cluster.status", "{name}"
-        )
-        vehicle_options = await _get_selector_options(
-            hass, device_id, "cluster.vehicle", "{name} / {shortname}"
-        )
-        alarm_options = await _get_selector_options(
-            hass, device_id, "alarm.items", "{title} ({id})"
-        )
+    # elif action_type == "put_alarm":
+    #     notification_type_options = await _get_selector_options(
+    #         hass, device_id, "notification_type_options"
+    #     )
+    #     group_options = await _get_selector_options(
+    #         hass, device_id, "cluster.group", "{name}"
+    #     )
+    #     user_cluster_relation_options = await _get_selector_options(
+    #         hass, device_id, "cluster.consumer", "{firstname} {lastname}"
+    #     )
+    #     user_status_options = await _get_selector_options(
+    #         hass, device_id, "cluster.status", "{name}"
+    #     )
+    #     vehicle_options = await _get_selector_options(
+    #         hass, device_id, "cluster.vehicle", "{name} / {shortname}"
+    #     )
+    #     alarm_options = await _get_selector_options(
+    #         hass, device_id, "alarm.items", "{title} ({id})"
+    #     )
 
-        return {
-            "extra_fields": vol.Schema(
-                {
-                    vol.Required("alarm_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=alarm_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    )
-                    if alarm_options
-                    else vol.Coerce(int),
-                    vol.Required("title"): str,
-                    vol.Required("notification_type"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=notification_type_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
-                    vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if vehicle_options
-                    else str,  # Comma-separated list
-                    vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("user_status"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_status_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    )
-                    if user_status_options
-                    else str,  # Comma-separated list
-                    vol.Optional("foreign_id"): str,
-                    vol.Optional("alarmcode_id"): vol.Coerce(int),
-                    vol.Optional("priority"): bool,
-                    vol.Optional("text"): str,
-                    vol.Optional("address"): str,
-                    vol.Optional("lat"): NumberSelector(
-                        NumberSelectorConfig(
-                            min=-90.0,
-                            max=90.0,
-                            step="any",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Optional("lng"): NumberSelector(
-                        NumberSelectorConfig(
-                            min=-180.0,
-                            max=180.0,
-                            step="any",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    vol.Optional("scene_object"): str,
-                    vol.Optional("caller"): str,
-                    vol.Optional("patient"): str,
-                    vol.Optional("report"): str,
-                    vol.Optional("private_mode"): bool,
-                    vol.Optional("send_push"): bool,
-                    vol.Optional("send_sms"): bool,
-                    vol.Optional("send_call"): bool,
-                    vol.Optional("send_mail"): bool,
-                    vol.Optional("send_pager"): bool,
-                    vol.Optional("response_time"): vol.Coerce(int),
-                    vol.Optional("message_channel"): bool,
-                    vol.Optional("closed"): bool,
-                    vol.Optional("ts_publish"): vol.Coerce(int),
-                    vol.Optional("notification_filter_access"): bool,
-                }
-            )
-        }
+    #     return {
+    #         "extra_fields": vol.Schema(
+    #             {
+    #                 vol.Required("alarm_id"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=alarm_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                     )
+    #                 )
+    #                 if alarm_options
+    #                 else vol.Coerce(int),
+    #                 vol.Required("title"): str,
+    #                 vol.Required("notification_type"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=notification_type_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                     )
+    #                 ),
+    #                 vol.Optional("user_cluster_relation"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=user_cluster_relation_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                         multiple=True,
+    #                     )
+    #                 )
+    #                 if user_cluster_relation_options
+    #                 else str,  # Comma-separated list als Fallback
+    #                 vol.Optional("group"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=group_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                         multiple=True,
+    #                     )
+    #                 )
+    #                 if group_options
+    #                 else str,  # Comma-separated list
+    #                 vol.Optional("notification_filter_vehicle"): bool,
+    #                 vol.Optional("vehicle_id"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=vehicle_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                         multiple=True,
+    #                     )
+    #                 )
+    #                 if vehicle_options
+    #                 else str,  # Comma-separated list
+    #                 vol.Optional("notification_filter_status"): bool,
+    #                 vol.Optional("user_status"): selector.SelectSelector(
+    #                     selector.SelectSelectorConfig(
+    #                         options=user_status_options,
+    #                         mode=selector.SelectSelectorMode.DROPDOWN,
+    #                         multiple=True,
+    #                     )
+    #                 )
+    #                 if user_status_options
+    #                 else str,  # Comma-separated list
+    #                 vol.Optional("foreign_id"): str,
+    #                 vol.Optional("alarmcode_id"): vol.Coerce(int),
+    #                 vol.Optional("priority"): bool,
+    #                 vol.Optional("text"): str,
+    #                 vol.Optional("address"): str,
+    #                 vol.Optional("lat"): NumberSelector(
+    #                     NumberSelectorConfig(
+    #                         min=-90.0,
+    #                         max=90.0,
+    #                         step="any",
+    #                         mode=NumberSelectorMode.BOX,
+    #                     )
+    #                 ),
+    #                 vol.Optional("lng"): NumberSelector(
+    #                     NumberSelectorConfig(
+    #                         min=-180.0,
+    #                         max=180.0,
+    #                         step="any",
+    #                         mode=NumberSelectorMode.BOX,
+    #                     )
+    #                 ),
+    #                 vol.Optional("scene_object"): str,
+    #                 vol.Optional("caller"): str,
+    #                 vol.Optional("patient"): str,
+    #                 vol.Optional("report"): str,
+    #                 vol.Optional("private_mode"): bool,
+    #                 vol.Optional("send_push"): bool,
+    #                 vol.Optional("send_sms"): bool,
+    #                 vol.Optional("send_call"): bool,
+    #                 vol.Optional("send_mail"): bool,
+    #                 vol.Optional("send_pager"): bool,
+    #                 vol.Optional("response_time"): vol.Coerce(int),
+    #                 vol.Optional("message_channel"): bool,
+    #                 vol.Optional("closed"): bool,
+    #                 vol.Optional("ts_publish"): vol.Coerce(int),
+    #                 vol.Optional("notification_filter_access"): bool,
+    #             }
+    #         )
+    #     }
 
     elif action_type == "post_close_alarm":
         alarm_options = await _get_selector_options(

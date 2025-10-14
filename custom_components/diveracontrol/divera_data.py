@@ -32,6 +32,33 @@ from .divera_api import D_UCR, DiveraAPI
 _LOGGER = logging.getLogger(__name__)
 
 
+def _convert_empty_lists_to_dicts(data: dict[str, Any]) -> dict[str, Any]:
+    """Recursively convert empty lists to empty dicts in nested structures.
+
+    Divera API sometimes returns empty lists instead of empty dicts for
+    collections like alarm.items or cluster.vehicle when no data is present.
+
+    Args:
+        data: Dictionary potentially containing empty lists
+
+    Returns:
+        Dictionary with empty lists converted to empty dicts
+
+    """
+    result = {}
+    for key, value in data.items():
+        if value == []:
+            # Convert empty list to empty dict
+            result[key] = {}
+        elif isinstance(value, dict):
+            # Recursively process nested dicts
+            result[key] = _convert_empty_lists_to_dicts(value)
+        else:
+            # Keep other values as-is
+            result[key] = value
+    return result
+
+
 async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str, Any]:
     """Update operational data from the Divera API.
 
@@ -94,9 +121,24 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
     key = None
     try:
         for key in cluster_data:
-            cluster_data[key] = raw_ucr_data.get(D_DATA, {}).get(key, {})
+            raw_value = raw_ucr_data.get(D_DATA, {}).get(key)
+
+            # Skip if no data
+            if raw_value is None:
+                cluster_data[key] = {}
+                continue
+
+            # If raw_value is a dict, recursively convert empty lists to dicts
+            if isinstance(raw_value, dict):
+                cluster_data[key] = _convert_empty_lists_to_dicts(raw_value)
+            # If raw_value is an empty list, convert to empty dict
+            elif raw_value == []:
+                cluster_data[key] = {}
+            else:
+                cluster_data[key] = raw_value
+
             _LOGGER.debug(
-                "Sucessfully updated key '%s', check diagnostics for data details",
+                "Successfully updated key '%s', check diagnostics for data details",
                 key,
             )
     except (KeyError, AttributeError) as e:
@@ -115,7 +157,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
                 )
                 continue
 
-            if raw_vehicle_property is not False:
+            if raw_vehicle_property:
                 vehicle_property = raw_vehicle_property.get(D_DATA, {})
                 if isinstance(vehicle_property, dict):
                     if (
@@ -127,7 +169,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
                         )
 
                 else:
-                    _LOGGER.warning(
+                    _LOGGER.error(
                         "Unexpected vehicle property format for '%s': %s",
                         key,
                         vehicle_property,

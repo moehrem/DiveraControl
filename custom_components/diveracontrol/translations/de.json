@@ -56,7 +56,7 @@
         "new_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}",
         "existing_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
         "new_and_existing_data": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
-        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden, daher auch keine neuen Hubs erstellt.",
+        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden.",
         "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
         "hub_not_found": "Hub wurde nicht gefunden.",
         "reconfigure_successful": "Neukonfiguration erfolgreich.",
@@ -134,7 +134,7 @@
       "send_mail": "E-Mail-Benachrichtigung",
       "send_pager": "Pager-Benachrichtigung",
       "closed": "Geschlossen",
-      "notification_filter_access": "Sichtbarkeit für nicht alarmierte Benutzer",
+      "notification_filter_access": "Sichtbarkeit",
       "group": "Gruppen",
       "user_cluster_relation": "Benutzer",
       "notification_filter_vehicle": "Nur Personen auf bestimmten Fahrzeugen alarmieren",
@@ -163,7 +163,7 @@
       "scene_object": "Infos zum Objekt",
       "caller": "Anrufer",
       "patient": "Patient",
-      "units": "alarmierte Einheiten",
+      "units": "Beteiligte Einsatzmittel",
       "remarks": "Hinweise",
       "message_channel": "Nachrichtenkanal erstellen",
       "user_status": "Nutzerstatus"
@@ -334,9 +334,37 @@
           "name": "Empfängertyp",
           "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
         },
+        "alarmcode_id": {
+          "name": "Alarmvorlage",
+          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+        },
         "foreign_id": {
           "name": "Einsatznummer/Fremdschlüssel",
           "description": "(Optional) externe Referenz-ID."
+        },
+        "group": {
+          "name": "Gruppen",
+          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere, durch Komma getrennt)."
+        },
+        "user_cluster_relation": {
+          "name": "Benutzer",
+          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere, durch Komma getrennt)."
+        },
+        "notification_filter_vehicle": {
+          "name": "Empfänger auf Fahrzeuge beschränken",
+          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
+        },
+        "vehicle_id": {
+          "name": "Fahrzeuge",
+          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
+        },
+        "notification_filter_status": {
+          "name": "Empfänger auf Status beschränken",
+          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
+        },
+        "status":{
+          "name": "Nutzerstatus",
+          "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
         },
         "priority": {
           "name": "Priorität",
@@ -371,8 +399,24 @@
           "description": "(Optional) Patienteninformationen."
         },
         "units": {
-          "name": "Alarmierte Einheiten",
-          "description": "(Optional) Informationen zu alarmierten Einheiten."
+          "name": "Beteiligte Einsatzmittel",
+          "description": "(Optional) Informationen zu beteiligten Einsatzmitteln."
+        },
+        "destination": {
+          "name": "Ziel",
+          "description": "(Optional) Gibt es ein Ziel?"
+        },
+        "destination_address": {
+          "name": "Zieladresse",
+          "description": "(Optional) Zieladresse."
+        },
+        "destination_lat": {
+          "name": "Ziel-Breitengrad",
+          "description": "(Optional) Ziel-Breitengrad in Dezimalgrad (−90 bis 90)."
+        },
+        "destination_lng": {
+          "name": "Ziel-Längengrad",
+          "description": "(Optional) Ziel-Längengrad in Dezimalgrad (−180 bis 180)."
         },
         "remarks": {
           "name": "Bemerkungen",
@@ -411,8 +455,38 @@
           "description": "(Optional) Nachrichtenkanal erstellen."
         },
         "notification_filter_access": {
-          "name": "Sichtbarkeit für nicht alarmierte Nutzer einschränken",
-          "description": "(Optional) Sichtbarkeit für nicht explizit alarmierte Nutzer begrenzen."
+          "name": "Sichtbarkeit",
+          "description": "(Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen."
+        },
+        "ts_publish": {
+          "name": "Veröffentlichungszeitpunkt",
+          "description": "(Optional) Datum und Uhrzeit der Veröffentlichung."
+        },
+        "ts_close": {
+          "name": "Schließungszeitpunkt",
+          "description": "(Optional) Datum und Uhrzeit der Schließung."
+        }
+      }
+    },
+    "put_alarm": {
+      "name": "Alarm ändern",
+      "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
+      "fields": {
+        "title": {
+          "name": "Stichwort",
+          "description": "(Erforderlich) Alarmstichwort."
+        },
+        "notification_type": {
+          "name": "Empfängertyp",
+          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+        },
+        "alarmcode_id": {
+          "name": "Alarmvorlage",
+          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+        },
+        "foreign_id": {
+          "name": "Einsatznummer/Fremdschlüssel",
+          "description": "(Optional) externe Referenz-ID."
         },
         "group": {
           "name": "Gruppen",
@@ -434,39 +508,9 @@
           "name": "Empfänger auf Status beschränken",
           "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
         },
-        "alarmcode_id": {
-          "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
-        },
         "status":{
           "name": "Nutzerstatus",
           "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
-        }
-      }
-    },
-    "put_alarm": {
-      "name": "Alarm ändern",
-      "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
-      "fields": {
-        "alarm_id": {
-          "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu ändernden Alarms."
-        },
-        "title": {
-          "name": "Stichwort",
-          "description": "(Erforderlich) Alarmstichwort."
-        },
-        "notification_type": {
-          "name": "Empfängertyp",
-          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
-        },
-        "foreign_id": {
-          "name": "Einsatznummer/Fremdschlüssel",
-          "description": "(Optional) externe Referenz-ID."
-        },
-        "alarmcode_id": {
-          "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
         },
         "priority": {
           "name": "Priorität",
@@ -474,7 +518,7 @@
         },
         "text": {
           "name": "Text",
-          "description": "(Erforderlich) Alarmbeschreibung."
+          "description": "(Optional) Alarmbeschreibung."
         },
         "address": {
           "name": "Adresse",
@@ -500,13 +544,29 @@
           "name": "Patient",
           "description": "(Optional) Patienteninformationen."
         },
-        "report": {
-          "name": "Einsatzbericht",
-          "description": "(Optional) Einsatzbericht."
+        "units": {
+          "name": "Beteiligte Einsatzmittel",
+          "description": "(Optional) Informationen zu beteiligten Einsatzmitteln."
         },
-        "private_mode": {
-          "name": "Sichtbarkeit privat",
-          "description": "(Optional) Sichtbarkeit des Alarms einschränken."
+        "destination": {
+          "name": "Ziel",
+          "description": "(Optional) Gibt es ein Ziel?"
+        },
+        "destination_address": {
+          "name": "Zieladresse",
+          "description": "(Optional) Zieladresse."
+        },
+        "destination_lat": {
+          "name": "Ziel-Breitengrad",
+          "description": "(Optional) Ziel-Breitengrad in Dezimalgrad (−90 bis 90)."
+        },
+        "destination_lng": {
+          "name": "Ziel-Längengrad",
+          "description": "(Optional) Ziel-Längengrad in Dezimalgrad (−180 bis 180)."
+        },
+        "remarks": {
+          "name": "Bemerkungen",
+          "description": "(Optional) Bemerkungen."
         },
         "response_time": {
           "name": "Rückmeldezeitraum",
@@ -540,37 +600,17 @@
           "name": "Nachrichtenkanal erstellen",
           "description": "(Optional) Nachrichtenkanal erstellen."
         },
+        "notification_filter_access": {
+          "name": "Sichtbarkeit",
+          "description": "(Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen."
+        },
         "ts_publish": {
           "name": "Veröffentlichungszeitpunkt",
           "description": "(Optional) Datum und Uhrzeit der Veröffentlichung."
         },
-        "notification_filter_access": {
-          "name": "Sichtbarkeit für nicht alarmierte Nutzer einschränken",
-          "description": "(Optional) Sichtbarkeit für nicht alarmierte Nutzer einschränken."
-        },
-        "group": {
-          "name": "Gruppen",
-          "description": "(Optional) Ziel-Gruppen-IDs (eine oder mehrere, durch Kommas getrennt)."
-        },
-        "user_cluster_relation": {
-          "name": "Benutzer",
-          "description": "(Optional) Ziel-Benutzer-IDs (eine oder mehrere, durch Kommas getrennt)."
-        },
-        "notification_filter_vehicle": {
-          "name": "Empfänger auf Fahrzeuge beschränken",
-          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
-        },
-        "vehicle_id": {
-          "name": "Fahrzeuge",
-          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (eine oder mehrere, durch Kommas getrennt)."
-        },
-        "notification_filter_status": {
-          "name": "Empfänger auf Status beschränken",
-          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
-        },
-        "status":{
-          "name": "Nutzerstatus",
-          "description": "(Optional) Nutzerstatus, der alarmiert werden soll."
+        "ts_close": {
+          "name": "Schließungszeitpunkt",
+          "description": "(Optional) Datum und Uhrzeit der Schließung."
         }
       }
     },
@@ -621,8 +661,8 @@
           "description": "(Optional) Patienteninformationen."
         },
         "units": {
-          "name": "Alarmierte Einheiten",
-          "description": "(Optional) Liste alarmierter Einheiten."
+          "name": "Beteiligte Einsatzmittel",
+          "description": "(Optional) Informationen zu beteiligten Einsatzmitteln."
         },
         "remarks": {
           "name": "Bemerkungen",

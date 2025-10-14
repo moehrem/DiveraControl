@@ -168,8 +168,9 @@ Several Home Assistant actions are implemented for interacting with Divera. They
 - Modify alarm
 - Create news
 
-All actions are device-dependent. This means that each execution must be provided with the unit to be addressed. In automations and the frontend, you can simply select a unit as the trigger and execute the desired action.
-In the developer options or when implementing actions in other ways, a target must be entered in the form of the device_id.
+All actions are device-dependent. This means that every execution must specify the target unit. In automations and the frontend, you can simply select a unit as the trigger and execute the desired action. Many fields here are also equipped with selection aids.
+
+In the developer tools or with other implementations of the actions, a target in the form of the device_id must be entered. For technical reasons, some fields cannot be provided with selection aids. This affects all changeable value aids, e.g., alarms, vehicles, crew, groups, etc. Instead, the corresponding ID must be entered in the fields, separated by commas for multiple IDs.
 
 More details on the parameters (required and optional) can be found in Home Assistant under "Developer Tools" -> "Actions". You may choose "YAML-Mode" or "UI-Mode". All actions start with "DiveraControl: " followed by the name and a short description. You can test them manually there. For more information on how actions work, [see here](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
