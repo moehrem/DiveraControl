@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -18,7 +18,6 @@ from .const import (
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_OPEN_ALARMS,
-    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USER,

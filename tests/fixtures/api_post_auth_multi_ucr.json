@@ -1,0 +1,23 @@
+{
+	"data": {
+		"ucr": [{
+            "id": 123456,
+            "usergroup_id": 8,
+            "shortname": "LZM",
+            "name": "Löschzug Musterstadt"
+			}, {
+            "id": 456789,
+            "usergroup_id": 4,
+            "shortname": "RZM",
+            "name": "Rüstzug Musterstadt"
+			}
+		],
+    "user": {
+        "autologin": false,
+        "auth_key": "test_api_key_123456",
+        "access_token": "test_api_key_123456",
+        "default_user_cluster_relation": 123456
+		}
+	},
+	"success": true
+}

@@ -113,7 +113,7 @@ Divera bietet zahlreiche Endpunkte, folgende sind (bisher) nicht für die Umsetz
 
 ### 🏆 **HACS (empfohlen)**
 
-DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
+DiveraControl ist via HACS (Home Assistant Community Store) verfügbar.
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
@@ -133,7 +133,7 @@ DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
 Zur Einrichtung werden entweder **Benutzername & Passwort** oder der **API-Schlüssel** benötigt. Die entsprechende Einrichtungsform kann vom Nutzer gewählt werden.
 Der persönliche API-Schlüssel ist in den Nutzerdaten unter "Einstellungen" -> "Debug" zu finden. Alternativ kann der Schlüssel der Einheit unter "Verwaltung" -> "Schnittstellen" genutzt werden oder der Schlüssel des System- oder Monitornutzers aus den jeweiligen Verwaltungsoptionen.
 
-Divera bietet verscheidene Nutzerformen an:
+Divera bietet verschiedene Nutzerformen an:
 
 - persönlicher/regulärer Nutzer
 - Systembenutzer
@@ -181,6 +181,6 @@ Aktionen, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auc
 
 Zur Analyse kann im Menü der Integration das "Debug-Protokoll" aktiviert werden. Damit wird der Loglevel der Integration auf "Debug" gesetzt und entsprechend deutlich mehr Logging ausgegeben.
 
-Im Kontextenü zum erstellen Dienst selbst können die "Diagnosedaten heruntergeladen" werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
+Zu jeder erstellen Einheit können im Kontextmenü die "Diagnosedaten" heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
 
 > **Hinweis:** In der Ausgabedatei werden lediglich die API-Schlüssel maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!

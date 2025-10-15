@@ -6,16 +6,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
-    D_COORDINATOR,
     D_UCR_ID,
-    DEFAULT_API,
-    DEFAULT_COORDINATOR,
-    DEFAULT_DEVICE_TRACKER,
-    DEFAULT_SENSORS,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -31,7 +27,7 @@ PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up DiveraControl at Home Assistant start to register services."""
     async_register_services(hass, DOMAIN)
     return True
@@ -76,14 +72,6 @@ async def async_setup_entry(
 
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN].setdefault(ucr_id, {})
-        hass.data[DOMAIN][ucr_id][D_COORDINATOR] = coordinator
-
-        # hass.data.setdefault(DOMAIN, {})[ucr_id] = {
-        #     DEFAULT_COORDINATOR: coordinator,
-        #     DEFAULT_API: api,
-        #     DEFAULT_SENSORS: {},
-        #     DEFAULT_DEVICE_TRACKER: {},
-        # }
 
         await coordinator.async_config_entry_first_refresh()
 
@@ -92,48 +80,16 @@ async def async_setup_entry(
 
         _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
+    except (TimeoutError, ConnectionError) as err:
+        _LOGGER.error("Connection failed: %s", err)
+        raise ConfigEntryNotReady("Failed to connect to Divera API") from err
+    except ConfigEntryAuthFailed:
+        raise
     except Exception as err:
-        _LOGGER.exception(
-            "Error setting up cluster %s (%s), error: %s",
-            cluster_name,
-            ucr_id,
-            err,
-        )
-        return False
+        _LOGGER.exception("Unexpected error during setup")
+        raise ConfigEntryNotReady("Unexpected error during setup") from err
 
     return True
-
-
-# async def async_unload_entry(
-#     hass: HomeAssistant,
-#     config_entry: ConfigEntry,
-# ) -> bool:
-#     """Unload a config entry.
-
-#     Args:
-#         hass: Home Assistance instance.
-#         config_entry: DiveraControl config entry to remove.
-
-#     Returns:
-#         bool: True, if successfully unloaded, otherwise False.
-
-#     """
-#     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
-#     ucr_id = config_entry.data.get(D_UCR_ID)
-
-#     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
-
-#     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
-#         return False
-
-#     if DOMAIN in hass.data and ucr_id in hass.data[DOMAIN]:
-#         hass.data[DOMAIN].pop(ucr_id, None)
-#         if not hass.data[DOMAIN]:
-#             hass.data.pop(DOMAIN, None)
-
-
-#     _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
-#     return True
 
 
 async def async_unload_entry(
@@ -149,7 +105,6 @@ async def async_unload_entry(
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
 
-    # ✅ Cleanup hass.data
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(ucr_id, None)
         if not hass.data[DOMAIN]:
@@ -163,66 +118,82 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """Migrate old config_entry of integration DiveraControl."""
     current_version = config_entry.version
     current_minor = config_entry.minor_version
-    current_patch: int = config_entry.patch_version if config_entry.patch_version else 0
+    current_patch: int = (
+        config_entry.patch_version
+        if hasattr(config_entry, "patch_version") and config_entry.patch_version
+        else 0
+    )
 
     _LOGGER.debug(
-        "Migrating configuration from version %s.%s.%s",
+        "Migrating configuration from version %s.%s.%s to %s.%s.%s",
         current_version,
         current_minor,
         current_patch,
+        VERSION,
+        MINOR_VERSION,
+        PATCH_VERSION,
     )
 
+    # Migration from version 0.x
     if current_version == 0:
-        # migration from before v0.9 not supported
         if current_minor < 9:
+            # Versions before v0.9 are not supported
             _LOGGER.error(
-                "Migration from versions older than v0.9 is not supported. "
-                "Please delete the integration and re-add it"
+                "Migration from version 0.%s is not supported. "
+                "Please delete the integration and re-add it",
+                current_minor,
             )
             return False
 
-        # migration from v0.9 → v1.0 - no changes needed
-        if current_minor >= 9:
-            new_data = {**config_entry.data}
+        # Migration from v0.9+ → current version
+        # No data changes needed, just update version
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data={**config_entry.data},
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
+        _LOGGER.info(
+            "Migration from version 0.%s to %s.%s completed successfully",
+            current_minor,
+            VERSION,
+            MINOR_VERSION,
+        )
 
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data=new_data,
-                version=VERSION,
-                minor_version=MINOR_VERSION,
-            )
-
-    # migrations from v1.0.0
+    # Migration from version 1.x
     elif current_version == 1:
-        # from v1.0.0 to v1.2.0 no changes needed
-        if current_minor < 2 and MINOR_VERSION < 2:
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data=config_entry.data,
-                version=VERSION,
-                minor_version=MINOR_VERSION,
-            )
-            _LOGGER.debug(
-                "Migration to version %s.%s.%s completed",
+        # Check if migration to v1.2+ (breaking changes in services)
+        if current_minor < 2 and MINOR_VERSION >= 2:
+            _LOGGER.warning(
+                "Migration from version 1.%s.%s to %s.%s.%s includes breaking changes. "
+                "Please check all your service and action calls!",
+                current_minor,
+                current_patch,
                 VERSION,
                 MINOR_VERSION,
                 PATCH_VERSION,
             )
 
-        # migrations from v1.*.* to v1.2.*
-        if current_minor < 2 and MINOR_VERSION >= 2:
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data=config_entry.data,
-                version=VERSION,
-                minor_version=MINOR_VERSION,
-            )
-            _LOGGER.warning(
-                "Migration to version %s.%s.%s completed"
-                "Due to bigger changes in services and actions, please check all your action calls!",
-                VERSION,
-                MINOR_VERSION,
-                PATCH_VERSION,
-            )
+        # Update to current version (no data changes needed)
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=config_entry.data,
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
+        _LOGGER.info(
+            "Migration from version 1.%s to %s.%s completed successfully",
+            current_minor,
+            VERSION,
+            MINOR_VERSION,
+        )
+
+    # Already at current version or newer
+    else:
+        _LOGGER.debug(
+            "No migration needed - already at version %s.%s",
+            current_version,
+            current_minor,
+        )
 
     return True

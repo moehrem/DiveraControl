@@ -130,6 +130,12 @@ class DiveraAPI:
                 _LOGGER.debug("API response: %s", self._redact_url(url))
                 return data
 
+            # this is needed, as response status could be OK, but Divera still returns "success" = false
+            if response.json().get("success") is not True:
+                raise HomeAssistantError(
+                    f"Divera API error: {response.json().get('message')}"
+                )
+
         except ClientResponseError as err:
             if err.status == 401:
                 raise ConfigEntryAuthFailed(

@@ -19,7 +19,6 @@ from .const import (
     D_STATUS,
     D_STATUSPLAN,
     D_TS,
-    D_UCR,
     D_UCR_ACTIVE,
     D_UCR_DEFAULT,
     D_USER,

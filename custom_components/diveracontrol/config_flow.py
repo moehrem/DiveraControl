@@ -23,7 +23,6 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERGROUP_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -32,7 +31,6 @@ from .const import (
     VERSION,
 )
 from .divera_credentials import DiveraCredentials as dc
-from .utils import get_translation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -159,10 +157,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        entry_id = self.context.get("entry_id")
-        if not entry_id:
-            return self.async_abort(reason="missing_entry_id")
-
+        entry_id = self.context["entry_id"]
         existing_entry = self.hass.config_entries.async_get_entry(entry_id)
         if not existing_entry:
             return self.async_abort(reason="hub_not_found")
@@ -206,7 +201,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate user input and decide next steps.
 
         Args:
-            validation_method (callable): The calidation method to be used.
+            validation_method (callable): The validation method to be used, might be `dc.validate_login` or `dc.validate_api_key`.
             user_input (dict[str, Any]): The user input data of step "reconfigure".
 
         Returns:
@@ -389,56 +384,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         for ucr_id in clusters_to_remove:
             del self.clusters[ucr_id]
 
-    async def _async_show_usergroup_message(
-        self,
-        cluster_name: str,
-        ucr_id: int,
-        usergroup_id: int,
-    ) -> None:
-        """Show persistant message based on usergroup_id and related issues and permissions.
-
-        Args:
-            cluster_name (str): The name of the cluster/unit.
-            ucr_id (int): The user_cluster_relation ID to identify the Divera user.
-            usergroup_id (int): The class-ID of the usergroup the user belongs to.
-
-        """
-
-        base_message = (
-            await get_translation(
-                self.hass,
-                "common",
-                "usergroup_message",
-                {"cluster_name": cluster_name, "ucr_id": ucr_id},
-            )
-            or ""
-        )
-
-        detail_message = (
-            await get_translation(self.hass, "common", f"usergroup_{usergroup_id}")
-            or None
-        )
-
-        if detail_message is None:
-            detail_message = await get_translation(
-                self.hass,
-                "common",
-                "usergroup_unknown",
-                {"usergroup_id": usergroup_id},
-            )
-
-        full_message = base_message + "\n\n" + detail_message
-
-        await self.hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {
-                "title": "DiveraControl",
-                "message": full_message,
-                "notification_id": "diveracontrol_success_permissions",
-            },
-        )
-
     async def _process_clusters(self) -> ConfigFlowResult:
         """Process device creation.
 
@@ -452,7 +397,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 cluster_name = cluster_data[D_CLUSTER_NAME]
                 api_key = cluster_data[D_API_KEY]
                 ucr_id = cluster_data[D_UCR_ID]
-                usergroup_id = cluster_data[D_USERGROUP_ID]
 
                 new_hub = {
                     D_UCR_ID: ucr_id,
@@ -462,9 +406,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
                 }
 
-                await self._async_show_usergroup_message(
-                    cluster_name, ucr_id, usergroup_id
-                )
+                # await self._async_show_usergroup_message(
+                #     cluster_name, ucr_id, usergroup_id
+                # )
 
                 return self.async_create_entry(title=cluster_name, data=new_hub)
 

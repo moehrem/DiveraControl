@@ -1,0 +1,12 @@
+{
+    "success": false,
+    "error": "2",
+    "errors": {
+        "username": [
+            "E-Mail-Adresse darf nicht leer sein."
+        ],
+        "password": [
+            "Passwort darf nicht leer sein."
+        ]
+    }
+}
