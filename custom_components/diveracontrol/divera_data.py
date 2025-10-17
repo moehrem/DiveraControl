@@ -4,18 +4,61 @@ import logging
 from typing import Any
 
 from aiohttp import ClientError
+from homeassistant.exceptions import HomeAssistantError
 
-from .const import D_ALARM, D_CLUSTER, D_DATA, D_OPEN_ALARMS, D_UCR_ID, D_VEHICLE
-from .divera_api import DiveraAPI
+from .const import (
+    D_ALARM,
+    D_CLUSTER,
+    D_DM,
+    D_EVENTS,
+    D_LOCALMONITOR,
+    D_MESSAGE,
+    D_MESSAGE_CHANNEL,
+    D_MONITOR,
+    D_NEWS,
+    D_STATUS,
+    D_STATUSPLAN,
+    D_TS,
+    D_UCR_ACTIVE,
+    D_UCR_DEFAULT,
+    D_USER,
+    D_VEHICLE,
+    D_DATA,
+    D_OPEN_ALARMS,
+)
+from .divera_api import D_UCR, DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def update_data(
-    api: DiveraAPI,
-    cluster_data: dict[str, Any],
-    admin_data: dict[str, Any],
-) -> None:
+def _convert_empty_lists_to_dicts(data: dict[str, Any]) -> dict[str, Any]:
+    """Recursively convert empty lists to empty dicts in nested structures.
+
+    Divera API sometimes returns empty lists instead of empty dicts for
+    collections like alarm.items or cluster.vehicle when no data is present.
+
+    Args:
+        data: Dictionary potentially containing empty lists
+
+    Returns:
+        Dictionary with empty lists converted to empty dicts
+
+    """
+    result = {}
+    for key, value in data.items():
+        if value == []:
+            # Convert empty list to empty dict
+            result[key] = {}
+        elif isinstance(value, dict):
+            # Recursively process nested dicts
+            result[key] = _convert_empty_lists_to_dicts(value)
+        else:
+            # Keep other values as-is
+            result[key] = value
+    return result
+
+
+async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str, Any]:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates
@@ -24,44 +67,77 @@ async def update_data(
     Args:
         api (DiveraAPI): The API instance used to communicate with Divera.
         cluster_data (dict): A dictionary to store and update Divera operational data.
-        admin_data (dict): A dictionary to store and update Divera admin data.
 
     Exceptions:
         Logs errors for network issues, invalid data, or missing keys in API responses.
         Sets alarm and vehicle data to empty if any issues occur.
 
     Returns:
-        None
+        cluster_data (dict): The updated data dictionary with the latest Divera information.
 
     """
 
+    # init structure on first call
+    if not cluster_data:
+        cluster_data = {
+            D_UCR: {},
+            D_UCR_DEFAULT: {},
+            D_UCR_ACTIVE: {},
+            D_TS: {},
+            D_USER: {},
+            D_STATUS: {},
+            D_CLUSTER: {},
+            D_MONITOR: {},
+            D_ALARM: {},
+            D_NEWS: {},
+            D_EVENTS: {},
+            D_DM: {},
+            D_MESSAGE_CHANNEL: {},
+            D_MESSAGE: {},
+            D_LOCALMONITOR: {},
+            D_STATUSPLAN: {},
+        }
+
     # request divera data
     try:
-        ucr_id = admin_data[D_UCR_ID]
-        raw_ucr_data = await api.get_ucr_data(ucr_id)
+        raw_ucr_data = await api.get_ucr_data()
 
         if not raw_ucr_data.get("success", False):
             _LOGGER.error(
                 "Unexpected data format or API request failed: %s",
                 raw_ucr_data,
             )
-            return
+            return cluster_data
 
     except (ClientError, ValueError, KeyError) as e:
         _LOGGER.error("Error in data request: %s", e)
-        return
+        return cluster_data
 
     # set local data
-    cluster = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
-    alarm = raw_ucr_data.get(D_DATA, {}).get(D_ALARM, {})
+    raw_cluster: dict[str, Any] = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
 
     # update data if new data available
     key = None
     try:
         for key in cluster_data:
-            cluster_data[key] = raw_ucr_data.get(D_DATA, {}).get(key, {})
+            raw_value = raw_ucr_data.get(D_DATA, {}).get(key)
+
+            # Skip if no data
+            if raw_value is None:
+                cluster_data[key] = {}
+                continue
+
+            # If raw_value is a dict, recursively convert empty lists to dicts
+            if isinstance(raw_value, dict):
+                cluster_data[key] = _convert_empty_lists_to_dicts(raw_value)
+            # If raw_value is an empty list, convert to empty dict
+            elif raw_value == []:
+                cluster_data[key] = {}
+            else:
+                cluster_data[key] = raw_value
+
             _LOGGER.debug(
-                "Sucessfully updated key '%s', check diagnostics for data details",
+                "Successfully updated key '%s', check diagnostics for data details",
                 key,
             )
     except (KeyError, AttributeError) as e:
@@ -71,10 +147,16 @@ async def update_data(
 
     # adding properties to vehicle
     try:
-        for key in cluster.get(D_VEHICLE, {}):
-            raw_vehicle_property = await api.get_vehicle_property(key)
+        for key in raw_cluster.get(D_VEHICLE, {}):
+            try:
+                raw_vehicle_property = await api.get_vehicle_property(key)
+            except HomeAssistantError as e:
+                _LOGGER.error(
+                    "Error fetching vehicle property for vehicle id '%s': %s", key, e
+                )
+                continue
 
-            if raw_vehicle_property is not False:
+            if raw_vehicle_property:
                 vehicle_property = raw_vehicle_property.get(D_DATA, {})
                 if isinstance(vehicle_property, dict):
                     if (
@@ -86,7 +168,7 @@ async def update_data(
                         )
 
                 else:
-                    _LOGGER.warning(
+                    _LOGGER.error(
                         "Unexpected vehicle property format for '%s': %s",
                         key,
                         vehicle_property,
@@ -104,14 +186,18 @@ async def update_data(
 
     # handle open alarms
     try:
-        if len(alarm.get("items")) > 0:
+        # Use normalized data from cluster_data instead of raw alarm data
+        alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
+        if alarm_items:
             open_alarms = sum(
                 1
-                for alarm_details in alarm.get("items", {}).values()
+                for alarm_details in alarm_items.values()
                 if not alarm_details.get("closed", True)
             )
             cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
         else:
+            # Set open_alarms to 0 when no alarm items exist
+            cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = 0
             open_alarms = 0
 
         _LOGGER.debug("Open alarms updated: %s", open_alarms)
@@ -120,3 +206,5 @@ async def update_data(
         _LOGGER.error("Error processing alarm data: %s", e)
     except Exception:
         _LOGGER.exception("Unexpected error while processing alarms")
+
+    return cluster_data

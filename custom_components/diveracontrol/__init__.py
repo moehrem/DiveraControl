@@ -5,26 +5,34 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv, issue_registry as ir
 
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
     D_COORDINATOR,
+    D_INTEGRATION_VERSION,
     D_UCR_ID,
-    DEFAULT_API,
-    DEFAULT_COORDINATOR,
-    DEFAULT_DEVICE_TRACKER,
-    DEFAULT_SENSORS,
     DOMAIN,
     MINOR_VERSION,
+    PATCH_VERSION,
     VERSION,
 )
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPI
 from .service import async_register_services
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
+    """Set up DiveraControl at Home Assistant start to register services."""
+    async_register_services(hass, DOMAIN)
+    return True
 
 
 async def async_setup_entry(
@@ -43,7 +51,7 @@ async def async_setup_entry(
     """
     ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
-    cluster_api_key: str = config_entry.data.get(D_API_KEY) or ""
+    api_key: str = config_entry.data.get(D_API_KEY) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
@@ -51,34 +59,37 @@ async def async_setup_entry(
         api = DiveraAPI(
             hass,
             ucr_id,
-            cluster_api_key,
+            api_key,
         )
         coordinator = DiveraCoordinator(
             hass,
             api,
-            dict(config_entry.data),
+            config_entry,
         )
 
-        hass.data.setdefault(DOMAIN, {})[ucr_id] = {
-            DEFAULT_COORDINATOR: coordinator,
-            DEFAULT_API: api,
-            DEFAULT_SENSORS: {},
-            DEFAULT_DEVICE_TRACKER: {},
-        }
+        # create references in config_entry
+        # for easy access of coordinator
+        config_entry.runtime_data = coordinator
+        # hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+
+        hass.data.setdefault(DOMAIN, {})
+        hass.data[DOMAIN].setdefault(ucr_id, {})[D_COORDINATOR] = coordinator
 
         await coordinator.async_config_entry_first_refresh()
+
+        config_entry.async_on_unload(api.close)
         await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
-        async_register_services(hass, DOMAIN)
 
         _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
 
-    except Exception:
-        _LOGGER.exception(
-            "Error setting up cluster %s (%s), error:",
-            cluster_name,
-            ucr_id,
-        )
-        return False
+    except (TimeoutError, ConnectionError) as err:
+        _LOGGER.error("Connection failed: %s", err)
+        raise ConfigEntryNotReady("Failed to connect to Divera API") from err
+    except ConfigEntryAuthFailed:
+        raise
+    except Exception as err:
+        _LOGGER.exception("Unexpected error during setup")
+        raise ConfigEntryNotReady("Unexpected error during setup") from err
 
     return True
 
@@ -87,96 +98,63 @@ async def async_unload_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
 ) -> bool:
-    """Unload a config entry.
-
-    Args:
-        hass: Home Assistance instance.
-        config_entry: DiveraControl config entry to remove.
-
-    Returns:
-        bool: True, if successfully unloaded, otherwise False.
-
-    """
+    """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
     ucr_id = config_entry.data.get(D_UCR_ID)
 
     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
 
-    try:
-        api: DiveraAPI = hass.data[DOMAIN].pop(config_entry.entry_id, None)
-        if api:
-            await api.close()
-
-        if not await hass.config_entries.async_unload_platforms(
-            config_entry, PLATFORMS
-        ):
-            return False
-
-        if DOMAIN in hass.data and ucr_id in hass.data[DOMAIN]:
-            coordinator = hass.data[DOMAIN][ucr_id].get(D_COORDINATOR)
-            if coordinator:
-                await coordinator.remove_listeners()
-
-            hass.data[DOMAIN].pop(ucr_id, None)
-            if not hass.data[DOMAIN]:
-                hass.data.pop(DOMAIN, None)
-
-            _LOGGER.info(
-                "Successfully removed cluster %s (%s)",
-                cluster_name,
-                ucr_id,
-            )
-
-    except Exception:
-        _LOGGER.exception(
-            "Error removing cluster %s (%s), error:",
-            cluster_name,
-            ucr_id,
-        )
+    if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
 
+    if DOMAIN in hass.data:
+        hass.data[DOMAIN].pop(ucr_id, None)
+        if not hass.data[DOMAIN]:
+            hass.data.pop(DOMAIN, None)
+
+    _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
     return True
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old config_entry of integration DiveraControl."""
-    current_version = config_entry.version
-    current_minor = config_entry.minor_version
+    """Migrate old config_entry to the respective version.
 
-    _LOGGER.debug(
-        "Migrating configuration from version %s.%s",
-        current_version,
-        current_minor,
-    )
+    HA Standard: method will be called if manifest version does not match the config_entry version. So no need to compare versions in coding, just check for the respective version.
+    Expect downgrades!
 
-    if current_version == 0:
-        # migration from before v0.9 not supported
-        if current_minor < 9:
-            _LOGGER.error(
-                "Migration from versions older than v0.9 is not supported. "
-                "Please delete the integration and re-add it"
-            )
-            return False
+    """
 
-        # migration from v0.9 → v1.0 - no changes needed
-        if current_minor >= 9:
-            new_data = {**config_entry.data}
+    # changing to v1.2.0
+    if VERSION == 1 and MINOR_VERSION == 2:
+        _LOGGER.info(
+            "Migrating config entry to version %s.%s.%s",
+            VERSION,
+            MINOR_VERSION,
+            PATCH_VERSION,
+        )
+        if D_INTEGRATION_VERSION not in config_entry.data:
+            _LOGGER.info("Adding integration version to existing config entry")
 
             hass.config_entries.async_update_entry(
                 config_entry,
-                data=new_data,
+                data={
+                    **config_entry.data,
+                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+                },
                 version=VERSION,
                 minor_version=MINOR_VERSION,
             )
 
-    # migration from v1.0 -> ... - no changes needed
-    elif current_version == 1 and current_minor < MINOR_VERSION:
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=config_entry.data,
-            version=VERSION,
-            minor_version=MINOR_VERSION,
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"breaking_changes_v1_2_0_{config_entry.entry_id}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="breaking_changes_v1_2_0",
+            translation_placeholders={
+                "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+            },
         )
-        _LOGGER.debug("Migration to version %s.%s completed", VERSION, MINOR_VERSION)
 
     return True

@@ -13,6 +13,7 @@
 ![update-badge](https://img.shields.io/github/last-commit/moehrem/diveracontrol?label=last%20update)
 
 [![GitHub Release](https://img.shields.io/github/v/release/moehrem/DiveraControl?sort=semver)](https://github.com/moehrem/DiveraControl/releases)
+
 <!-- [![GitHub Release Date](https://img.shields.io/github/release-date/moehrem/DiveraControl)](https://github.com/moehrem/DiveraControl/releases) -->
 <!-- ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/moehrem/DiveraControl/latest/total?label=Downloads%20latest%20Release)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/moehrem/DiveraControl/ci_pipeline.yml?branch=main) -->
@@ -29,25 +30,29 @@
 ---
 
 # DiveraControl für HomeAssistant
+
 💡 **Fehler oder Funktionswünsche?** Bitte erstelle ein [Issue](https://github.com/moehrem/DiveraControl/issues). Vielen Dank! 👍
 
 ## 🔍 Was ist DiveraControl?
 
 **DiveraControl** ist eine Integration von [Divera 24/7](https://www.divera247.com) in [HomeAssistant](https://www.home-assistant.io/). Sie ermöglicht lokalen Administratoren oder Einheitenbesitzern einen umfangreichen Datenaustausch zwischen HomeAssistant und Divera 24/7.
 
-In Feuerwehrgebäuden und Fahrzeugen sammeln sich zahlreiche Daten an, die im Einsatzfall sinnvoll genutzt werden können. Leider gibt es kaum erschwingliche, integrierte Lösungen für die Verwaltung und Steuerung dieser Daten. **HomeAssistant** bietet hier eine kostengünstige Zentrale zur Steuerung von zum Beispiel:
-- Beleuchtung, Türen & Toren
-- Monitoren & Sprachausgaben
-- Fahrzeugpositionen, Besatzungen & Status
-- Gerätepositionen & Akkuständen
+Wachen, Fahrzeuge und Geräte werden zunehmend smarter. Die daraus entstehenden Daten können sinnvoll und effektiv genutzt werden, um Einsätze und Alltag effektiver und automatisierter zu gestalten. Leider gibt es kaum erschwingliche, integrierte Lösungen für die Verwaltung und Steuerung dieser Daten. **HomeAssistant** bietet hier eine kostengünstige Zentrale zur Steuerung und Überwachung von zum Beispiel:
 
-Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmierungssoftware bereit und ermöglicht so eine nahtlose Integration.
+- Beleuchtung, Türen & Toren,
+- Monitoren & Sprachausgaben,
+- Fahrzeugpositionen, Besatzungen & Status,
+- Gerätepositionen & Akkuständen,
+- ... (theoretisch) jeder beliebige Anwendung, solange die Daten verarbeitet werden können.
+
+Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmierungssoftware bereit und ermöglicht so eine nahtlose Integration der Divera-Einheit.
 
 **Für wen ist diese Integration gedacht?**
+
 - **Besitzer** und **Administratoren** einer Divera-Einheit
 - **Neugierige Nutzer**, die die Möglichkeiten der Divera-API erkunden wollen
 
-> **Hinweis:** Die Integration funktioniert auch mit eingeschränkten Rechten, dann allerdings mit reduziertem Funktionsumfang. Für reine Nutzer einer Einheit empfiehlt sich die bestehende [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera).
+> **Hinweis:** Die Integration funktioniert auch mit eingeschränkten Rechten, dann allerdings mit reduziertem Funktionsumfang. Für reine Nutzer einer Einheit ohne erweiterte Berechtigungen empfiehlt sich die bestehende [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera).
 
 ---
 
@@ -55,14 +60,16 @@ Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmier
 
 Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von HomeAssistant und dieser Integration in realen Lagen erfolgt **auf eigene Verantwortung**. Die Einhaltung der Datenschutzrichtlinien – insbesondere im Hinblick auf **Datenweitergabe, -verarbeitung und -sicherheit** – liegt vollständig beim Nutzer.
 
-> Diese Integration steht in **keiner Verbindung** zu und wird auch **nicht unterstützt** von der DIVERA GmbH.
+Diese Integration steht in **keiner Verbindung** zu und wird auch **nicht unterstützt** von der DIVERA GmbH.
 
 ---
 
 ## ✅ Funktionsumfang
+
 Die Kommunikation zu Divera basiert vollständig auf der APIv2.
 
 ### 📥 **Datenabfrage**
+
 - Alarmdaten
 - Einheitendetails
 - Verfügbarkeiten
@@ -73,7 +80,9 @@ Die Kommunikation zu Divera basiert vollständig auf der APIv2.
 - Kalendereinträge
 
 ### 📤 **Datenübergabe**
+
 Verschiedene Divera-Endpunkte sind als Aktionen in HomeAssistant umgesetzt und ermöglichen das Übermitteln von Daten an Divera:
+
 - Alarmerstellung, -änderung & -abschluss
 - Fahrzeugdaten & individuelle Eigenschaften
 - Einsatzrückmeldungen
@@ -83,11 +92,14 @@ Verschiedene Divera-Endpunkte sind als Aktionen in HomeAssistant umgesetzt und e
 ---
 
 ## 💡 Weitere geplante Funktionen
+
 Anstehende Funktionen finden sich in den Issues. Beteilige dich gerne an der Diskussion oder auch der Entwicklung!
 Neue Vorschläge dürfen gerne als Issue angefragt werden.
 
 ## ❌ Nicht enthalten und bisher nicht geplant
-Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung geplant:
+
+Divera bietet zahlreiche Endpunkte, folgende sind (bisher) nicht für die Umsetzung geplant:
+
 - Setzen von Nutzerstatus bzw. Rückmeldungen
 - Löschen & Archivieren von Alarmen, Mitteilungen & Terminen
 - Verwaltung von Terminen (Erstellen, Ändern, Löschen)
@@ -100,13 +112,15 @@ Divera bietet zahlreiche Endpunkte, folgende sind nicht für die Umsetzung gepla
 ## 📂 Installation
 
 ### 🏆 **HACS (empfohlen)**
-DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
+
+DiveraControl ist via HACS (Home Assistant Community Store) verfügbar.
 
 1. [HACS installieren](https://www.hacs.xyz/docs/use/)
 2. [![HACS Repo hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=moehrem&repository=diveracontrol&category=Integration)
 3. **Installation:** Unten rechts auf "Herunterladen" klicken.
 
 ### 🔧 **Manuelle Installation**
+
 - [Letzten Release](https://github.com/moehrem/DiveraControl/releases/latest) herunterladen
 - Dateien in `config/custom_components/diveracontrol` extrahieren
 
@@ -115,10 +129,12 @@ DiveraControl ist via HACS (Home Assistant COmmunity Store) verfügbar.
 ## ⚙️ Einrichtung
 
 ### 🔑 **Authentifizierung**
+
 Zur Einrichtung werden entweder **Benutzername & Passwort** oder der **API-Schlüssel** benötigt. Die entsprechende Einrichtungsform kann vom Nutzer gewählt werden.
 Der persönliche API-Schlüssel ist in den Nutzerdaten unter "Einstellungen" -> "Debug" zu finden. Alternativ kann der Schlüssel der Einheit unter "Verwaltung" -> "Schnittstellen" genutzt werden oder der Schlüssel des System- oder Monitornutzers aus den jeweiligen Verwaltungsoptionen.
 
-Divera bietet verscheidene Nutzerformen an:
+Divera bietet verschiedene Nutzerformen an:
+
 - persönlicher/regulärer Nutzer
 - Systembenutzer
 - Monitornutzer
@@ -130,19 +146,21 @@ Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **Sys
 
 Die Anmeldung eines Nutzers einer Einheit, die bereits integriert wurde, ist nicht möglich.
 
-
 ### ⏳ **Abfrageintervalle**
+
 Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval wird zur Datenabfrage und -aktualisierung genutzt.
+
 - **Außerhalb von Einsätzen**: längeres Intervall, das außerhalb aktiver Alarme genutzt wird
 - **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme genutzt wird
 
 > **Hinweis:** Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 30s für "außerhalb von Einsätzen" bzw 10s für "während Einsätzen" nicht möglich.
 
-
 ## 🔨 Benutzung
 
 ### 📟 **Aktionen**
+
 Zur Interaktion mit Divera sind verschiedene Aktionen in HomeAssistant implementiert. Sie beginnen alle mit "DiveraControl" und können in Automationen, im Frontend über Buttons, in eigenen Entwicklungen - kurz: überall da, wo in HomeAssistant Aktionen unterstützt werden - aufgerufen werden. Umgesetzte Aktionen sind:
+
 - Alarm erstellen
 - Alarm schließen/öffnen
 - Nachrichten senden
@@ -152,13 +170,17 @@ Zur Interaktion mit Divera sind verschiedene Aktionen in HomeAssistant implement
 - Alarm ändern
 - Erstellen einer neuen Mitteilung
 
-Weitere Details zu den Aktionen, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Es ist in dort außerdem möglich, Aktionen manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
+Alle Aktionen sind geräteabhängig. Das heißt, dass jeder Ausführung die anzusprechende Einheit mitgegeben werden muss. Über Automationen und im Frontend kann als Auslöser einfach eine Einhet gewählt und die gewünschte Aktion ausgeführt werden. Hier sind viele Felder auch mit Auswahlhilfen versehen.
+In den Entwickleroptionen oder bei anderer Implementierunt der Aktionen muss ein target in Form der device_id eingegeben werden. Aus technischen Gründen können hier einige Felder nicht mit Auswahlhilfen versorgt werden. Das betrifft alle änderbaren Wertehilfen, zB Alarme, Fahrzeuge, Besatzung, Gruppen etc. In die Felder muss stattdessen die entsprechende ID, bei mehreren IDs durch Komma getrennt, eingegeben werden.
+
+Weitere Details zu den Aktionen, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Die Umsetzung umfasst sowohl den "YAML-Modus" als auch den "UI-Modus". Alle Aktionen beginnen mit "DiveraControl: ", gefolgt vom Namen und einer kurzen Beschreibung. Es ist dort außerdem möglich, Aktionen manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
 Aktionen, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
 
-
 ## ⁉️ **Fehleranalyse**
+
 Zur Analyse kann im Menü der Integration das "Debug-Protokoll" aktiviert werden. Damit wird der Loglevel der Integration auf "Debug" gesetzt und entsprechend deutlich mehr Logging ausgegeben.
 
-Im Kontextenü zum erstellen Dienst selbst können die "Diagnosedaten heruntergeladen" werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
+Zu jeder erstellen Einheit können im Kontextmenü die "Diagnosedaten" heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
+
 > **Hinweis:** In der Ausgabedatei werden lediglich die API-Schlüssel maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!

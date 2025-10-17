@@ -1,0 +1,18 @@
+{
+  "success":  true,
+  "data":  {
+    "user":  {
+      "autologin":  false,
+      "auth_key": "test_api_key_123456",
+      "access_token": "test_access_token_123456",
+      "default_user_cluster_relation": 123456
+    },
+    "ucr": [{
+      "id": 123456,
+      "usergroup_id": 8,
+      "shortname": "LZM",
+      "name": "Löschzug Musterstadt"
+    }]
+  }
+}
+

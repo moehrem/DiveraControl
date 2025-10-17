@@ -1,0 +1,9 @@
+# Test dependencies for DiveraControl integration
+# pytest-homeassistant-custom-component includes:
+#   - pytest
+#   - pytest-asyncio
+#   - pytest-cov
+#   - syrupy
+#   - Home Assistant test utilities
+pytest-homeassistant-custom-component>=0.13.180  # Python 3.13 compatible
+pytest-timeout==2.3.1

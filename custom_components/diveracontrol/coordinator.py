@@ -1,39 +1,24 @@
 """Coordinator for myDivera integration."""
 
-from collections.abc import Callable
 from datetime import timedelta
 import logging
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    D_ALARM,
-    D_CLUSTER,
     D_CLUSTER_NAME,
-    D_DM,
-    D_EVENTS,
-    D_LOCALMONITOR,
-    D_MESSAGE,
-    D_MESSAGE_CHANNEL,
-    D_MONITOR,
-    D_NEWS,
-    D_OPEN_ALARMS,
-    D_STATUS,
-    D_STATUSPLAN,
-    D_TS,
-    D_UCR,
-    D_UCR_ACTIVE,
-    D_UCR_DEFAULT,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USER,
+    UPDATE_INTERVAL_ALARM,
+    UPDATE_INTERVAL_DATA,
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
-from .utils import log_execution_time, set_update_interval
+from .utils import set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +30,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         api: "DiveraAPI",
-        config_entry: dict,
+        config_entry: ConfigEntry,
     ) -> None:
         """Initialize DiveraControl coordinator.
 
@@ -59,145 +44,57 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         """
 
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=f"DiveraCoordinator_{config_entry.get(D_UCR_ID)}",
-        )
         self.api = api
-        self.cluster_data = {}
-        self.admin_data = {
-            D_CLUSTER_NAME: config_entry.get(D_CLUSTER_NAME, "Unknown"),
-            D_UCR_ID: config_entry.get(D_UCR_ID),
+
+        self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
+        self.ucr_id: str = config_entry.data.get(D_UCR_ID, "")
+
+        self.interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
-                seconds=config_entry[D_UPDATE_INTERVAL_ALARM]
+                seconds=config_entry.data.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                )
             ),
             D_UPDATE_INTERVAL_DATA: timedelta(
-                seconds=config_entry[D_UPDATE_INTERVAL_DATA]
+                seconds=config_entry.data.get(
+                    D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+                )
             ),
         }
 
-        self._listeners = {}
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"DiveraCoordinator_{self.ucr_id}",
+            update_interval=self.interval_data.get(D_UPDATE_INTERVAL_DATA),
+            config_entry=config_entry,
+        )
 
-        if not hasattr(self, "_listener_index"):
-            self._listener_index = 0
-        if not hasattr(self, "_removers"):
-            self._removers: dict[int, Callable[[], None]] = {}
-
-    def init_cluster_data_structure(self) -> None:
-        """Define main data structures for divera data and admin data.
-
-        Returns:
-            None
-
-        """
-        if not self.cluster_data:
-            self.cluster_data = {
-                D_UCR: {},
-                D_UCR_DEFAULT: {},
-                D_UCR_ACTIVE: {},
-                D_TS: {},
-                D_USER: {},
-                D_STATUS: {},
-                D_CLUSTER: {},
-                D_MONITOR: {},
-                D_ALARM: {},
-                D_NEWS: {},
-                D_EVENTS: {},
-                D_DM: {},
-                D_MESSAGE_CHANNEL: {},
-                D_MESSAGE: {},
-                D_LOCALMONITOR: {},
-                D_STATUSPLAN: {},
-            }
-
-        if not self.admin_data:
-            self.admin_data = {
-                D_CLUSTER_NAME: "Unknown",
-                D_UCR_ID: "Unknown",
-                D_UPDATE_INTERVAL_ALARM: 0,
-                D_UPDATE_INTERVAL_DATA: 0,
-            }
-
-    @log_execution_time
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from Divera API and update cache on a regular basis.
+        """Fetch data from Divera API.
 
         Returns:
-            self.cluster_data (dict): all new data, freshly requested from Divera.
+            cluster_data (dict): The updated data dictionary with the latest Divera information.
+
+        Raises:
+            UpdateFailed: If there is an error fetching data from the API.
 
         """
-
-        if not self.cluster_data or not self.admin_data:
-            self.init_cluster_data_structure()
 
         try:
-            await update_data(self.api, self.cluster_data, self.admin_data)
+            # read data from Divera API
+            new_cluster_data = await update_data(self.api, self.data)
 
+            # dynamically change update interval
             self.update_interval = set_update_interval(
-                self.update_interval,
-                self.cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0),
-                self.admin_data,
+                new_cluster_data, self.interval_data, self.update_interval
             )
 
             _LOGGER.debug(
-                "Successfully updated data for unit '%s' ",
-                self.admin_data[D_CLUSTER_NAME],
+                "Successfully updated data for unit '%s'",
+                self.cluster_name,
             )
-
         except Exception as err:
-            self.async_set_update_error(err)
-
-        # update entities
-        self.async_set_updated_data(self.cluster_data)
-
-        return self.cluster_data
-
-    def async_add_listener(
-        self,
-        update_callback: Callable,
-        context: Any = None,
-    ) -> Callable:
-        """Add a listener and store the remove function.
-
-        Args:
-            update_callback (callable): Callback function to be called when data is updated.
-            context (Any): optional context for the listener.
-
-        Returns:
-            callable: function to remove listener.
-
-        """
-        remove_listener = super().async_add_listener(update_callback)
-
-        self._listener_index += 1
-        listener_id = self._listener_index
-
-        self._listeners[listener_id] = (update_callback, context)
-        self._removers[listener_id] = remove_listener
-
-        return remove_listener
-
-    async def remove_listeners(self) -> None:
-        """Remove all update listeners for this coordinator.
-
-        Returns:
-            None
-
-        """
-
-        remover_ids = list(self._removers.keys())
-
-        for listener_id in remover_ids:
-            remove_func = self._removers.get(listener_id)
-
-            if callable(remove_func):
-                try:
-                    remove_func()
-                except Exception as e:
-                    _LOGGER.debug("Error while removing listener: %s", e)
-
-            self._listeners.pop(listener_id, None)
-            self._removers.pop(listener_id, None)
-
-        _LOGGER.debug("Removed update listeners for HUB: %s", self.admin_data[D_UCR_ID])
+            raise UpdateFailed(f"Error fetching data: {err}") from err
+        else:
+            return new_cluster_data

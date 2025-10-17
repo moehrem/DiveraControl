@@ -1,11 +1,17 @@
 """Communication with Divera 24/7 api."""
 
 import logging
+from typing import Any
+from urllib.parse import urlencode
 
-from aiohttp import ClientError, ClientTimeout
+from aiohttp import ClientError, ClientResponseError, ClientTimeout
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -25,9 +31,9 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import log_execution_time, permission_check
+from .utils import permission_check
 
-LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class DiveraAPI:
@@ -56,15 +62,23 @@ class DiveraAPI:
 
         self.session = async_get_clientsession(hass)
 
-    @log_execution_time
+    def _redact_url(self, url: str) -> str:
+        """Redact API key from URL for logging.
+
+        Args:
+            url: URL to redact.
+
+        Returns:
+            URL with API key replaced by asterisks.
+        """
+        return url.replace(self.api_key, "***")
+
     async def api_request(
         self,
         url: str,
         method: str,
-        parameters: dict | None = None,
-        payload: dict | None = None,
-        headers: dict | None = None,
-    ) -> dict:
+        payload: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Request data from Divera API at the given endpoint.
 
         Args:
@@ -73,32 +87,29 @@ class DiveraAPI:
             perm_key (str): Permission key to check if user is allowed to enter API. Special: All non-restricted APIs have "perm_key=None"
             parameters (dict | None): Dictionary containing URL parameters. Defaults to None.
             payload (dict | None): JSON payload for the request. Defaults to None.
-            headers (dict | None): HTTP headers. Defaults to `{ "Accept": "*/*", "Content-Type": "application/json"}`.
 
         Returns:
             dict: JSON response from the API.
 
         """
-        # init headers, if None
-        headers = headers or {
+        # init headers
+        headers = {
             "Accept": "*/*",
             "Content-Type": "application/json",
         }
 
-        # init "parameters" as dict, if None; add mandatory api-key
-        parameters = parameters or {}
+        # init "parameters" as dict
+        # IMPORTANT! Every API-call needs these two parameters: api_key and ucr_id
+        # api_key is needed for authentification
+        # ucr_id is needed to identify the divera unit - without that parameter Divera will accept the call for the main unit of the user only!
+        parameters: dict[str, str] = {}
         parameters[API_ACCESS_KEY] = self.api_key
+        parameters[D_UCR] = self.ucr_id
+        url = f"{url}?{urlencode(parameters)}"
 
-        # Add parameters to the URL
-        if parameters:
-            param_strings = [f"{key}={value}" for key, value in parameters.items()]
-            param_string = "&".join(param_strings)
-            url = f"{url}?{param_string}"
+        _LOGGER.debug("API request: %s %s", method, self._redact_url(url))
 
         try:
-            log_url = url.replace(self.api_key, "**REDACTED**")
-            LOGGER.debug("Starting request to Divera API: %s", log_url)
-
             async with self.session.request(
                 method,
                 url,
@@ -106,37 +117,44 @@ class DiveraAPI:
                 headers=headers,
                 timeout=ClientTimeout(total=10),
             ) as response:
-                if response.status != 200:
-                    raise ConfigEntryNotReady(
-                        f"Divera API error (HTTP status {response.status}) for cluster id '{self.ucr_id}'"
-                    )
+                response.raise_for_status()
+                data = await response.json()
+                _LOGGER.debug("API response: %s", self._redact_url(url))
+                return data
 
-                if response.status == 200:
-                    try:
-                        LOGGER.debug("Finished request to Divera API: %s", log_url)
-                        return await response.json()
-                    except Exception:
-                        LOGGER.exception("Error parsing JSON response from Divera API")
-                        return await response.json()
+            # this is needed, as https-response status could be OK, but Divera still returns "success" = false
+            if response.json().get("success") is not True:
+                raise HomeAssistantError(
+                    f"Divera API error: {response.json().get('message')}"
+                )
 
-                return {}
-        except ClientError as e:
-            log_url = url.replace(self.api_key, "**REDACTED**")
-            LOGGER.error(
-                "Client error: %s for cluster id %s from url %s",
-                e,
-                self.ucr_id,
-                log_url,
-            )
-            return {}
+        except ClientResponseError as err:
+            if err.status == 401:
+                raise ConfigEntryAuthFailed(
+                    f"Invalid API key for cluster {self.ucr_id}"
+                ) from err
+            if err.status >= 500:
+                raise ConfigEntryNotReady(
+                    f"Divera API unavailable (HTTP {err.status})"
+                ) from err
+            raise HomeAssistantError(
+                f"Divera API error (HTTP {err.status}): {err.message}"
+            ) from err
+
+        except TimeoutError as err:
+            raise ConfigEntryNotReady(
+                "Timeout connecting to Divera API after 10 seconds"
+            ) from err
+
+        except ClientError as err:
+            raise HomeAssistantError(f"Failed to connect to Divera API: {err}") from err
 
     async def close(self) -> None:
         """Cleanup if needed in the future - right now just implemented as a dummy to satisfy linting."""
 
     async def get_ucr_data(
         self,
-        ucr_id: str,
-    ) -> dict:
+    ) -> dict[str, str]:
         """GET all data for user cluster relation from the Divera API. No permission check.
 
         Args:
@@ -146,139 +164,119 @@ class DiveraAPI:
             dict: JSON response from the API.
 
         """
-        LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
+        _LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        parameters = {D_UCR: ucr_id}
-        return await self.api_request(url, method, parameters=parameters)
+        return await self.api_request(url, method)
 
     async def post_vehicle_status(
         self,
         vehicle_id: int,
-        payload: dict,
-    ) -> bool:
+        payload: dict[str, str],
+    ) -> None:
         """POST vehicle status and data to Divera API.
 
         Args:
             vehicle_id (int): Divera-ID of the vehicle to update.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
+        _LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)
 
     async def post_alarms(
         self,
-        payload: dict,
-    ) -> bool:
+        payload: dict[str, str],
+    ) -> None:
         """POST new alarm to Divera API.
 
         Args:
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
+        _LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_ALARM)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)
 
     async def put_alarms(
         self,
-        alarm_id: str,
-        payload: dict,
-    ) -> bool:
+        alarm_id: int,
+        payload: dict[str, str],
+    ) -> None:
         """PUT changes for existing alarm to Divera API.
 
         Args:
-            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            alarm_id (int): Divera-Alarm-ID which had to be changed.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug(
+        _LOGGER.debug(
             "Putting changes to alarm %s for cluster %s", alarm_id, self.ucr_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
-            method = "PUT"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_ALARM)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
+        method = "PUT"
+
+        await self.api_request(url, method, payload=payload)
 
     async def post_close_alarm(
         self,
-        payload: dict,
-        alarm_id: str,
-    ) -> bool:
+        payload: dict[str, str],
+        alarm_id: int,
+    ) -> None:
         """POST to close an existing alarm to Divera API.
 
         Args:
-            alarm_id (str): Divera-Alarm-ID which had to be changed.
+            alarm_id (int): Divera-Alarm-ID which had to be changed.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_ALARM):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        _LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
-        return False
+        permission_check(self.hass, self.ucr_id, PERM_ALARM)
+
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)
 
     async def post_message(
         self,
-        payload: dict,
-    ) -> bool:
-        """POSt to close an existing alarm to Divera API.
+        payload: dict[str, str],
+    ) -> None:
+        """POST to close an existing alarm to Divera API.
 
         Args:
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug("Posting message for cluster %s", self.ucr_id)
+        _LOGGER.debug("Posting message for cluster %s", self.ucr_id)
 
-        if permission_check(self.hass, self.ucr_id, PERM_MESSAGES):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_MESSAGES)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)
 
     async def get_vehicle_property(
         self,
         vehicle_id: int,
-    ) -> dict:
+    ) -> dict[str, str]:
         """GET individual vehicle poroperties for vehicle from Divera API.
 
         Args:
@@ -288,50 +286,50 @@ class DiveraAPI:
             dict: JSON response from the API, otherwise empty if no permissions.
 
         """
-        LOGGER.debug(
+        _LOGGER.debug(
             "Getting individual vehicle properties for vehicle id %s", vehicle_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
-            method = "GET"
-            return await self.api_request(url, method)
+        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        return {}
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
+        )
+        method = "GET"
+
+        return await self.api_request(url, method)
 
     async def post_using_vehicle_property(
         self,
         vehicle_id: int,
-        payload: dict,
-    ) -> bool:
+        payload: dict[str, str],
+    ) -> None:
         """POST individual vehicle poroperties for vehicle from Divera API.
 
         Args:
             vehicle_id (int): ID of the vehicle to fetch property data from.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug(
+        _LOGGER.debug(
             "Posting individual vehicle properties for cluster %s", self.ucr_id
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        return False
+        url = (
+            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
+        )
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)
 
     async def post_using_vehicle_crew(
         self,
         vehicle_id: int,
         mode: str,
-        payload: dict,
-    ) -> bool:
+        payload: dict[str, str],
+    ) -> None:
         """POST add one or more crew to a vehicle.
 
         Args:
@@ -342,47 +340,50 @@ class DiveraAPI:
                         "reset" - resetting all crew from vehicle.
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
+        Raises:
+            HomeAssistantError: If mode is invalid.
 
         """
-        LOGGER.debug(
+
+        _LOGGER.debug(
             "Posting %s crew members to vehicle %s for cluster %s",
             mode,
             vehicle_id,
             self.ucr_id,
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
+        if mode in {"add", "remove"}:
+            method = "POST"
+        elif mode == "reset":
+            method = "DELETE"
+        else:
+            raise HomeAssistantError(
+                f"Invalid mode '{mode}' for crew management, can't choose method"
+            )
+
+        await self.api_request(url, method, payload=payload)
 
     async def post_news(
         self,
-        payload: dict,
-    ) -> bool:
+        payload: dict[str, str],
+    ) -> None:
         """POST news to Divera.
 
         Args:
             payload (dict): Dictionary of data to send to Divera-API.
 
-        Returns:
-            bool: True if API-call successful, False otherwise.
-
         """
-        LOGGER.debug(
+        _LOGGER.debug(
             "Posting news to unit %s",
             self.ucr_id,
         )
 
-        if permission_check(self.hass, self.ucr_id, PERM_NEWS):
-            url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
-            method = "POST"
-            await self.api_request(url, method, payload=payload)
-            return True
+        permission_check(self.hass, self.ucr_id, PERM_NEWS)
 
-        return False
+        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
+        method = "POST"
+
+        await self.api_request(url, method, payload=payload)

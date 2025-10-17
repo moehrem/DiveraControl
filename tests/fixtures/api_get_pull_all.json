@@ -1,0 +1,92 @@
+{
+    "success": true,
+    "data": {
+        "ucr": {
+            "123456": {
+                "cluster_id": 11111,
+                "name": "Löschzug Musterstadt",
+                "shortname": "LZM"
+            },
+            "456789": {
+                "cluster_id": 22222,
+                "name": "Rüstzug Musterstadt",
+                "shortname": "RZM"
+            }
+        },
+        "ucr_default": 123456,
+        "ucr_active": 123456,
+        "ts": 1760530080,
+        "user": {
+            "accesskey": "test_api_key",
+            "firstname": "Test",
+            "lastname": "User",
+            "access": {
+                "messages": true,
+                "alarm": true,
+                "news": true,
+                "status": true,
+                "status_vehicle": true,
+                "management": true
+            }
+        },
+        "cluster": {
+            "consumer": {
+                "123456": {
+                    "firstname": "Test",
+                    "lastname": "User",
+                    "groups": [445566],
+                    "qualifications": [1, 2]
+                }
+            },
+            "qualification": {
+                "1": {
+                    "name": "Kraftfahrer C",
+                    "shortname": "C"
+                },
+                "2": {
+                    "name": "Atemschutz",
+                    "shortname": "AGT"
+                }
+            },
+            "status": {
+                "91767": {
+                    "id": 11111,
+                    "name": "5 Minuten",
+                    "color_hex": "39CF00"
+                },
+                "91769": {
+                    "id": 22222,
+                    "name": "nicht einsatzbereit",
+                    "color_hex": "EF0000"
+                }
+            },
+            "vehicle": {
+                "79461": {
+                    "fullname": "Testfahrzeug",
+                    "shortname": "TFZ",
+                    "name": "99-99-99",
+                    "fmsstatus_id": 2,
+                    "crew": []
+                }
+            },
+            "group": {
+                "445566": {
+                    "name": "Nutzer"
+                }
+            },
+            "name": "Löschzug Musterstadt",
+            "shortname": "LZM"
+        },
+        "alarm": {
+            "items": [],
+            "sorting": [],
+            "ts": 1760530080,
+            "new": 0
+        },
+        "monitor": {
+            "1": {},
+            "2": {},
+            "3": {}
+        }
+    }
+}

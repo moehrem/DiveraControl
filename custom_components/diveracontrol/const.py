@@ -1,10 +1,20 @@
 """Constants for DiveraControl Integration."""
 
+import json
+from pathlib import Path
+
+# Load version from manifest.json
+_MANIFEST_PATH = Path(__file__).parent / "manifest.json"
+with _MANIFEST_PATH.open(encoding="utf-8") as manifest_file:
+    _MANIFEST = json.load(manifest_file)
+
+_VERSION_PARTS = _MANIFEST["version"].split(".")
+VERSION = int(_VERSION_PARTS[0])
+MINOR_VERSION = int(_VERSION_PARTS[1])
+PATCH_VERSION = int(_VERSION_PARTS[2])
+
 # general
 DOMAIN = "diveracontrol"
-VERSION = 1
-MINOR_VERSION = 1
-PATCH_VERSION = 5
 MANUFACTURER = "Divera GmbH"
 UPDATE_INTERVAL_DATA = 60
 UPDATE_INTERVAL_ALARM = 30
@@ -34,9 +44,11 @@ D_UPDATE_INTERVAL_ALARM = "update_interval_alarm"
 D_DATA = "data"
 D_NAME = "name"
 D_API_KEY = "api_key"
+D_ENTRY_ID = "config_entry_id"
 D_USERGROUP_ID = "usergroup_id"
 D_UCR = "ucr"
 D_UCR_ID = "ucr_id"
+D_INTEGRATION_VERSION = "integration_version"
 D_CLUSTER_NAME = "cluster_name"
 D_COORDINATOR = "coordinator"
 D_OPEN_ALARMS = "open_alarms"

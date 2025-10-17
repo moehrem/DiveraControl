@@ -20,18 +20,18 @@ from homeassistant.helpers.selector import (
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
+    D_INTEGRATION_VERSION,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERGROUP_ID,
     DOMAIN,
     MINOR_VERSION,
+    PATCH_VERSION,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
     VERSION,
 )
 from .divera_credentials import DiveraCredentials as dc
-from .utils import get_translation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = VERSION
     MINOR_VERSION = MINOR_VERSION
+    PATCH_VERSION = PATCH_VERSION
 
     def __init__(self) -> None:
         """Initialize the config flow.
@@ -157,11 +158,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        entry_id = self.context.get("entry_id")
-        if not entry_id:
-            return self.async_abort(reason="missing_entry_id")
+        try:
+            entry_id: str = self.context["entry_id"]
+            existing_entry = self.hass.config_entries.async_get_entry(entry_id)
+        except KeyError:
+            existing_entry = None
 
-        existing_entry = self.hass.config_entries.async_get_entry(entry_id)
         if not existing_entry:
             return self.async_abort(reason="hub_not_found")
 
@@ -198,13 +200,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _validate_and_proceed(
         self,
-        validation_method: Callable,
+        validation_method: Callable[[dict[str, str], Any, dict[str, Any]], Any],
         user_input: dict[str, Any],
     ) -> ConfigFlowResult:
         """Validate user input and decide next steps.
 
         Args:
-            validation_method (callable): The calidation method to be used.
+            validation_method (callable): The validation method to be used, might be `dc.validate_login` or `dc.validate_api_key`.
             user_input (dict[str, Any]): The user input data of step "reconfigure".
 
         Returns:
@@ -224,7 +226,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if self.errors:
             return self._show_api_key_form()
 
-        # check and delete dubliucate clusters
+        # check and delete duplicate clusters
         self._handle_duplicates()
 
         if len(self.clusters) > 1:
@@ -387,50 +389,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         for ucr_id in clusters_to_remove:
             del self.clusters[ucr_id]
 
-    async def _async_show_usergroup_message(
-        self,
-        cluster_name: str,
-        ucr_id: int,
-        usergroup_id: int,
-    ) -> None:
-        """Show persistant message based on usergroup_id and related issues and permissions.
-
-        Args:
-            cluster_name (str): The name of the cluster/unit.
-            ucr_id (int): The user_cluster_relation ID to identify the Divera user.
-            usergroup_id (int): The class-ID of the usergroup the user belongs to.
-
-        """
-
-        translation = await get_translation(self.hass, "common")
-
-        base_message = (
-            translation.get("component.diveracontrol.common.usergroup_message") or ""
-        )
-        base_message = base_message.format(cluster_name=cluster_name, ucr_id=ucr_id)
-
-        detail_key = f"component.diveracontrol.common.usergroup_{usergroup_id}"
-        detail_message = translation.get(detail_key)
-
-        if detail_message is None:
-            detail_message = (
-                translation.get("component.diveracontrol.common.usergroup_unknown")
-                or ""
-            )
-            detail_message.format(usergroup_id=usergroup_id)
-
-        full_message = base_message + "\n\n" + detail_message
-
-        await self.hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {
-                "title": "DiveraControl",
-                "message": full_message,
-                "notification_id": "diveracontrol_success_permissions",
-            },
-        )
-
     async def _process_clusters(self) -> ConfigFlowResult:
         """Process device creation.
 
@@ -441,22 +399,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if self.clusters:
             for ucr_id, cluster_data in self.clusters.items():
-                cluster_name = cluster_data[D_CLUSTER_NAME]
-                api_key = cluster_data[D_API_KEY]
-                ucr_id = cluster_data[D_UCR_ID]
-                usergroup_id = cluster_data[D_USERGROUP_ID]
+                cluster_name: str = cluster_data[D_CLUSTER_NAME]
+                api_key: str = cluster_data[D_API_KEY]
+                ucr_id: int = cluster_data[D_UCR_ID]
 
-                new_hub = {
+                new_hub: dict[str, Any] = {
                     D_UCR_ID: ucr_id,
                     D_CLUSTER_NAME: cluster_name,
                     D_API_KEY: api_key,
                     D_UPDATE_INTERVAL_DATA: self.update_interval_data,
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
+                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 }
-
-                await self._async_show_usergroup_message(
-                    cluster_name, ucr_id, usergroup_id
-                )
 
                 return self.async_create_entry(title=cluster_name, data=new_hub)
 
