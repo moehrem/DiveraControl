@@ -12,8 +12,6 @@ from custom_components.diveracontrol.service import (
     POST_USING_VEHICLE_CREW_VALIDATION_RULES,
     POST_VEHICLE_VALIDATION_RULES,
     _build_payload,
-    _extract_news,
-    _extract_survey,
     _validate_data,
     async_register_services,
     handle_post_alarm,
@@ -93,7 +91,7 @@ class TestBuildPayload:
     def test_build_payload_with_multiple_keys(self):
         """Test building payload with multiple keys."""
         data = {"title": "News", "text": "Content"}
-        survey_data = {"answers": ["Yes", "No"], "sorting": "abc"}
+        survey_data = {"answers": ["Yes", "No"], "sorting": ["Yes", "No"]}
         payload = _build_payload(data, keys={"News": {}, "newssurvey": survey_data})
 
         assert "News" in payload
@@ -134,40 +132,6 @@ class TestBuildPayload:
 
         assert "description" not in payload
         assert payload == {"title": "Test", "priority": 1}
-
-
-class TestExtractFunctions:
-    """Test data extraction functions."""
-
-    def test_extract_news(self):
-        """Test extracting news data."""
-        data = {
-            "title": "Important News",
-            "text": "Content",
-            "newssurvey_answers": ["Yes", "No"],
-            "newssurvey_sorting": "abc",
-        }
-        news_data = _extract_news(data, notification_type=3)
-
-        assert news_data == {"title": "Important News", "text": "Content"}
-        assert "newssurvey_answers" not in news_data
-
-    def test_extract_survey(self):
-        """Test extracting survey data."""
-        data = {
-            "title": "News",
-            "newssurvey_answers": ["Yes", "No"],
-            "newssurvey_sorting": "abc",
-            "newssurvey_title": "Survey",
-        }
-        survey_data = _extract_survey(data)
-
-        # newssurvey_title becomes "title" in survey_data (prefix is stripped)
-        assert survey_data == {
-            "answers": ["Yes", "No"],
-            "sorting": "abc",
-            "title": "Survey",
-        }
 
 
 @pytest.fixture
@@ -656,7 +620,7 @@ class TestHandlePostNews:
             "notification_type": 3,
             "survey": True,
             "newssurvey_answers": ["Yes", "No"],
-            "newssurvey_sorting": "abc",
+            "newssurvey_sorting": ["Yes", "No"],
             "group": [1, 2],  # Required for notification_type 3
         }
         mock_get_coordinator.return_value = mock_api_instance
@@ -665,8 +629,9 @@ class TestHandlePostNews:
 
         call_args = mock_api_instance.post_news.call_args[0][0]
         assert "News" in call_args
-        assert "newssurvey" in call_args
-        assert call_args["newssurvey"]["answers"] == ["Yes", "No"]
+        assert "NewsSurvey" in call_args
+        assert call_args["NewsSurvey"]["answers"] == ["Yes", "No"]
+        assert call_args["NewsSurvey"]["sorting"] == ["Yes", "No"]
 
 
 class TestAsyncRegisterServices:

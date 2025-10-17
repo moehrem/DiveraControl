@@ -2,14 +2,14 @@
 
 import logging
 from typing import Any
+from urllib.parse import urlencode
 
 from aiohttp import ClientError, ClientResponseError, ClientTimeout
-from urllib.parse import urlencode
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
-    ConfigEntryNotReady,
     ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
     HomeAssistantError,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -77,9 +77,7 @@ class DiveraAPI:
         self,
         url: str,
         method: str,
-        parameters: dict[str, str] | None = None,
         payload: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Request data from Divera API at the given endpoint.
 
@@ -89,31 +87,25 @@ class DiveraAPI:
             perm_key (str): Permission key to check if user is allowed to enter API. Special: All non-restricted APIs have "perm_key=None"
             parameters (dict | None): Dictionary containing URL parameters. Defaults to None.
             payload (dict | None): JSON payload for the request. Defaults to None.
-            headers (dict | None): HTTP headers. Defaults to `{ "Accept": "*/*", "Content-Type": "application/json"}`.
 
         Returns:
             dict: JSON response from the API.
 
         """
-        # init headers, if None
-        headers = headers or {
+        # init headers
+        headers = {
             "Accept": "*/*",
             "Content-Type": "application/json",
         }
 
-        # init "parameters" as dict, if None; add mandatory api-key
-        parameters = parameters or {}
+        # init "parameters" as dict
+        # IMPORTANT! Every API-call needs these two parameters: api_key and ucr_id
+        # api_key is needed for authentification
+        # ucr_id is needed to identify the divera unit - without that parameter Divera will accept the call for the main unit of the user only!
+        parameters: dict[str, str] = {}
         parameters[API_ACCESS_KEY] = self.api_key
         parameters[D_UCR] = self.ucr_id
-
-        # Add parameters to the URL
-        # if parameters:
-        #     param_strings = [f"{key}={value}" for key, value in parameters.items()]
-        #     param_string = "&".join(param_strings)
-        #     url = f"{url}?{param_string}"
-
-        if parameters:
-            url = f"{url}?{urlencode(parameters)}"
+        url = f"{url}?{urlencode(parameters)}"
 
         _LOGGER.debug("API request: %s %s", method, self._redact_url(url))
 
@@ -130,7 +122,7 @@ class DiveraAPI:
                 _LOGGER.debug("API response: %s", self._redact_url(url))
                 return data
 
-            # this is needed, as response status could be OK, but Divera still returns "success" = false
+            # this is needed, as https-response status could be OK, but Divera still returns "success" = false
             if response.json().get("success") is not True:
                 raise HomeAssistantError(
                     f"Divera API error: {response.json().get('message')}"

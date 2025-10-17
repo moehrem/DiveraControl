@@ -162,9 +162,187 @@ class TestActionSchema:
 class TestGetSelectorOptions:
     """Test _get_selector_options function."""
 
-    # Skipping _get_selector_options tests for now as they require complex mocking
-    # of coordinator data structure. Function is tested indirectly through
-    # async_get_action_capabilities tests.
+    @patch("custom_components.diveracontrol.device_action.get_translation")
+    async def test_notification_type_options(self, mock_get_translation, hass):
+        """Test notification_type_options static options."""
+        mock_get_translation.side_effect = ["Type 1", "Type 2", "Type 3", "Type 4"]
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(
+            hass, "test_device", "notification_type_options"
+        )
+
+        assert len(options) == 4
+        assert options[0] == {"value": "1", "label": "Type 1"}
+        assert options[1] == {"value": "2", "label": "Type 2"}
+        assert options[2] == {"value": "3", "label": "Type 3"}
+        assert options[3] == {"value": "4", "label": "Type 4"}
+
+        # Verify translation calls
+        expected_calls = [
+            ((hass, "selector", "notification_type_options.options.1"),),
+            ((hass, "selector", "notification_type_options.options.2"),),
+            ((hass, "selector", "notification_type_options.options.3"),),
+            ((hass, "selector", "notification_type_options.options.4"),),
+        ]
+        mock_get_translation.assert_has_calls(expected_calls)
+
+    @patch("custom_components.diveracontrol.device_action.get_translation")
+    async def test_mode_options(self, mock_get_translation, hass):
+        """Test mode_options static options."""
+        mock_get_translation.side_effect = ["Add", "Remove", "Reset"]
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(hass, "test_device", "mode_options")
+
+        assert len(options) == 3
+        assert options[0] == {"value": "add", "label": "Add"}
+        assert options[1] == {"value": "remove", "label": "Remove"}
+        assert options[2] == {"value": "reset", "label": "Reset"}
+
+        # Verify translation calls
+        expected_calls = [
+            ((hass, "selector", "mode_options.options.add"),),
+            ((hass, "selector", "mode_options.options.remove"),),
+            ((hass, "selector", "mode_options.options.reset"),),
+        ]
+        mock_get_translation.assert_has_calls(expected_calls)
+
+    @patch("custom_components.diveracontrol.device_action.get_translation")
+    async def test_newssurvey_result_count_options(self, mock_get_translation, hass):
+        """Test newssurvey_show_result_count_options static options."""
+        mock_get_translation.side_effect = ["Option 0", "Option 1", "Option 2"]
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(
+            hass, "test_device", "newssurvey_show_result_count_options"
+        )
+
+        assert len(options) == 3
+        assert options[0] == {"value": "0", "label": "Option 0"}
+        assert options[1] == {"value": "1", "label": "Option 1"}
+        assert options[2] == {"value": "2", "label": "Option 2"}
+
+    @patch("custom_components.diveracontrol.device_action.get_translation")
+    async def test_newssurvey_result_names_options(self, mock_get_translation, hass):
+        """Test newssurvey_show_result_names_options static options."""
+        mock_get_translation.side_effect = ["Option 0", "Option 1", "Option 2"]
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(
+            hass, "test_device", "newssurvey_show_result_names_options"
+        )
+
+        assert len(options) == 3
+        assert options[0] == {"value": "0", "label": "Option 0"}
+        assert options[1] == {"value": "1", "label": "Option 1"}
+        assert options[2] == {"value": "2", "label": "Option 2"}
+
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
+    async def test_dynamic_options_from_coordinator(self, mock_get_coordinator, hass):
+        """Test dynamic options retrieved from coordinator data."""
+        # Mock coordinator data
+        mock_coordinator_data = {
+            "cluster": {
+                "vehicle": {
+                    "items": {
+                        1: {"name": "Vehicle 1", "shortname": "V1"},
+                        2: {"name": "Vehicle 2", "shortname": "V2"},
+                    }
+                }
+            }
+        }
+        mock_get_coordinator.return_value = mock_coordinator_data
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(
+            hass, "test_device", "cluster.vehicle", "{name} / {shortname}"
+        )
+
+        assert len(options) == 2
+        assert options[0] == {"value": "1", "label": "Vehicle 1 / V1"}
+        assert options[1] == {"value": "2", "label": "Vehicle 2 / V2"}
+
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
+    async def test_dynamic_options_empty_device_id(self, mock_get_coordinator, hass):
+        """Test dynamic options with empty device_id."""
+        mock_get_coordinator.return_value = {}
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(hass, "", "cluster.vehicle")
+
+        assert options == []
+        mock_get_coordinator.assert_called_once_with(hass, "", "data")
+
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
+    async def test_dynamic_options_no_data(self, mock_get_coordinator, hass):
+        """Test dynamic options when no data is available."""
+        mock_get_coordinator.return_value = {}
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(hass, "test_device", "cluster.vehicle")
+
+        assert options == []
+
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
+    async def test_dynamic_options_no_items(self, mock_get_coordinator, hass):
+        """Test dynamic options when data has no items wrapper."""
+        mock_coordinator_data = {
+            "cluster": {
+                "vehicle": {}  # No items wrapper
+            }
+        }
+        mock_get_coordinator.return_value = mock_coordinator_data
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(hass, "test_device", "cluster.vehicle")
+
+        assert options == []
+
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
+    async def test_dynamic_options_default_label_format(
+        self, mock_get_coordinator, hass
+    ):
+        """Test dynamic options with default label format (None)."""
+        mock_coordinator_data = {
+            "cluster": {
+                "vehicle": {
+                    "items": {
+                        1: {"name": "Vehicle 1"},
+                        2: {"name": "Vehicle 2"},
+                    }
+                }
+            }
+        }
+        mock_get_coordinator.return_value = mock_coordinator_data
+
+        from custom_components.diveracontrol.device_action import _get_selector_options
+
+        options = await _get_selector_options(
+            hass, "test_device", "cluster.vehicle", None
+        )
+
+        assert len(options) == 2
+        assert options[0] == {"value": "1", "label": "Vehicle 1"}
+        assert options[1] == {"value": "2", "label": "Vehicle 2"}
 
 
 class TestAsyncGetActions:

@@ -63,6 +63,12 @@
       "unknown_step": "Unknown configuration step, setup aborted."
     }
   },
+  "issues": {
+    "breaking_changes_v1_2_0": {
+      "title": "Action required: **{cluster_name}**",
+      "description": "You have upgraded DiveraControl for **{cluster_name}** from version 1.1 or earlier to version 1.2.0.\n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
+    }
+  },
   "entity": {
     "sensor": {
       "open_alarms": {
@@ -115,8 +121,8 @@
       "post_news": "Create announcement"
     },
     "extra_fields": {
-      "vehicle_id": "Vehicle",
-      "status": "FMS status (0-9)",
+      "vehicle": "Vehicle",
+      "status": "Status",
       "status_id": "FMS status ID (1-10; 10 = emergency)",
       "status_note": "Status note",
       "lat": "Latitude",
@@ -151,6 +157,7 @@
       "survey": "Enable survey",
       "archive": "Archive",
       "ts_archive": "Archive time",
+      "ts_close": "Close time",
       "newssurvey_title": "Survey title",
       "newssurvey_show_result_count": "Response visibility",
       "newssurvey_show_result_names": "Name visibility",
@@ -166,7 +173,11 @@
       "units": "Alerted units",
       "remarks": "Remarks",
       "message_channel": "Create message channel",
-      "user_status": "User status"
+      "user_status": "User status",
+      "destination": "Destination",
+      "destination_address": "Destination address",
+      "destination_lat": "Destination latitude",
+      "destination_lng": "Destination longitude"
     }
   },
   "exceptions": {
@@ -180,7 +191,7 @@
       "message": "No Divera unit found"
     },
     "api_post_vehicle_status_failed": {
-      "message": "Changing vehicle status and data for {vehicle_id} failed: {err}"
+      "message": "Changing vehicle status and data for {vehicle} failed: {err}"
     },
     "no_alarm_title": {
       "message": "No alarm title provided"
@@ -213,7 +224,7 @@
       "message": "Sending message to channel {message_channel_id} failed"
     },
     "api_post_using_vehicle_property_failed": {
-      "message": "Sending vehicle data for vehicle ID {vehicle_id} failed"
+      "message": "Sending vehicle data for vehicle ID {vehicle} failed"
     },
     "no_mode_provided": {
       "message": "No mode selected. Valid values are {valid_modes}"
@@ -225,7 +236,7 @@
       "message": "Invalid mode {mode} for setting vehicle crew, must be add, remove or reset"
     },
     "api_post_using_vehicle_crew_failed": {
-      "message": "Error sending vehicle crew for vehicle ID {vehicle_id}, check logs for details"
+      "message": "Error sending vehicle crew for vehicle ID {vehicle}, check logs for details"
     },
     "no_news_title": {
       "message": "No title provided for the announcement"
@@ -267,7 +278,7 @@
       "message": "Invalid type for {field}, must be {expected_type}, not {type}"
     },
     "invalid_vehicle_id_format": {
-      "message": "Invalid format for vehicle ID {vehicle_id}, must be an integer or comma-separated list of integers"
+      "message": "Invalid format for vehicle ID {vehicle}, must be an integer or comma-separated list of integers"
     },
     "no_vehicles_selected": {
       "message": "Recipient selection vehicles, but no vehicles selected. Please select at least one vehicle"
@@ -296,7 +307,7 @@
       "name": "Change vehicle status and data",
       "description": "Updates vehicle status and data in Divera 24/7.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Vehicle ID",
           "description": "(Required) ID of the target vehicle"
         },
@@ -354,7 +365,7 @@
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeuge",
           "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
         },
@@ -500,7 +511,7 @@
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeuge",
           "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
         },
@@ -678,7 +689,7 @@
       "name": "Change vehicle properties",
       "description": "Sets arbitrary key-value pairs for a specific vehicle.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Vehicle ID",
           "description": "(Required) ID of the vehicle whose properties are being changed"
         },
@@ -692,7 +703,7 @@
       "name": "Change vehicle crew",
       "description": "Adds, removes, or resets crew for a specific vehicle.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Vehicle ID",
           "description": "(Required) ID of the vehicle whose crew is being changed"
         },

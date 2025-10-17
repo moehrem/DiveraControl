@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
@@ -37,7 +37,7 @@ def permission_check(
     hass: HomeAssistant,
     ucr_id: str,
     perm_key: str,
-) -> None:
+) -> bool:
     """Check permission and return success.
 
     Args:
@@ -50,7 +50,7 @@ def permission_check(
     """
     coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
     if not coordinator:
-        return
+        raise HomeAssistantError("No permission data available yet, permission denied")
 
     cluster_data = coordinator.data
 
@@ -65,14 +65,14 @@ def permission_check(
             "Management permission granted for cluster '%s'",
             coordinator.cluster_name,
         )
-        return
+        return True
 
     if not user_access.get(perm_key):
         raise HomeAssistantError(
             f"Permission '{perm_key}' denied for cluster '{coordinator.cluster_name}'"
         )
 
-    return
+    return False
 
 
 def get_device_info(cluster_name: str) -> DeviceInfo:
@@ -83,7 +83,7 @@ def get_device_info(cluster_name: str) -> DeviceInfo:
         "manufacturer": MANUFACTURER,
         "model": DOMAIN,
         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-        "entry_type": "service",  # type: ignore[misc]
+        "entry_type": DeviceEntryType.SERVICE,
         "configuration_url": f"{BASE_API_URL}session/login.html",
     }
 
@@ -115,24 +115,14 @@ def _get_coordinator_from_device(hass: HomeAssistant, device_id: str) -> dict[st
     if not entry or entry.domain != DOMAIN:
         raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
 
-    # ucr_id = entry.data.get(D_UCR_ID)
-    # if not ucr_id:
-    #     raise HomeAssistantError(f"UCR ID not found for device: {device_id}")
-
-    # coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
-    # if not coordinator:
-    #     raise HomeAssistantError(f"Integration data not found for device: {device_id}")
-
-    coordinator = entry.runtime_data
-
-    return coordinator
+    return entry.runtime_data
 
 
 def get_coordinator_key_from_device(
     hass: HomeAssistant,
     device_id: str,
     key: str | None = None,
-) -> dict[str, Any]:
+) -> Any:
     """Get the DiveraCoordinator instance for a device.
 
     Args:
@@ -148,13 +138,13 @@ def get_coordinator_key_from_device(
     """
     coordinator = _get_coordinator_from_device(hass, device_id)
 
+    if key is None:
+        return coordinator
+
     if not hasattr(coordinator, key):
         raise HomeAssistantError(
             f"Key {key} not found in coordinator for device: {device_id}"
         )
-
-    if key is None:
-        return coordinator
 
     return getattr(coordinator, key)
 
@@ -266,15 +256,28 @@ async def handle_entity(
                 )
                 return
 
-            vehicle_data: dict[str, Any] = vehicle_items[entity_id_str]
+            vehicle_data_dict: dict[str, Any] = vehicle_items[entity_id_str]
             mode: str | None = data.get("mode")
             new_crew: list[int] = data.get("crew", [])
 
-            if "crew" not in vehicle_data:
-                vehicle_data["crew"] = []
+            if "crew" not in vehicle_data_dict:
+                vehicle_data_dict["crew"] = []
 
-            # extract IDs for easier handling
-            current_crew: set[int] = {item["id"] for item in vehicle_data["crew"]}
+            # extract IDs for easier handling: iterate and cast each item
+            current_crew: set[int] = set()
+            for item in vehicle_data_dict.get("crew", []):
+                if isinstance(item, dict):
+                    raw_id = item.get("id")
+                else:
+                    raw_id = item
+                if raw_id is None:
+                    continue
+                try:
+                    crew_id = int(raw_id)
+                except (ValueError, TypeError):
+                    # skip malformed entries
+                    continue
+                current_crew.add(crew_id)
 
             match mode:
                 case "add":
@@ -287,7 +290,9 @@ async def handle_entity(
                     _LOGGER.warning("Unknown crew mode: %s", mode)
 
             # convert to Divera format
-            vehicle_data["crew"] = [{"id": crew_id} for crew_id in sorted(current_crew)]
+            vehicle_data_dict["crew"] = [
+                {"id": crew_id} for crew_id in sorted(current_crew)
+            ]
 
         case _:
             # Unknown service

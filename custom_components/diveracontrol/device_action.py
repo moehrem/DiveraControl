@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import voluptuous as vol
@@ -15,6 +16,7 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
 )
 
 from .const import (
@@ -26,12 +28,7 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_translation, permission_check
-
-# if TYPE_CHECKING:
-#     from .utils import (
-#         get_coordinator_key_from_device,
-#     )
+from .utils import get_coordinator_key_from_device, get_translation, permission_check
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -55,10 +52,10 @@ ACTION_SCHEMA = vol.Schema(
 
 async def _get_selector_options(
     hass: HomeAssistant,
-    device_id: int,
+    device_id: str,
     data_path: str,
-    label_format: str | None = None,
-) -> list[dict[str, str]]:
+    label_format: str | None = "",
+) -> Sequence[SelectOptionDict]:
     """Generic function to get selector options from coordinator data.
 
     Args:
@@ -71,11 +68,7 @@ async def _get_selector_options(
     Returns:
         List of option dictionaries with value and label
     """
-
-    from .utils import get_coordinator_key_from_device
-
-    coor_data = get_coordinator_key_from_device(hass, device_id, "data")
-
+    # Check for static options first (don't require coordinator data)
     if data_path == "notification_type_options":
         # Special case for static options
         return [
@@ -152,29 +145,34 @@ async def _get_selector_options(
             },
         ]
 
+    # For dynamic options, get coordinator data
+    coor_data: dict[str, Any] = get_coordinator_key_from_device(hass, device_id, "data")
+
     if not device_id:
         return []
 
     # Navigate data path
-    data = coor_data
     for key in data_path.split("."):
-        data = data.get(key, {})
-        if not data:
+        coor_data = coor_data.get(key, {})
+        if not coor_data:
             return []
 
     # Handle items wrapper if present
-    if isinstance(data, dict) and "items" in data:
-        data = data["items"]
+    if "items" in coor_data:
+        coor_data = coor_data["items"]
 
-    if not isinstance(data, dict):
+    if not coor_data:
         return []
+
+    if label_format is None:
+        label_format = "{name}"
 
     return [
         {
             "value": str(item_id),
             "label": label_format.format(**item),
         }
-        for item_id, item in data.items()
+        for item_id, item in coor_data.items()
     ]
 
 
@@ -185,20 +183,23 @@ async def async_get_actions(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not any(
-        ident[0] == DOMAIN for ident in (device.identifiers or set())
-    ):
+    if not device or not device.config_entries:
         return []
 
-    action_types = []
+    action_types: list[str] = []
 
     # check action type permissions
     entry_id = next(iter(device.config_entries))
     config_entry = hass.config_entries.async_get_entry(entry_id)
-    ucr_id = config_entry.data.get(D_UCR_ID)
+    if not config_entry:
+        return []
+
+    ucr_id: str | None = config_entry.data.get(D_UCR_ID)
+    if not ucr_id:
+        return []
 
     if permission_check(hass, ucr_id, PERM_MANAGEMENT):
-        action_types = (
+        action_types = [
             "post_vehicle_status",
             "post_alarm",
             "put_alarm",
@@ -207,7 +208,7 @@ async def async_get_actions(
             "post_using_vehicle_property",
             "post_using_vehicle_crew",
             "post_news",
-        )
+        ]
 
     else:
         if permission_check(hass, ucr_id, PERM_STATUS_VEHICLE):
@@ -238,16 +239,20 @@ async def async_call_action_from_config(
     context: Context | None,
 ) -> None:
     """Execute a device action."""
+    validated_config: dict[Any, Any] = {}
     try:
         validated_config = ACTION_SCHEMA(config)
     except vol.Invalid as err:
         raise InvalidDeviceAutomationConfig(err) from err
 
-    service_data = {"device_id": validated_config["device_id"]}
-
-    for key, value in validated_config.items():
-        if key not in ["domain", "type", "device_id", "data"]:
-            service_data[key] = value
+    service_data = {
+        "device_id": validated_config["device_id"],
+        **{
+            key: value
+            for key, value in validated_config.items()
+            if key not in ["domain", "type", "device_id", "data"]
+        },
+    }
 
     # optional: add data dict if available
     if data := validated_config.get("data"):
@@ -262,13 +267,15 @@ async def async_call_action_from_config(
     )
 
 
-async def async_validate_action_config(hass: HomeAssistant, config: dict) -> dict:
+async def async_validate_action_config(
+    hass: HomeAssistant, config: dict[str, Any]
+) -> dict[str, Any]:
     """Validate action config."""
     return ACTION_SCHEMA(config)
 
 
 async def async_get_action_capabilities(
-    hass: HomeAssistant, config: dict
+    hass: HomeAssistant, config: dict[str, Any]
 ) -> dict[str, vol.Schema]:
     """Return extra fields for the action."""
     action_type: str | None = config.get("type")
@@ -288,7 +295,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle_id"): selector.SelectSelector(
+                    vol.Required("vehicle"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -333,7 +340,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type in ["post_alarm", "put_alarm"]:
+    if action_type in ["post_alarm", "put_alarm"]:
         notification_type_options = await _get_selector_options(
             hass, device_id, "notification_type_options"
         )
@@ -356,23 +363,25 @@ async def async_get_action_capabilities(
             hass, device_id, "alarm.items", "{title} ({id})"
         )
 
+        alarm_selector: dict[Any, Any] = (
+            {
+                vol.Required("alarm_id"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=alarm_options,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                )
+                if alarm_options
+                else vol.Coerce(int)
+            }
+            if action_type == "put_alarm"
+            else {}
+        )
+
         return {
             "extra_fields": vol.Schema(
                 {
-                    **(
-                        {
-                            vol.Required("alarm_id"): selector.SelectSelector(
-                                selector.SelectSelectorConfig(
-                                    options=alarm_options,
-                                    mode=selector.SelectSelectorMode.DROPDOWN,
-                                )
-                            )
-                            if alarm_options
-                            else vol.Coerce(int)
-                        }
-                        if action_type == "put_alarm"
-                        else {}
-                    ),
+                    **alarm_selector,
                     vol.Required("title"): str,
                     vol.Required("notification_type"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
@@ -408,7 +417,7 @@ async def async_get_action_capabilities(
                     if user_cluster_relation_options
                     else str,  # Comma-separated list als Fallback
                     vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle_id"): selector.SelectSelector(
+                    vol.Optional("vehicle"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -449,7 +458,13 @@ async def async_get_action_capabilities(
                     vol.Optional("scene_object"): str,
                     vol.Optional("caller"): str,
                     vol.Optional("patient"): str,
-                    vol.Optional("units"): str,
+                    vol.Optional("units"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=vehicle_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    ),
                     vol.Optional("destination"): bool,
                     vol.Optional("destination_address"): str,
                     vol.Optional("destination_lat"): NumberSelector(
@@ -484,123 +499,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    # elif action_type == "put_alarm":
-    #     notification_type_options = await _get_selector_options(
-    #         hass, device_id, "notification_type_options"
-    #     )
-    #     group_options = await _get_selector_options(
-    #         hass, device_id, "cluster.group", "{name}"
-    #     )
-    #     user_cluster_relation_options = await _get_selector_options(
-    #         hass, device_id, "cluster.consumer", "{firstname} {lastname}"
-    #     )
-    #     user_status_options = await _get_selector_options(
-    #         hass, device_id, "cluster.status", "{name}"
-    #     )
-    #     vehicle_options = await _get_selector_options(
-    #         hass, device_id, "cluster.vehicle", "{name} / {shortname}"
-    #     )
-    #     alarm_options = await _get_selector_options(
-    #         hass, device_id, "alarm.items", "{title} ({id})"
-    #     )
-
-    #     return {
-    #         "extra_fields": vol.Schema(
-    #             {
-    #                 vol.Required("alarm_id"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=alarm_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                     )
-    #                 )
-    #                 if alarm_options
-    #                 else vol.Coerce(int),
-    #                 vol.Required("title"): str,
-    #                 vol.Required("notification_type"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=notification_type_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                     )
-    #                 ),
-    #                 vol.Optional("user_cluster_relation"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=user_cluster_relation_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                         multiple=True,
-    #                     )
-    #                 )
-    #                 if user_cluster_relation_options
-    #                 else str,  # Comma-separated list als Fallback
-    #                 vol.Optional("group"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=group_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                         multiple=True,
-    #                     )
-    #                 )
-    #                 if group_options
-    #                 else str,  # Comma-separated list
-    #                 vol.Optional("notification_filter_vehicle"): bool,
-    #                 vol.Optional("vehicle_id"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=vehicle_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                         multiple=True,
-    #                     )
-    #                 )
-    #                 if vehicle_options
-    #                 else str,  # Comma-separated list
-    #                 vol.Optional("notification_filter_status"): bool,
-    #                 vol.Optional("user_status"): selector.SelectSelector(
-    #                     selector.SelectSelectorConfig(
-    #                         options=user_status_options,
-    #                         mode=selector.SelectSelectorMode.DROPDOWN,
-    #                         multiple=True,
-    #                     )
-    #                 )
-    #                 if user_status_options
-    #                 else str,  # Comma-separated list
-    #                 vol.Optional("foreign_id"): str,
-    #                 vol.Optional("alarmcode_id"): vol.Coerce(int),
-    #                 vol.Optional("priority"): bool,
-    #                 vol.Optional("text"): str,
-    #                 vol.Optional("address"): str,
-    #                 vol.Optional("lat"): NumberSelector(
-    #                     NumberSelectorConfig(
-    #                         min=-90.0,
-    #                         max=90.0,
-    #                         step="any",
-    #                         mode=NumberSelectorMode.BOX,
-    #                     )
-    #                 ),
-    #                 vol.Optional("lng"): NumberSelector(
-    #                     NumberSelectorConfig(
-    #                         min=-180.0,
-    #                         max=180.0,
-    #                         step="any",
-    #                         mode=NumberSelectorMode.BOX,
-    #                     )
-    #                 ),
-    #                 vol.Optional("scene_object"): str,
-    #                 vol.Optional("caller"): str,
-    #                 vol.Optional("patient"): str,
-    #                 vol.Optional("report"): str,
-    #                 vol.Optional("private_mode"): bool,
-    #                 vol.Optional("send_push"): bool,
-    #                 vol.Optional("send_sms"): bool,
-    #                 vol.Optional("send_call"): bool,
-    #                 vol.Optional("send_mail"): bool,
-    #                 vol.Optional("send_pager"): bool,
-    #                 vol.Optional("response_time"): vol.Coerce(int),
-    #                 vol.Optional("message_channel"): bool,
-    #                 vol.Optional("closed"): bool,
-    #                 vol.Optional("ts_publish"): vol.Coerce(int),
-    #                 vol.Optional("notification_filter_access"): bool,
-    #             }
-    #         )
-    #     }
-
-    elif action_type == "post_close_alarm":
+    if action_type == "post_close_alarm":
         alarm_options = await _get_selector_options(
             hass, device_id, "alarm.items", "{title} ({id})"
         )
@@ -622,7 +521,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type == "post_message":
+    if action_type == "post_message":
         alarm_options = await _get_selector_options(
             hass, device_id, "alarm.items", "{title} ({id})"
         )
@@ -654,7 +553,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type == "post_using_vehicle_property":
+    if action_type == "post_using_vehicle_property":
         vehicle_options = await _get_selector_options(
             hass, device_id, "cluster.vehicle", "{name} / {shortname}"
         )
@@ -662,7 +561,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle_id"): selector.SelectSelector(
+                    vol.Required("vehicle"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -675,7 +574,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type == "post_using_vehicle_crew":
+    if action_type == "post_using_vehicle_crew":
         vehicle_options = await _get_selector_options(
             hass, device_id, "cluster.vehicle", "{name} / {shortname}"
         )
@@ -689,7 +588,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle_id"): selector.SelectSelector(
+                    vol.Required("vehicle"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=vehicle_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -716,7 +615,7 @@ async def async_get_action_capabilities(
             )
         }
 
-    elif action_type == "post_news":
+    if action_type == "post_news":
         notification_type_options = await _get_selector_options(
             hass, device_id, "notification_type_options"
         )

@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.const import EntityCategory
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import parse_datetime, utc_from_timestamp
 
@@ -53,25 +53,20 @@ class DiveraCalendar(CoordinatorEntity, CalendarEntity):
 
         now = datetime.now(UTC)
 
-        # Filter future events only
-        upcoming_events = [
-            e
-            for e in self._event_list
-            if (event_start := parse_datetime(e["start"]["dateTime"]))
-            and event_start >= now
-        ]
+        # Filter future events only and parse datetimes
+        upcoming_events = []
+        for e in self._event_list:
+            event_start = parse_datetime(e["start"]["dateTime"])
+            if event_start and event_start >= now:
+                upcoming_events.append((e, event_start))
 
         if not upcoming_events:
             return None
 
         # Sort by start time
-        sorted_events = sorted(
-            upcoming_events,
-            key=lambda e: parse_datetime(e["start"]["dateTime"]) or datetime.min,
-        )
-        first_event = sorted_events[0]
+        sorted_events = sorted(upcoming_events, key=lambda x: x[1])
+        first_event, start = sorted_events[0]
 
-        start = parse_datetime(first_event["start"]["dateTime"])
         end = parse_datetime(first_event["end"]["dateTime"])
 
         if not start or not end:
@@ -120,7 +115,7 @@ class DiveraCalendar(CoordinatorEntity, CalendarEntity):
 
     async def async_get_events(
         self,
-        hass,
+        hass: HomeAssistant,
         start_date: datetime,
         end_date: datetime,
     ) -> list[CalendarEvent]:

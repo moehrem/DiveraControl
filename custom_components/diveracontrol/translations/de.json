@@ -63,6 +63,12 @@
         "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
       }
   },
+  "issues": {
+    "breaking_changes_v1_2_0": {
+      "title": "Aktion erforderlich: **{cluster_name}**",
+      "description": "Sie haben DiveraControl für **{cluster_name}** von Version 1.1 oder früher auf Version 1.2.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    }
+  },
   "entity": {
     "sensor": {
       "open_alarms": {
@@ -115,8 +121,8 @@
       "post_news": "Mitteilung erstellen"
     },
     "extra_fields": {
-      "vehicle_id": "Fahrzeug",
-      "status": "FMS-Status (0-9)",
+      "vehicle": "Fahrzeug",
+      "status": "Status",
       "status_id": "FMS-Status-ID (1-10; 10 = Notruf)",
       "status_note": "Statusnotiz",
       "lat": "Breitengrad",
@@ -151,6 +157,7 @@
       "survey": "Umfrage aktivieren",
       "archive": "Archivieren",
       "ts_archive": "Archivierungszeitpunkt",
+      "ts_close": "Schließungszeitpunkt",
       "newssurvey_title": "Umfrage-Titel",
       "newssurvey_show_result_count": "Sichtbarkeit Rückmeldungen",
       "newssurvey_show_result_names": "Sichtbarkeit Namen",
@@ -166,7 +173,11 @@
       "units": "Beteiligte Einsatzmittel",
       "remarks": "Hinweise",
       "message_channel": "Nachrichtenkanal erstellen",
-      "user_status": "Nutzerstatus"
+      "user_status": "Nutzerstatus",
+      "destination": "Ziel",
+      "destination_address": "Zieladresse",
+      "destination_lat": "Ziel-Breitengrad",
+      "destination_lng": "Ziel-Längengrad"
     }
   },
   "exceptions": {
@@ -180,7 +191,7 @@
       "message": "Keine Divera-Einheit gefunden."
     },
     "api_post_vehicle_status_failed": {
-      "message": "Ändern des Fahrzeugstatus und der Daten für {vehicle_id} fehlgeschlagen: {err}"
+      "message": "Ändern des Fahrzeugstatus und der Daten für {vehicle} fehlgeschlagen: {err}"
     },
     "no_alarm_title": {
       "message": "Keine Alarmbezeichnung angegeben."
@@ -213,7 +224,7 @@
       "message": "Senden der Nachricht an den Kanal {message_channel_id} fehlgeschlagen."
     },
     "api_post_using_vehicle_property_failed": {
-      "message": "Senden der Fahrzeugdaten für Fahrzeug-ID {vehicle_id} fehlgeschlagen."
+      "message": "Senden der Fahrzeugdaten für Fahrzeug-ID {vehicle} fehlgeschlagen."
     },
     "no_mode_provided": {
       "message": "Kein Modus gewählt. Gültige Werte sind {valid_modes}."
@@ -225,7 +236,7 @@
       "message": "Ungültiger Modus {mode} für die Festlegung der Fahrzeugbesatzung, muss hinzufügen, entfernen oder zurücksetzen sein."
     },
     "api_post_using_vehicle_crew_failed": {
-      "message": "Fehler beim Senden der Fahrzeugbesatzung für Fahrzeug-ID {vehicle_id}, überprüfen Sie die Protokolle auf Details."
+      "message": "Fehler beim Senden der Fahrzeugbesatzung für Fahrzeug-ID {vehicle}, überprüfen Sie die Protokolle auf Details."
     },
     "no_news_title": {
       "message": "Kein Titel für die Nachricht angegeben."
@@ -267,7 +278,7 @@
       "message": "Ungültiger Typ für {field}, es muss sich um {expected_type} handeln, nicht um {type}."
     },
     "invalid_vehicle_id_format": {
-      "message": "Ungültiges Format für Fahrzeug-ID {vehicle_id}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+      "message": "Ungültiges Format für Fahrzeug-ID {vehicle}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
     },
     "no_vehicles_selected": {
       "message": "Empfängerauswahl Fahrzeuge, jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
@@ -296,7 +307,7 @@
       "name": "Fahrzeugstatus und -daten ändern",
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeug-ID",
           "description": "(Erforderlich) ID des Ziel-Fahrzeugs."
         },
@@ -354,7 +365,7 @@
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeuge",
           "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
         },
@@ -500,7 +511,7 @@
           "name": "Empfänger auf Fahrzeuge beschränken",
           "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
         },
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeuge",
           "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
         },
@@ -678,7 +689,7 @@
       "name": "Fahrzeugeigenschaften ändern",
       "description": "Setzt beliebige Schlüssel-Wert-Paare für ein bestimmtes Fahrzeug.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeug-ID",
           "description": "(Erforderlich) ID des Fahrzeugs, dessen Eigenschaften geändert werden."
         },
@@ -692,7 +703,7 @@
       "name": "Fahrzeugbesatzung ändern",
       "description": "Fügt Besatzung hinzu, entfernt sie oder setzt sie zurück (reset) für ein bestimmtes Fahrzeug.",
       "fields": {
-        "vehicle_id": {
+        "vehicle": {
           "name": "Fahrzeug-ID",
           "description": "(Erforderlich) ID des Fahrzeugs, dessen Besatzung geändert wird."
         },

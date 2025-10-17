@@ -24,7 +24,7 @@ async def async_setup_entry(
     ucr_id: str = config_entry.data[D_UCR_ID]
     coordinator = config_entry.runtime_data
 
-    # Create manager entities that handle dynamic sensors
+    # Create manager helpers that handle dynamic sensors
     alarm_manager = DiveraAlarmSensorManager(coordinator, ucr_id, async_add_entities)
     vehicle_manager = DiveraVehicleSensorManager(
         coordinator, ucr_id, async_add_entities
@@ -33,8 +33,15 @@ async def async_setup_entry(
         coordinator, ucr_id, async_add_entities
     )
 
-    # Add managers first (they will create dynamic entities)
-    async_add_entities([alarm_manager, vehicle_manager, availability_manager])
+    # Start managers (they register listeners and create dynamic entities)
+    alarm_manager.start()
+    vehicle_manager.start()
+    availability_manager.start()
+
+    # Ensure managers are stopped when the config entry is unloaded
+    config_entry.async_on_unload(alarm_manager.stop)
+    config_entry.async_on_unload(vehicle_manager.stop)
+    config_entry.async_on_unload(availability_manager.stop)
 
     # Add static sensors
     static_sensors = [

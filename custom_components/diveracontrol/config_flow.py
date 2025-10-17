@@ -20,6 +20,7 @@ from homeassistant.helpers.selector import (
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
+    D_INTEGRATION_VERSION,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
@@ -157,8 +158,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        entry_id = self.context["entry_id"]
-        existing_entry = self.hass.config_entries.async_get_entry(entry_id)
+        try:
+            entry_id: str = self.context["entry_id"]
+            existing_entry = self.hass.config_entries.async_get_entry(entry_id)
+        except KeyError:
+            existing_entry = None
+
         if not existing_entry:
             return self.async_abort(reason="hub_not_found")
 
@@ -394,21 +399,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if self.clusters:
             for ucr_id, cluster_data in self.clusters.items():
-                cluster_name = cluster_data[D_CLUSTER_NAME]
-                api_key = cluster_data[D_API_KEY]
-                ucr_id = cluster_data[D_UCR_ID]
+                cluster_name: str = cluster_data[D_CLUSTER_NAME]
+                api_key: str = cluster_data[D_API_KEY]
+                ucr_id: int = cluster_data[D_UCR_ID]
 
-                new_hub = {
+                new_hub: dict[str, Any] = {
                     D_UCR_ID: ucr_id,
                     D_CLUSTER_NAME: cluster_name,
                     D_API_KEY: api_key,
                     D_UPDATE_INTERVAL_DATA: self.update_interval_data,
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
+                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 }
-
-                # await self._async_show_usergroup_message(
-                #     cluster_name, ucr_id, usergroup_id
-                # )
 
                 return self.async_create_entry(title=cluster_name, data=new_hub)
 

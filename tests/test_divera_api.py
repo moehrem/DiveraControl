@@ -13,7 +13,6 @@ from homeassistant.exceptions import (
 )
 
 from custom_components.diveracontrol.const import (
-    API_ACCESS_KEY,
     API_ALARM,
     API_MESSAGES,
     API_NEWS,
@@ -22,7 +21,6 @@ from custom_components.diveracontrol.const import (
     API_USING_VEHICLE_PROP,
     API_USING_VEHICLE_SET_SINGLE,
     BASE_API_V2_URL,
-    D_UCR,
 )
 from custom_components.diveracontrol.divera_api import DiveraAPI
 
@@ -90,33 +88,6 @@ class TestAPIRequest:
             # Check that timeout was set
             assert "timeout" in mock_request.call_args[1]
 
-    async def test_request_with_parameters(
-        self, hass: HomeAssistant, api_client: DiveraAPI
-    ) -> None:
-        """Test request with URL parameters."""
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
-        mock_response.raise_for_status = MagicMock()
-
-        with patch.object(api_client.session, "request") as mock_request:
-            mock_request.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
-
-            await api_client.api_request(
-                url="https://api.test.com/endpoint",
-                method="GET",
-                parameters={"custom": "value"},
-            )
-
-            # Verify URL contains api key, ucr, and custom parameter
-            called_url = mock_request.call_args[0][1]
-            assert API_ACCESS_KEY in called_url
-            assert "test_api_key_123" in called_url
-            assert D_UCR in called_url
-            assert "123456" in called_url
-            assert "custom=value" in called_url
-
     async def test_request_with_payload(
         self, hass: HomeAssistant, api_client: DiveraAPI
     ) -> None:
@@ -140,29 +111,6 @@ class TestAPIRequest:
             call_kwargs = mock_request.call_args[1]
             assert call_args[0] == "POST"  # method is positional
             assert call_kwargs["json"] == payload
-
-    async def test_request_with_custom_headers(
-        self, hass: HomeAssistant, api_client: DiveraAPI
-    ) -> None:
-        """Test request with custom headers."""
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={"success": True})
-        mock_response.raise_for_status = MagicMock()
-
-        with patch.object(api_client.session, "request") as mock_request:
-            mock_request.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
-
-            custom_headers = {"X-Custom": "test"}
-            await api_client.api_request(
-                url="https://api.test.com/endpoint",
-                method="GET",
-                headers=custom_headers,
-            )
-
-            call_kwargs = mock_request.call_args[1]
-            assert call_kwargs["headers"] == custom_headers
 
     async def test_request_auth_error_401(
         self, hass: HomeAssistant, api_client: DiveraAPI

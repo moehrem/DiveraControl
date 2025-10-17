@@ -5,12 +5,14 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv
-from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv, issue_registry as ir
 
 from .const import (
     D_API_KEY,
     D_CLUSTER_NAME,
+    D_COORDINATOR,
+    D_INTEGRATION_VERSION,
     D_UCR_ID,
     DOMAIN,
     MINOR_VERSION,
@@ -50,7 +52,6 @@ async def async_setup_entry(
     ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
     api_key: str = config_entry.data.get(D_API_KEY) or ""
-    config_entry.patch_version = PATCH_VERSION
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
@@ -69,9 +70,10 @@ async def async_setup_entry(
         # create references in config_entry
         # for easy access of coordinator
         config_entry.runtime_data = coordinator
+        # hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
 
         hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN].setdefault(ucr_id, {})
+        hass.data[DOMAIN].setdefault(ucr_id, {})[D_COORDINATOR] = coordinator
 
         await coordinator.async_config_entry_first_refresh()
 
@@ -115,85 +117,44 @@ async def async_unload_entry(
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Migrate old config_entry of integration DiveraControl."""
-    current_version = config_entry.version
-    current_minor = config_entry.minor_version
-    current_patch: int = (
-        config_entry.patch_version
-        if hasattr(config_entry, "patch_version") and config_entry.patch_version
-        else 0
-    )
+    """Migrate old config_entry to the respective version.
 
-    _LOGGER.debug(
-        "Migrating configuration from version %s.%s.%s to %s.%s.%s",
-        current_version,
-        current_minor,
-        current_patch,
-        VERSION,
-        MINOR_VERSION,
-        PATCH_VERSION,
-    )
+    HA Standard: method will be called if manifest version does not match the config_entry version. So no need to compare versions in coding, just check for the respective version.
+    Expect downgrades!
 
-    # Migration from version 0.x
-    if current_version == 0:
-        if current_minor < 9:
-            # Versions before v0.9 are not supported
-            _LOGGER.error(
-                "Migration from version 0.%s is not supported. "
-                "Please delete the integration and re-add it",
-                current_minor,
-            )
-            return False
+    """
 
-        # Migration from v0.9+ → current version
-        # No data changes needed, just update version
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data={**config_entry.data},
-            version=VERSION,
-            minor_version=MINOR_VERSION,
-        )
+    # changing to v1.2.0
+    if VERSION == 1 and MINOR_VERSION == 2:
         _LOGGER.info(
-            "Migration from version 0.%s to %s.%s completed successfully",
-            current_minor,
+            "Migrating config entry to version %s.%s.%s",
             VERSION,
             MINOR_VERSION,
+            PATCH_VERSION,
         )
+        if D_INTEGRATION_VERSION not in config_entry.data:
+            _LOGGER.info("Adding integration version to existing config entry")
 
-    # Migration from version 1.x
-    elif current_version == 1:
-        # Check if migration to v1.2+ (breaking changes in services)
-        if current_minor < 2 and MINOR_VERSION >= 2:
-            _LOGGER.warning(
-                "Migration from version 1.%s.%s to %s.%s.%s includes breaking changes. "
-                "Please check all your service and action calls!",
-                current_minor,
-                current_patch,
-                VERSION,
-                MINOR_VERSION,
-                PATCH_VERSION,
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data={
+                    **config_entry.data,
+                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+                },
+                version=VERSION,
+                minor_version=MINOR_VERSION,
             )
 
-        # Update to current version (no data changes needed)
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=config_entry.data,
-            version=VERSION,
-            minor_version=MINOR_VERSION,
-        )
-        _LOGGER.info(
-            "Migration from version 1.%s to %s.%s completed successfully",
-            current_minor,
-            VERSION,
-            MINOR_VERSION,
-        )
-
-    # Already at current version or newer
-    else:
-        _LOGGER.debug(
-            "No migration needed - already at version %s.%s",
-            current_version,
-            current_minor,
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"breaking_changes_v1_2_0_{config_entry.entry_id}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="breaking_changes_v1_2_0",
+            translation_placeholders={
+                "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+            },
         )
 
     return True

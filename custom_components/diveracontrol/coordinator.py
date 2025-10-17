@@ -13,6 +13,8 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    UPDATE_INTERVAL_ALARM,
+    UPDATE_INTERVAL_DATA,
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
@@ -44,15 +46,19 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         self.api = api
 
-        self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME)
-        self.ucr_id: str = config_entry.data.get(D_UCR_ID)
+        self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
+        self.ucr_id: str = config_entry.data.get(D_UCR_ID, "")
 
         self.interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
-                seconds=config_entry.data.get(D_UPDATE_INTERVAL_ALARM)
+                seconds=config_entry.data.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                )
             ),
             D_UPDATE_INTERVAL_DATA: timedelta(
-                seconds=config_entry.data.get(D_UPDATE_INTERVAL_DATA)
+                seconds=config_entry.data.get(
+                    D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+                )
             ),
         }
 

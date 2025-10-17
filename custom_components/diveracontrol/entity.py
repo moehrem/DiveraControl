@@ -17,4 +17,3 @@ class BaseDiveraEntity(CoordinatorEntity):
         self.cluster_name = coordinator.cluster_name
 
         self._attr_device_info = get_device_info(self.cluster_name)
-        self._attr_has_entity_name = True

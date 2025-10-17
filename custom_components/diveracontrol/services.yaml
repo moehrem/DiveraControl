@@ -6,7 +6,7 @@ post_vehicle_status:
       integration: diveracontrol
       domain: sensor
   fields:
-    vehicle_id:
+    vehicle:
       required: true
       example: 123456
       selector:
@@ -103,7 +103,7 @@ post_alarm:
       example: false
       selector:
         boolean:
-    vehicle_id:
+    vehicle:
       required: false
       example: 1, 2, 3, 4
       selector:
@@ -333,7 +333,7 @@ put_alarm:
       example: false
       selector:
         boolean:
-    vehicle_id:
+    vehicle:
       required: false
       example: 1, 2, 3, 4
       selector:
@@ -539,12 +539,14 @@ post_message:
   fields:
     message_channel_id:
       required: false
-      example: 54321
+      example: 87654321
       selector:
         number:
     alarm_id:
       required: false
       example: 54321
+      selector:
+        number:
     text:
       required: false
       example: 'Dies ist eine Testnachricht.'
@@ -558,7 +560,7 @@ post_using_vehicle_property:
     device:
       integration: diveracontrol
   fields:
-    vehicle_id:
+    vehicle:
       required: true
       example: 123456
       selector:
@@ -582,7 +584,7 @@ post_using_vehicle_crew:
     entity:
       integration: diveracontrol
   fields:
-    vehicle_id:
+    vehicle:
       required: true
       example: 123456
       selector:

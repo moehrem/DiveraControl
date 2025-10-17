@@ -21,7 +21,7 @@ async def async_setup_entry(
     ucr_id: str = config_entry.data[D_UCR_ID]
     coordinator = config_entry.runtime_data
 
-    # Create manager trackers that handle dynamic entities
+    # Create manager helpers that handle dynamic trackers
     alarm_tracker_manager = DiveraAlarmTrackerManager(
         coordinator, ucr_id, async_add_entities
     )
@@ -29,5 +29,10 @@ async def async_setup_entry(
         coordinator, ucr_id, async_add_entities
     )
 
-    # Managers register themselves and handle updates automatically
-    async_add_entities([alarm_tracker_manager, vehicle_tracker_manager])
+    # Start managers (they register listeners and create dynamic trackers)
+    alarm_tracker_manager.start()
+    vehicle_tracker_manager.start()
+
+    # Ensure managers are stopped when the config entry is unloaded
+    config_entry.async_on_unload(alarm_tracker_manager.stop)
+    config_entry.async_on_unload(vehicle_tracker_manager.stop)

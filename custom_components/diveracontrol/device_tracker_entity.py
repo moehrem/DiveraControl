@@ -1,11 +1,13 @@
 """Support for Divera device tracker entities."""
 
+from collections.abc import Callable
 import logging
 from typing import Any
 
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.core import callback
-import homeassistant.helpers.entity_registry as er
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     D_ALARM,
@@ -23,26 +25,39 @@ from .entity import BaseDiveraEntity
 _LOGGER = logging.getLogger(__name__)
 
 
-class DiveraAlarmTrackerManager(BaseDiveraEntity):
-    """Manager for dynamic alarm trackers."""
+class DiveraAlarmTrackerManager:
+    """Manager for dynamic alarm trackers (helper object, not an Entity)."""
 
     def __init__(
-        self, coordinator: DiveraCoordinator, ucr_id: str, async_add_entities
+        self,
+        coordinator: DiveraCoordinator,
+        ucr_id: str,
+        async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize alarm tracker manager."""
-        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.hass = coordinator.hass
         self._ucr_id = ucr_id
         self._async_add_entities = async_add_entities
         self._known_alarm_ids: set[str] = set()
+        self._unsub: Callable[[], None] | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when added to hass."""
-        await super().async_added_to_hass()
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self._handle_coordinator_update)
+    def start(self) -> None:
+        """Register coordinator listener and run initial update."""
+        if self._unsub is not None:
+            return
+        self._unsub = self.coordinator.async_add_listener(
+            self._handle_coordinator_update
         )
-        # Initial update
         self._handle_coordinator_update()
+
+    def stop(self) -> None:
+        """Unregister coordinator listener if set."""
+        if self._unsub:
+            try:
+                self._unsub()
+            finally:
+                self._unsub = None
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -77,26 +92,39 @@ class DiveraAlarmTrackerManager(BaseDiveraEntity):
             _LOGGER.debug("Added %d alarm trackers", len(new_alarm_ids))
 
 
-class DiveraVehicleTrackerManager(BaseDiveraEntity):
-    """Manager for dynamic vehicle trackers."""
+class DiveraVehicleTrackerManager:
+    """Manager for dynamic vehicle trackers (helper object)."""
 
     def __init__(
-        self, coordinator: DiveraCoordinator, ucr_id: str, async_add_entities
+        self,
+        coordinator: DiveraCoordinator,
+        ucr_id: str,
+        async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize vehicle tracker manager."""
-        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.hass = coordinator.hass
         self._ucr_id = ucr_id
         self._async_add_entities = async_add_entities
         self._known_vehicle_ids: set[str] = set()
+        self._unsub: Callable[[], None] | None = None
 
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when added to hass."""
-        await super().async_added_to_hass()
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self._handle_coordinator_update)
+    def start(self) -> None:
+        """Register listener and perform initial sync."""
+        if self._unsub is not None:
+            return
+        self._unsub = self.coordinator.async_add_listener(
+            self._handle_coordinator_update
         )
-        # Initial update
         self._handle_coordinator_update()
+
+    def stop(self) -> None:
+        """Unregister listener."""
+        if self._unsub:
+            try:
+                self._unsub()
+            finally:
+                self._unsub = None
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -144,6 +172,7 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         self.alarm_id = alarm_id
 
         # static entity attributes
+        self._attr_has_entity_name = False
         self._attr_name = f"Alarm {self.alarm_id}"
         self.entity_id = f"device_tracker.{self.ucr_id}_alarmtracker_{self.alarm_id}"
         self._attr_unique_id = f"{self.ucr_id}_alarmtracker_{self.alarm_id}"
@@ -153,11 +182,11 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         try:
             alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
             return alarm_items.get(self.alarm_id)
-        except Exception:
+        except KeyError:
             return None
 
-    @property
-    def available(self) -> bool:
+    @property  # type: ignore[override]
+    def available(self) -> bool:  # type: ignore[override]
         """Return if entity is available."""
         return super().available and self._get_alarm_data() is not None
 
@@ -188,7 +217,7 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
                 if _priority
                 else I_OPEN_ALARM_NOPRIO
             )
-        return None
+        return I_OPEN_ALARM_NOPRIO
 
 
 class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
@@ -201,6 +230,7 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         self.vehicle_id = vehicle_id
 
         # static entity attributes
+        self._attr_has_entity_name = False
         self.entity_id = (
             f"device_tracker.{self.ucr_id}_vehicletracker_{self.vehicle_id}"
         )
@@ -211,11 +241,11 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         try:
             vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
             return vehicle_items.get(self.vehicle_id)
-        except Exception:
+        except KeyError:
             return None
 
-    @property
-    def available(self) -> bool:
+    @property  # type: ignore[override]
+    def available(self) -> bool:  # type: ignore[override]
         """Return if entity is available."""
         return super().available and self._get_vehicle_data() is not None
 
@@ -226,7 +256,7 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
             _shortname = vehicle_data.get("shortname", "Unknown")
             _veh_name = vehicle_data.get("name", "Unknown")
             return f"{_shortname} / {_veh_name}"
-        return None
+        return "Unknown Vehicle"
 
     @property
     def latitude(self) -> float | None:  # type: ignore[override]
@@ -252,7 +282,7 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
                 if _veh_status == "unknown"
                 else f"mdi:numeric-{_veh_status}-box"
             )
-        return None
+        return "mdi:help-box"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]

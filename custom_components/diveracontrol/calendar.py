@@ -12,7 +12,7 @@ from .const import D_UCR_ID
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: Callable,
+    async_add_entities: Callable[[list], None],  # type: ignore[no-untyped-call]
 ) -> None:
     """Set up the Divera calendar entity."""
     calendar_entity = DiveraCalendar(

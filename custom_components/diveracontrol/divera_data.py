@@ -196,6 +196,8 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
             )
             cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
         else:
+            # Set open_alarms to 0 when no alarm items exist
+            cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = 0
             open_alarms = 0
 
         _LOGGER.debug("Open alarms updated: %s", open_alarms)

@@ -42,23 +42,6 @@ class FieldNormalizer(ABC):
 
         """
 
-    # def _raise_error(self, translation_key: str, **placeholders: Any) -> None:
-    #     """Raise a ServiceValidationError with translation.
-
-    #     Args:
-    #         translation_key: Translation key for error message
-    #         **placeholders: Additional placeholders for translation
-
-    #     Raises:
-    #         ServiceValidationError: Always raised
-
-    #     """
-    #     raise ServiceValidationError(
-    #         translation_domain=DOMAIN,
-    #         translation_key=translation_key,
-    #         translation_placeholders={"field": self.field_name, **placeholders},
-    #     )
-
 
 class DeviceIdNormalizer(FieldNormalizer):
     """Normalize device_id to single string."""
@@ -92,6 +75,7 @@ class DeviceIdNormalizer(FieldNormalizer):
                 )
             return value[0]
 
+        # else: value = str
         if isinstance(value, str):
             return value
 

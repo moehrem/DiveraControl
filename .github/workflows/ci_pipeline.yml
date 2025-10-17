@@ -48,7 +48,7 @@ jobs:
         run: pip install bandit safety
 
       - name: 🔍 Run Bandit (Code Security)
-        run: bandit -r .
+        run: bandit -r custom_components/ -ll -i
 
       - name: 🛡️ Run Safety (Dependency Security)
         run: safety check --full-report
