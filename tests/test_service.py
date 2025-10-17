@@ -30,7 +30,7 @@ class TestValidateData:
 
     def test_validate_data_success(self):
         """Test successful validation."""
-        data = {"vehicle_id": [123]}
+        data = {"vehicle": [123]}
         # Should not raise any exception
         _validate_data(data, POST_VEHICLE_VALIDATION_RULES)
 
@@ -53,7 +53,7 @@ class TestValidateData:
 
     def test_validate_data_failure_with_callable_placeholders(self):
         """Test validation failure with callable translation placeholders."""
-        data = {"vehicle_id": [123, 456], "mode": "add"}
+        data = {"vehicle": [123, 456], "mode": "add"}
         with pytest.raises(ServiceValidationError) as exc_info:
             _validate_data(data, POST_USING_VEHICLE_CREW_VALIDATION_RULES)
 
@@ -183,7 +183,7 @@ class TestHandlePostVehicleStatus:
         """Test successful vehicle status update."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "fmsstatus": 2,
         }
         mock_get_coordinator.return_value = mock_api_instance
@@ -191,9 +191,9 @@ class TestHandlePostVehicleStatus:
 
         await handle_post_vehicle_status(mock_hass, mock_service_call)
 
-        # Payload includes vehicle_id since no keys are specified in _build_payload
+        # Payload includes vehicle since no keys are specified in _build_payload
         mock_api_instance.post_vehicle_status.assert_called_once_with(
-            123, {"vehicle_id": [123], "fmsstatus": 2}
+            123, {"vehicle": [123], "fmsstatus": 2}
         )
         mock_handle_entity.assert_called_once()
 
@@ -212,7 +212,7 @@ class TestHandlePostVehicleStatus:
         """Test handling of API error."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "fmsstatus": 2,
         }
         mock_get_coordinator.return_value = mock_api_instance
@@ -450,7 +450,7 @@ class TestHandlePostUsingVehicleProperty:
         """Test successful vehicle property update."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "property1": "value1",
         }
         mock_get_coordinator.return_value = mock_api_instance
@@ -481,7 +481,7 @@ class TestHandlePostUsingVehicleCrew:
         """Test adding crew members."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "mode": "add",
             "crew": [456, 789],
         }
@@ -511,7 +511,7 @@ class TestHandlePostUsingVehicleCrew:
         """Test removing crew members."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "mode": "remove",
             "crew": [456],
         }
@@ -538,7 +538,7 @@ class TestHandlePostUsingVehicleCrew:
         """Test resetting crew."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "mode": "reset",
         }
         mock_get_coordinator.return_value = mock_api_instance
@@ -562,7 +562,7 @@ class TestHandlePostUsingVehicleCrew:
         """Test invalid crew mode."""
         mock_normalize.return_value = {
             "device_id": "test_device",
-            "vehicle_id": [123],
+            "vehicle": [123],
             "mode": "invalid",
         }
         mock_get_coordinator.return_value = mock_api_instance
