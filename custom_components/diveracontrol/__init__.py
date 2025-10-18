@@ -7,6 +7,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     D_API_KEY,
@@ -157,4 +158,28 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             },
         )
 
+        # Remove all existing entity registry entries that belong to this
+        # config entry. This prevents old/unavailable entities from lingering
+        # after the upgrade. We do this before the integration creates new
+        # entities so the new registration is clean.
+        try:
+            ent_reg = er.async_get(hass)
+            entries = [
+                e
+                for e in ent_reg.entities.values()
+                if e.config_entry_id == config_entry.entry_id
+            ]
+
+            for entry in entries:
+                _LOGGER.info(
+                    "Migration: removing old entity registry entry %s (unique_id=%s)",
+                    entry.entity_id,
+                    entry.unique_id,
+                )
+                ent_reg.async_remove(entry.entity_id)
+
+        except Exception:
+            _LOGGER.exception(
+                "Failed to remove old entity registry entries during migration"
+            )
     return True
