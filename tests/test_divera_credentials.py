@@ -13,6 +13,7 @@ from custom_components.diveracontrol.const import (
     D_UCR,
     D_UCR_ID,
     D_USERGROUP_ID,
+    BASE_API_URL,
 )
 from custom_components.diveracontrol.divera_credentials import DiveraCredentials
 
@@ -42,7 +43,7 @@ class TestValidateLogin:
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {}
@@ -70,7 +71,7 @@ class TestValidateLogin:
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "wrong", "password": "wrong"}
+            {}, mock_session, {"username": "wrong", "password": "wrong"}, BASE_API_URL
         )
 
         assert errors == {"base": "Invalid username"}
@@ -83,7 +84,7 @@ class TestValidateLogin:
         mock_session.post.side_effect = ClientError("Connection failed")
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -94,7 +95,7 @@ class TestValidateLogin:
         mock_session.post.side_effect = TimeoutError("Request timed out")
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -109,7 +110,7 @@ class TestValidateLogin:
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {"base": "no_data"}
@@ -122,7 +123,7 @@ class TestValidateLogin:
         mock_session.post.side_effect = Exception("Unexpected error")
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {"base": "unknown"}
@@ -138,7 +139,7 @@ class TestValidateLogin:
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {}
@@ -163,7 +164,7 @@ class TestValidateLogin:
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}
+            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
         assert errors == {}
@@ -193,7 +194,7 @@ class TestValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}
+            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
         assert errors == {}
@@ -219,7 +220,7 @@ class TestValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "invalid_key"}
+            {}, mock_session, {"api_key": "invalid_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "Invalid API key"}
@@ -232,7 +233,7 @@ class TestValidateApiKey:
         mock_session.request.side_effect = ClientError("Connection failed")
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}
+            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -245,7 +246,7 @@ class TestValidateApiKey:
         mock_session.request.side_effect = TimeoutError("Request timed out")
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}
+            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -261,7 +262,7 @@ class TestValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}
+            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "no_data"}
@@ -274,7 +275,7 @@ class TestValidateApiKey:
         mock_session.request.side_effect = Exception("Unexpected error")
 
         errors, clusters = await DiveraCredentials.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}
+            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "Unexpected error"}

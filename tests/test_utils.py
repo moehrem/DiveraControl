@@ -23,6 +23,8 @@ from custom_components.diveracontrol.const import (
     MANUFACTURER,
     PERM_MANAGEMENT,
     VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
 )
 from custom_components.diveracontrol.utils import (
     get_coordinator_key_from_device,
@@ -109,7 +111,8 @@ class TestGetDeviceInfo:
         assert result["name"] == "test_cluster"
         assert result["manufacturer"] == "Divera GmbH"
         assert result["model"] == "diveracontrol"
-        assert result["sw_version"] == "1.2.0"  # Updated to match manifest version
+        expected_version = f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        assert result["sw_version"] == expected_version
         assert result["entry_type"] == DeviceEntryType.SERVICE
         assert "configuration_url" in result
 

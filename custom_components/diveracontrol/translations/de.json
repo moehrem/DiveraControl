@@ -7,10 +7,6 @@
             "description": "Bitte wähle eine Option zur Konfiguration aus.",
             "data": {
               "method": "Methode"
-            },
-            "options": {
-              "login": "Benutzeranmeldung",
-              "api_key": "API-Schlüssel"
             }
           },
           "login": {

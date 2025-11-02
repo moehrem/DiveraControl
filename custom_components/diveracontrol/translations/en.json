@@ -7,10 +7,6 @@
         "description": "Please select a configuration option.",
         "data": {
           "method": "Method"
-        },
-        "options": {
-          "login": "User login",
-          "api_key": "API key"
         }
       },
       "login": {

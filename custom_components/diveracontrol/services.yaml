@@ -1,10 +1,11 @@
 post_vehicle_status:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
-      domain: sensor
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
+        domain: sensor
   fields:
     vehicle:
       required: true
@@ -52,10 +53,11 @@ post_vehicle_status:
 
 post_alarm:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     title:
       required: true
@@ -276,10 +278,11 @@ post_alarm:
 
 put_alarm:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     alarm_id:
       required: true
@@ -507,10 +510,11 @@ put_alarm:
 
 post_close_alarm:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     alarm_id:
       required: true
@@ -532,10 +536,11 @@ post_close_alarm:
 
 post_message:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     message_channel_id:
       required: false
@@ -557,8 +562,9 @@ post_message:
 
 post_using_vehicle_property:
   target:
-    device:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
   fields:
     vehicle:
       required: true
@@ -579,10 +585,11 @@ post_using_vehicle_property:
 
 post_using_vehicle_crew:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     vehicle:
       required: true
@@ -612,10 +619,11 @@ post_using_vehicle_crew:
 
 post_news:
   target:
-    device:
-      integration: diveracontrol
-    entity:
-      integration: diveracontrol
+    selector:
+      device:
+        integration: diveracontrol
+      entity:
+        integration: diveracontrol
   fields:
     title:
       required: true
