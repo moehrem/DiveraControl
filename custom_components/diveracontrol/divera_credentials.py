@@ -30,6 +30,7 @@ class DiveraCredentials:
         errors: dict[str, str],
         session: ClientSession | None,
         user_input: dict[str, str],
+        base_api_url: str,
     ) -> tuple[dict[str, str], dict[str, str]]:
         """Validate login and fetch all instance names.
 
@@ -37,13 +38,14 @@ class DiveraCredentials:
             errors: Dictionary with error messages (not used, kept for compatibility).
             session: Valid websession of Home Assistant.
             user_input: User input from config flow containing username and password.
+            base_api_url: Base API URL.
 
         Returns:
             Tuple of (errors dict, clusters dict) where clusters maps UCR IDs to their data.
 
         """
         clusters = {}
-        url_auth = f"{BASE_API_URL}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
+        url_auth = f"{base_api_url}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
         payload = {
             "Login": {
                 "username": user_input.get("username", ""),
@@ -124,6 +126,7 @@ class DiveraCredentials:
         errors: dict[str, str],
         session: ClientSession,
         user_input: dict[str, str],
+        base_api_url: str,
     ) -> tuple[dict[str, str], dict[str, str]]:
         """Validate API access and fetch all instance names.
 
@@ -131,6 +134,7 @@ class DiveraCredentials:
             errors (dict): Dictionary with error messages.
             session (dict): Valid websession of Hass.
             user_input (dict): User input, most likely from config_flow.
+            base_api_url (str): Base API URL.
 
         Returns:
             errors (dict): Dictionary with error messages.
@@ -141,7 +145,7 @@ class DiveraCredentials:
         errors = {}
         api_key = user_input.get("api_key", "")
         url = (
-            f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
+            f"{base_api_url}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
         )
 
         try:

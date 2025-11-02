@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -18,7 +18,9 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    BASE_API_URL,
     D_API_KEY,
+    D_BASE_API_URL,
     D_CLUSTER_NAME,
     D_INTEGRATION_VERSION,
     D_UCR_ID,
@@ -57,6 +59,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         self.usergroup_id = ""
         self.update_interval_data = ""
         self.update_interval_alarm = ""
+        self.base_api_url = ""
 
     async def async_step_user(
         self,
@@ -74,8 +77,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self.session = async_get_clientsession(self.hass)
 
+        # Show a small form at the entry instead of a menu. Using a form
+        # allows us to present errors on the same screen when validation
+        # fails and to keep a consistent UI.
         if user_input is None:
-            return self.async_show_menu(menu_options=["login", "api_key"])
+            return self._show_entry_form()
+
+        # choose next step depending on user selection
+        method = user_input.get("method")
+        if method == "login":
+            return await self.async_step_login()
+        if method == "api_key":
+            return await self.async_step_api_key()
 
         return self.async_abort(reason="unknown_step")
 
@@ -158,43 +171,41 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        try:
-            entry_id: str = self.context["entry_id"]
-            existing_entry = self.hass.config_entries.async_get_entry(entry_id)
-        except KeyError:
-            existing_entry = None
+        entry_id: str = self.context["entry_id"]
+        config_entry: ConfigEntry = self.hass.config_entries.async_get_entry(entry_id)
 
-        if not existing_entry:
-            return self.async_abort(reason="hub_not_found")
-
-        current_interval_data: int = existing_entry.data.get(
+        current_interval_data: int = config_entry.data.get(
             D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
         )
-        current_interval_alarm: int = existing_entry.data.get(
+        current_interval_alarm: int = config_entry.data.get(
             D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
         )
-        current_api_key: str = existing_entry.data.get(D_API_KEY, "")
+        current_api_key: str = config_entry.data.get(D_API_KEY, "")
+        current_base_api_url: str = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
         if user_input is None:
             return self._show_reconfigure_form(
                 current_interval_data,
                 current_interval_alarm,
                 current_api_key,
+                current_base_api_url,
             )
 
         new_api_key = user_input[D_API_KEY]
         new_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
         new_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
+        new_base_api_url = user_input[D_BASE_API_URL]
 
         new_data = {
-            **existing_entry.data,
+            **config_entry.data,
             D_API_KEY: new_api_key,
             D_UPDATE_INTERVAL_DATA: new_interval_data,
             D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
+            D_BASE_API_URL: new_base_api_url,
         }
 
         return self.async_update_reload_and_abort(
-            existing_entry,
+            config_entry,
             data_updates=new_data,
         )
 
@@ -216,19 +227,55 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self.errors.clear()
 
-        self.update_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
-        self.update_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
+        # persist non-sensitive input so we can prefill forms if the user
+        # returns to the menu after validation errors
+        cur_step_id = self.cur_step.get("step_id") if self.cur_step else None
+        if cur_step_id == "login":
+            # do not persist password
+            self._saved_login = {
+                CONF_USERNAME: user_input.get(CONF_USERNAME, ""),
+                D_UPDATE_INTERVAL_DATA: user_input.get(
+                    D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+                ),
+                D_UPDATE_INTERVAL_ALARM: user_input.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                ),
+                D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
+            }
+        elif cur_step_id == D_API_KEY:
+            self._saved_api_key = {
+                D_API_KEY: user_input.get(D_API_KEY, ""),
+                D_UPDATE_INTERVAL_DATA: user_input.get(
+                    D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+                ),
+                D_UPDATE_INTERVAL_ALARM: user_input.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                ),
+                D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
+            }
+
+        # still update the working values used for processing
+        self.update_interval_data = user_input.get(
+            D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+        )
+        self.update_interval_alarm = user_input.get(
+            D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+        )
+        self.base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
 
         self.errors, self.clusters = await validation_method(
-            self.errors, self.session, user_input
+            self.errors, self.session, user_input, self.base_api_url
         )
 
+        # error handling: show the initial menu so the user can switch
+        # between login and API key flow if validation failed
         if self.errors:
-            return self._show_api_key_form()
+            return self._show_entry_form(errors=self.errors)
 
         # check and delete duplicate clusters
         self._handle_duplicates()
 
+        # if more units available, ask user to choose a unit
         if len(self.clusters) > 1:
             return self._show_multi_cluster_form()
 
@@ -242,9 +289,15 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
+        defaults = getattr(self, "_saved_login", {})
+
+        self.errors.clear()
+
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_USERNAME): TextSelector(
+                vol.Required(
+                    CONF_USERNAME, default=defaults.get(CONF_USERNAME, "")
+                ): TextSelector(
                     TextSelectorConfig(
                         type=TextSelectorType.EMAIL, autocomplete="username"
                     )
@@ -255,11 +308,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     )
                 ),
                 vol.Required(
-                    D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
+                    D_UPDATE_INTERVAL_DATA,
+                    default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
                 ): vol.All(vol.Coerce(int), vol.Range(min=30)),
                 vol.Required(
-                    D_UPDATE_INTERVAL_ALARM, default=UPDATE_INTERVAL_ALARM
+                    D_UPDATE_INTERVAL_ALARM,
+                    default=defaults.get(
+                        D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                    ),
                 ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                vol.Required(
+                    D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
+                ): str,
             }
         )
 
@@ -267,6 +327,30 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="login",
             data_schema=data_schema,
             errors=self.errors,
+        )
+
+    def _show_entry_form(
+        self, errors: dict[str, str] | None = None
+    ) -> ConfigFlowResult:
+        """Show the initial entry form (replaces menu) so errors can be displayed."""
+
+        data_schema = vol.Schema(
+            {
+                vol.Required("method", default="login"): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            "login",
+                            "api_key",
+                        ],
+                        translation_key="entry_method_options",
+                        multiple=False,
+                    )
+                )
+            }
+        )
+
+        return self.async_show_form(
+            step_id="user", data_schema=data_schema, errors=errors or {}
         )
 
     def _show_api_key_form(self) -> ConfigFlowResult:
@@ -277,17 +361,30 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
+        defaults = getattr(self, "_saved_api_key", {})
+
+        self.errors.clear()
+
         data_schema = vol.Schema(
             {
-                vol.Required(D_API_KEY): TextSelector(
+                vol.Required(
+                    D_API_KEY, default=defaults.get(D_API_KEY, "")
+                ): TextSelector(
                     TextSelectorConfig(type="password")  # type: ignore[misc]
                 ),
                 vol.Required(
-                    D_UPDATE_INTERVAL_DATA, default=UPDATE_INTERVAL_DATA
+                    D_UPDATE_INTERVAL_DATA,
+                    default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
                 ): vol.All(vol.Coerce(int), vol.Range(min=30)),
                 vol.Required(
-                    D_UPDATE_INTERVAL_ALARM, default=UPDATE_INTERVAL_ALARM
+                    D_UPDATE_INTERVAL_ALARM,
+                    default=defaults.get(
+                        D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                    ),
                 ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                vol.Required(
+                    D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
+                ): str,
             }
         )
 
@@ -302,6 +399,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         interval_data: int,
         interval_alarm: int,
         api_key: str,
+        base_api_url: str,
     ) -> ConfigFlowResult:
         """Display the reconfigure input form.
 
@@ -309,6 +407,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             interval_data (int): data update interval in case of no alarm.
             interval_alarm (int): data update interval in case of alarm.
             api_key (str): The API key to access Divera API.
+            base_api_url (str): The base API URL for Divera API.
 
         Returns:
             ConfigFLowResult: The result of the config flow step "reconfigure".
@@ -326,6 +425,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
                     vol.Coerce(int), vol.Range(min=10)
                 ),
+                vol.Required(D_BASE_API_URL, default=base_api_url): str,
             }
         )
 
@@ -403,15 +503,16 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 api_key: str = cluster_data[D_API_KEY]
                 ucr_id: int = cluster_data[D_UCR_ID]
 
-                new_hub: dict[str, Any] = {
+                new_entry: dict[str, Any] = {
                     D_UCR_ID: ucr_id,
                     D_CLUSTER_NAME: cluster_name,
                     D_API_KEY: api_key,
+                    D_BASE_API_URL: self.base_api_url,
                     D_UPDATE_INTERVAL_DATA: self.update_interval_data,
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
                     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 }
 
-                return self.async_create_entry(title=cluster_name, data=new_hub)
+                return self.async_create_entry(title=cluster_name, data=new_entry)
 
         return self.async_abort(reason="no_new_hubs_found")

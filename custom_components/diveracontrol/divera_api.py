@@ -44,6 +44,7 @@ class DiveraAPI:
         hass: HomeAssistant,
         ucr_id: str,
         api_key: str,
+        base_url: str,
     ) -> None:
         """Initialize the API client.
 
@@ -51,6 +52,7 @@ class DiveraAPI:
             hass (HomeAssistant): Instance of HomeAssistant.
             ucr_id (str): user_cluster_relation, the ID to identify the Divera-user.
             api_key (str): API key to access Divera API.
+            base_url (str): Base URL for the Divera API.
 
         Returns:
             None
@@ -59,6 +61,7 @@ class DiveraAPI:
         self.api_key = api_key
         self.ucr_id = ucr_id
         self.hass = hass
+        self.base_url = base_url
 
         self.session = async_get_clientsession(hass)
 
@@ -75,23 +78,25 @@ class DiveraAPI:
 
     async def api_request(
         self,
-        url: str,
+        part_url: str,
         method: str,
         payload: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Request data from Divera API at the given endpoint.
 
         Args:
-            url (str): URL to request.
-            method (str): HTTP method to use. Defaults to "GET".
-            perm_key (str): Permission key to check if user is allowed to enter API. Special: All non-restricted APIs have "perm_key=None"
-            parameters (dict | None): Dictionary containing URL parameters. Defaults to None.
-            payload (dict | None): JSON payload for the request. Defaults to None.
+            part_url (str): Part of the URL to access specific API endpoint.
+            method (str): HTTP method to use for the request (GET, POST, etc.).
+            payload (dict, optional): Data to send with the request. Defaults to None.
 
         Returns:
             dict: JSON response from the API.
 
         """
+
+        # build full URL from base URL and part URL
+        url = f"{self.base_url}{part_url}"
+
         # init headers
         headers = {
             "Accept": "*/*",
@@ -147,7 +152,10 @@ class DiveraAPI:
             ) from err
 
         except ClientError as err:
-            raise HomeAssistantError(f"Failed to connect to Divera API: {err}") from err
+            url = self._redact_url(err.url.path_qs)
+            raise HomeAssistantError(
+                f"Failed to connect to Divera API at URL: {url}"
+            ) from err
 
     async def close(self) -> None:
         """Cleanup if needed in the future - right now just implemented as a dummy to satisfy linting."""
@@ -165,9 +173,9 @@ class DiveraAPI:
 
         """
         _LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_PULL_ALL}"
+        part_url = f"{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        return await self.api_request(url, method)
+        return await self.api_request(part_url, method)
 
     async def post_vehicle_status(
         self,
@@ -185,10 +193,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
+        part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def post_alarms(
         self,
@@ -204,10 +212,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_ALARM)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}"
+        part_url = f"{BASE_API_V2_URL}{API_ALARM}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def put_alarms(
         self,
@@ -227,10 +235,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_ALARM)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
+        part_url = f"{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
         method = "PUT"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def post_close_alarm(
         self,
@@ -249,10 +257,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_ALARM)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
+        part_url = f"{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def post_message(
         self,
@@ -268,10 +276,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_MESSAGES)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_MESSAGES}"
+        part_url = f"{BASE_API_V2_URL}{API_MESSAGES}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def get_vehicle_property(
         self,
@@ -292,12 +300,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        url = (
-            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
-        )
+        part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
         method = "GET"
 
-        return await self.api_request(url, method)
+        return await self.api_request(part_url, method)
 
     async def post_using_vehicle_property(
         self,
@@ -317,12 +323,10 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        url = (
-            f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
-        )
+        part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def post_using_vehicle_crew(
         self,
@@ -354,7 +358,7 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
+        part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
         if mode in {"add", "remove"}:
             method = "POST"
         elif mode == "reset":
@@ -364,7 +368,7 @@ class DiveraAPI:
                 f"Invalid mode '{mode}' for crew management, can't choose method"
             )
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)
 
     async def post_news(
         self,
@@ -383,7 +387,7 @@ class DiveraAPI:
 
         permission_check(self.hass, self.ucr_id, PERM_NEWS)
 
-        url = f"{BASE_API_URL}{BASE_API_V2_URL}{API_NEWS}"
+        part_url = f"{BASE_API_V2_URL}{API_NEWS}"
         method = "POST"
 
-        await self.api_request(url, method, payload=payload)
+        await self.api_request(part_url, method, payload=payload)

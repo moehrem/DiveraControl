@@ -5,7 +5,10 @@
           "user": {
             "title": "Einrichtung von DiveraControl",
             "description": "Bitte wähle eine Option zur Konfiguration aus.",
-            "menu_options": {
+            "data": {
+              "method": "Methode"
+            },
+            "options": {
               "login": "Benutzeranmeldung",
               "api_key": "API-Schlüssel"
             }
@@ -17,7 +20,8 @@
               "username": "Benutzername",
               "password": "Passwort",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+              "base_api_url": "Basis-API-URL"
             }
           },
           "api_key": {
@@ -26,7 +30,8 @@
             "data": {
               "api_key": "API-Schlüssel",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+              "base_api_url": "Basis-API-URL"
             }
           },
           "multi_cluster": {
@@ -42,13 +47,14 @@
             "data": {
               "api_key": "API-Schlüssel",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)"
+              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+              "base_api_url": "Basis-API-URL"
             }
           }
       },
       "error": {
         "cannot_auth": "Ungültiger Benutzername oder Passwort.",
-        "cannot_connect": "Keine Verbindung zu Divera möglich.",
+        "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
         "no_ucr": "Keine verbundenen Einheiten gefunden.",
         "unknown": "Unbekannter Fehler"
       },
@@ -86,6 +92,12 @@
     "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
   },
   "selector": {
+    "entry_method_options": {
+      "options": {
+        "login": "Benutzeranmeldung",
+        "api_key": "API-Schlüssel"
+      }
+    },
     "notification_type_options": {
       "options": {
         "1": "Ausgewählte Standorte (nur in der PRO-Version)",
