@@ -124,18 +124,21 @@ async def async_unload_entry(
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old config_entry to the respective version.
 
-    HA Standard: method will be called if manifest version does not match the config_entry version. So no need to compare versions in coding, just check for the respective version.
-    Expect downgrades!
+    Note: config_entry.version and config_entry.minor_version are the CONFIG ENTRY
+    SCHEMA version numbers. They must be explicitly set during migration to match
+    the versions defined in ConfigFlow (VERSION and MINOR_VERSION).
 
     """
-
-    integrated_version = config_entry.data.get(D_INTEGRATION_VERSION, "0.0.0")
+    _LOGGER.debug(
+        "Checking migration from config_entry version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
 
     # changing to v1.2.0
-    # all versions before 1.2.0 do not have an integrated version
-    if integrated_version == "0.0.0":
+    if MINOR_VERSION == 2:
         _LOGGER.info(
-            "Migrating config entry to version %s.%s.%s",
+            "Migrating config entry to integration version %s.%s.%s",
             VERSION,
             MINOR_VERSION,
             PATCH_VERSION,
@@ -143,6 +146,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if D_INTEGRATION_VERSION not in config_entry.data:
             _LOGGER.info("Adding integration version to existing config entry")
 
+            # Update both the data AND the schema version
             hass.config_entries.async_update_entry(
                 config_entry,
                 data={
@@ -190,11 +194,11 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 "Failed to remove old entity registry entries during migration"
             )
 
-    # changing to v1.2.1
+    # changing to v1.3.0
     # add new base_url parameter to config entry
-    if integrated_version == "1.2.0":
+    if MINOR_VERSION == 3:
         _LOGGER.info(
-            "Migrating config entry to version %s.%s.%s",
+            "Migrating config entry to integration version %s.%s.%s",
             VERSION,
             MINOR_VERSION,
             PATCH_VERSION,
@@ -203,14 +207,21 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         if D_BASE_API_URL not in config_entry.data:
             _LOGGER.info("Adding base_url to existing config entry")
 
+            # Update both the data AND the schema version
             hass.config_entries.async_update_entry(
                 config_entry,
                 data={
                     **config_entry.data,
                     D_BASE_API_URL: BASE_API_URL,
+                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 },
                 version=VERSION,
                 minor_version=MINOR_VERSION,
             )
 
+    _LOGGER.debug(
+        "Migration complete, config_entry is now at version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
     return True

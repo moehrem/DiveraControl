@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -21,9 +20,6 @@ from custom_components.diveracontrol.const import (
     D_INTEGRATION_VERSION,
     D_UCR_ID,
     DOMAIN,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    VERSION,
 )
 
 
@@ -58,9 +54,10 @@ async def test_async_migrate_entry_from_v0_9(hass: HomeAssistant) -> None:
     ):
         result = await async_migrate_entry(hass, old_entry)
 
-    assert result is True
-    assert old_entry.version == VERSION
-    assert old_entry.minor_version == MINOR_VERSION
+        # Verify migration was successful and versions were updated to patched values
+        assert result is True
+        assert old_entry.version == 1
+        assert old_entry.minor_version == 2
 
 
 async def test_async_migrate_entry_from_v0_8_succeeds(hass: HomeAssistant) -> None:
