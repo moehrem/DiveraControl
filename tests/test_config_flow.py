@@ -220,6 +220,7 @@ async def test_reconfigure(
     from custom_components.diveracontrol.const import (
         D_UPDATE_INTERVAL_ALARM,
         D_UPDATE_INTERVAL_DATA,
+        D_BASE_API_URL,
     )
 
     # Add the existing config entry to hass
@@ -270,10 +271,8 @@ async def test_reconfigure(
     assert updated_entry.data[D_API_KEY] == new_api_key
     assert updated_entry.data[D_UPDATE_INTERVAL_DATA] == new_interval_data
     assert updated_entry.data[D_UPDATE_INTERVAL_ALARM] == new_interval_alarm
-
-    # Properly unload the entry to clean up timers
-    await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    # Verify base_url is present from migration
+    assert D_BASE_API_URL in updated_entry.data
 
 
 async def test_reconfigure_entry_not_found(hass: HomeAssistant) -> None:
