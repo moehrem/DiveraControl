@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
+    BASE_API_URL,
     D_API_KEY,
     D_BASE_API_URL,
     D_CLUSTER_NAME,
@@ -128,9 +129,11 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     """
 
+    integrated_version = config_entry.data.get(D_INTEGRATION_VERSION, "0.0.0")
+
     # changing to v1.2.0
-    # all versions before 1.2.0 do not have PATCH_VERSION set
-    if VERSION == 1 and MINOR_VERSION == 2 and not PATCH_VERSION:
+    # all versions before 1.2.0 do not have an integrated version
+    if integrated_version == "0.0.0":
         _LOGGER.info(
             "Migrating config entry to version %s.%s.%s",
             VERSION,
@@ -187,8 +190,9 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 "Failed to remove old entity registry entries during migration"
             )
 
-    # v1.2.1: add new base_url parameter to config entry
-    if VERSION == 1 and MINOR_VERSION == 2 and PATCH_VERSION == 1:
+    # changing to v1.2.1
+    # add new base_url parameter to config entry
+    if integrated_version == "1.2.0":
         _LOGGER.info(
             "Migrating config entry to version %s.%s.%s",
             VERSION,
@@ -203,7 +207,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 config_entry,
                 data={
                     **config_entry.data,
-                    D_BASE_API_URL: "https://api.divera247.com",
+                    D_BASE_API_URL: BASE_API_URL,
                 },
                 version=VERSION,
                 minor_version=MINOR_VERSION,
