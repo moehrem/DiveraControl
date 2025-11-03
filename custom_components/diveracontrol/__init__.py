@@ -207,7 +207,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 },
                 version=VERSION,
                 minor_version=MINOR_VERSION,
-                patch_version=PATCH_VERSION,
             )
 
     return True
