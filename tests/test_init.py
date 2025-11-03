@@ -51,7 +51,12 @@ async def test_async_migrate_entry_from_v0_9(hass: HomeAssistant) -> None:
     )
     old_entry.add_to_hass(hass)
 
-    result = await async_migrate_entry(hass, old_entry)
+    with (
+        patch("custom_components.diveracontrol.VERSION", 1),
+        patch("custom_components.diveracontrol.MINOR_VERSION", 2),
+        patch("custom_components.diveracontrol.PATCH_VERSION", 0),
+    ):
+        result = await async_migrate_entry(hass, old_entry)
 
     assert result is True
     assert old_entry.version == VERSION
@@ -73,7 +78,12 @@ async def test_async_migrate_entry_from_v0_8_succeeds(hass: HomeAssistant) -> No
     )
     old_entry.add_to_hass(hass)
 
-    result = await async_migrate_entry(hass, old_entry)
+    with (
+        patch("custom_components.diveracontrol.VERSION", 1),
+        patch("custom_components.diveracontrol.MINOR_VERSION", 2),
+        patch("custom_components.diveracontrol.PATCH_VERSION", 0),
+    ):
+        result = await async_migrate_entry(hass, old_entry)
 
     assert result is True
     assert D_INTEGRATION_VERSION in old_entry.data
@@ -156,6 +166,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
             hass,
             "123456",
             "test_key",
+            "",
         )
         mock_coordinator_class.assert_called_once_with(
             hass,

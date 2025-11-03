@@ -1,7 +1,5 @@
 post_vehicle_status:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
       domain: sensor
@@ -52,8 +50,6 @@ post_vehicle_status:
 
 post_alarm:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:
@@ -276,8 +272,6 @@ post_alarm:
 
 put_alarm:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:
@@ -507,8 +501,6 @@ put_alarm:
 
 post_close_alarm:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:
@@ -532,8 +524,6 @@ post_close_alarm:
 
 post_message:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:
@@ -557,7 +547,7 @@ post_message:
 
 post_using_vehicle_property:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     vehicle:
@@ -579,8 +569,6 @@ post_using_vehicle_property:
 
 post_using_vehicle_crew:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:
@@ -612,8 +600,6 @@ post_using_vehicle_crew:
 
 post_news:
   target:
-    device:
-      integration: diveracontrol
     entity:
       integration: diveracontrol
   fields:

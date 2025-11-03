@@ -33,7 +33,14 @@ def api_client(hass: HomeAssistant) -> Generator[DiveraAPI]:
     ) as mock_session:
         session = MagicMock()
         mock_session.return_value = session
-        api = DiveraAPI(hass=hass, ucr_id="123456", api_key="test_api_key_123")
+        from custom_components.diveracontrol.const import BASE_API_URL
+
+        api = DiveraAPI(
+            hass=hass,
+            ucr_id="123456",
+            api_key="test_api_key_123",
+            base_url=BASE_API_URL,
+        )
         yield api
 
 
@@ -42,7 +49,11 @@ class TestDiveraAPIInit:
 
     async def test_init(self, hass: HomeAssistant) -> None:
         """Test DiveraAPI initialization."""
-        api = DiveraAPI(hass=hass, ucr_id="123456", api_key="test_key")
+        from custom_components.diveracontrol.const import BASE_API_URL
+
+        api = DiveraAPI(
+            hass=hass, ucr_id="123456", api_key="test_key", base_url=BASE_API_URL
+        )
 
         assert api.ucr_id == "123456"
         assert api.api_key == "test_key"
@@ -76,9 +87,7 @@ class TestAPIRequest:
             mock_request.return_value.__aenter__ = AsyncMock(return_value=mock_response)
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            result = await api_client.api_request(
-                url="https://api.test.com/endpoint", method="GET"
-            )
+            result = await api_client.api_request("/endpoint", "GET")
 
             assert result == {"success": True, "data": "test"}
             mock_request.assert_called_once()
@@ -102,9 +111,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             payload = {"title": "Test", "message": "Test message"}
-            await api_client.api_request(
-                url="https://api.test.com/endpoint", method="POST", payload=payload
-            )
+            await api_client.api_request("/endpoint", "POST", payload=payload)
 
             # Check positional and keyword arguments
             call_args = mock_request.call_args[0]
@@ -131,9 +138,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryAuthFailed) as exc_info:
-                await api_client.api_request(
-                    url="https://api.test.com/endpoint", method="GET"
-                )
+                await api_client.api_request("/endpoint", "GET")
 
             assert "Invalid API key" in str(exc_info.value)
             assert "123456" in str(exc_info.value)
@@ -154,9 +159,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryNotReady) as exc_info:
-                await api_client.api_request(
-                    url="https://api.test.com/endpoint", method="GET"
-                )
+                await api_client.api_request("/endpoint", "GET")
 
             assert "Divera API unavailable" in str(exc_info.value)
             assert "500" in str(exc_info.value)
@@ -172,9 +175,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryNotReady) as exc_info:
-                await api_client.api_request(
-                    url="https://api.test.com/endpoint", method="GET"
-                )
+                await api_client.api_request("/endpoint", "GET")
 
             assert "Timeout connecting" in str(exc_info.value)
 
@@ -183,15 +184,19 @@ class TestAPIRequest:
     ) -> None:
         """Test API request with generic client error."""
         with patch.object(api_client.session, "request") as mock_request:
-            mock_request.return_value.__aenter__ = AsyncMock(
-                side_effect=ClientError("Connection failed")
+            # Create a ClientError instance that includes a `.url.path_qs`
+            # attribute so the production code can redact the URL when
+            # building the error message.
+            ce = ClientError("Connection failed")
+            ce.url = MagicMock()
+            ce.url.path_qs = (
+                "https://api.test.com/endpoint?accesskey=test_api_key_123&ucr=123456"
             )
+            mock_request.return_value.__aenter__ = AsyncMock(side_effect=ce)
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(HomeAssistantError) as exc_info:
-                await api_client.api_request(
-                    url="https://api.test.com/endpoint", method="GET"
-                )
+                await api_client.api_request("/endpoint", "GET")
 
             assert "Failed to connect to Divera API" in str(exc_info.value)
 
@@ -211,9 +216,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(HomeAssistantError) as exc_info:
-                await api_client.api_request(
-                    url="https://api.test.com/endpoint", method="GET"
-                )
+                await api_client.api_request("/endpoint", "GET")
 
             assert "Divera API error" in str(exc_info.value)
             assert "404" in str(exc_info.value)

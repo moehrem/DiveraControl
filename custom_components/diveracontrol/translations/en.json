@@ -5,9 +5,8 @@
       "user": {
         "title": "Set up DiveraControl",
         "description": "Please select a configuration option.",
-        "menu_options": {
-          "login": "User login",
-          "api_key": "API key"
+        "data": {
+          "method": "Method"
         }
       },
       "login": {
@@ -17,7 +16,8 @@
           "username": "Username",
           "password": "Password",
           "update_interval_data": "Query interval outside of alarms (seconds)",
-          "update_interval_alarm": "Query interval during open alarms (seconds)"
+          "update_interval_alarm": "Query interval during open alarms (seconds)",
+          "base_api_url": "Base API URL"
         }
       },
       "api_key": {
@@ -26,7 +26,8 @@
         "data": {
           "api_key": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
-          "update_interval_alarm": "Query interval during open alarms (seconds)"
+          "update_interval_alarm": "Query interval during open alarms (seconds)",
+          "base_api_url": "Base API URL"
         }
       },
       "multi_cluster": {
@@ -42,13 +43,14 @@
         "data": {
           "api_key": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
-          "update_interval_alarm": "Query interval during open alarms (seconds)"
+          "update_interval_alarm": "Query interval during open alarms (seconds)",
+          "base_api_url": "Base API URL"
         }
       }
     },
     "error": {
       "cannot_auth": "Invalid username or password.",
-      "cannot_connect": "Unable to connect to Divera.",
+      "cannot_connect": "Unable to connect to Divera. Correct base URL? Is Divera reachable in the browser?",
       "no_ucr": "No connected units found.",
       "unknown": "Unknown error"
     },
@@ -86,6 +88,12 @@
     "usergroup_unknown": "A user from an unknown user group {usergroup_id} was logged in. Depending on granted permissions, not all data may be available."
   },
   "selector": {
+    "entry_method_options": {
+      "options": {
+        "login": "User login",
+        "api_key": "API-Key"
+      }
+    },
     "notification_type_options": {
       "options": {
         "1": "Selected locations (PRO version only)",

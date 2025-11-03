@@ -41,6 +41,7 @@ API_USING_VEHICLE_CREW = "using-vehicle-crew"
 # data
 D_UPDATE_INTERVAL_DATA = "update_interval_data"
 D_UPDATE_INTERVAL_ALARM = "update_interval_alarm"
+D_BASE_API_URL = "base_api_url"
 D_DATA = "data"
 D_NAME = "name"
 D_API_KEY = "api_key"

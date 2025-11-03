@@ -11,6 +11,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import (
     D_API_KEY,
+    D_BASE_API_URL,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
@@ -53,6 +54,7 @@ async def async_setup_entry(
     ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
     api_key: str = config_entry.data.get(D_API_KEY) or ""
+    base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
@@ -61,6 +63,7 @@ async def async_setup_entry(
             hass,
             ucr_id,
             api_key,
+            base_url,
         )
         coordinator = DiveraCoordinator(
             hass,
@@ -126,7 +129,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """
 
     # changing to v1.2.0
-    if VERSION == 1 and MINOR_VERSION == 2:
+    # all versions before 1.2.0 do not have PATCH_VERSION set
+    if VERSION == 1 and MINOR_VERSION == 2 and not PATCH_VERSION:
         _LOGGER.info(
             "Migrating config entry to version %s.%s.%s",
             VERSION,
@@ -182,4 +186,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             _LOGGER.exception(
                 "Failed to remove old entity registry entries during migration"
             )
+
+    # v1.2.1: no migration needed
+
     return True
