@@ -1,13 +1,12 @@
 name: Tests
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
-    branches: [main, dev]
+    branches: [dev, main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  # Bei Push: "Tests-push-main", bei PR zu main: "Tests-pr-123"
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:

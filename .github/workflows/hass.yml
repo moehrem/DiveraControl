@@ -1,13 +1,14 @@
 name: Home Assistant Quality Checks
 
 on:
-  push:
+  pull_request:
     branches: [dev, main]
   schedule:
     - cron: "0 0 * * *"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Bei Push: "HASS-push-dev", bei PR zu main: "HASS-pr-123"
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
