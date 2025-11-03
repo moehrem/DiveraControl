@@ -2,14 +2,12 @@ name: ✅ CI Pipeline
 
 on:
   push:
-    branches: [dev]
-  pull_request:
     branches: [dev, main]
   schedule:
     - cron: "0 3 * * 1" # Läuft jeden Montag um 03:00 UTC für automatische Updates
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
