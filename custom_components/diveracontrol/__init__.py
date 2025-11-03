@@ -187,6 +187,27 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 "Failed to remove old entity registry entries during migration"
             )
 
-    # v1.2.1: no migration needed
+    # v1.2.1: add new base_url parameter to config entry
+    if VERSION == 1 and MINOR_VERSION == 2 and PATCH_VERSION == 1:
+        _LOGGER.info(
+            "Migrating config entry to version %s.%s.%s",
+            VERSION,
+            MINOR_VERSION,
+            PATCH_VERSION,
+        )
+
+        if D_BASE_API_URL not in config_entry.data:
+            _LOGGER.info("Adding base_url to existing config entry")
+
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data={
+                    **config_entry.data,
+                    D_BASE_API_URL: "https://api.divera247.com",
+                },
+                version=VERSION,
+                minor_version=MINOR_VERSION,
+                patch_version=PATCH_VERSION,
+            )
 
     return True
