@@ -124,9 +124,12 @@ async def async_unload_entry(
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old config_entry to the respective version.
 
-    Note: config_entry.version and config_entry.minor_version are the CONFIG ENTRY
-    SCHEMA version numbers. They must be explicitly set during migration to match
-    the versions defined in ConfigFlow (VERSION and MINOR_VERSION).
+    Call everytime, VERSION or MINOR_VERSION differs between config_entry and manifest.
+    Any changes to config_entry MUST increase either VERSION or MINOR_VERSION!
+
+    VERSION will not change.
+    MINOR_VERSION will change upon config_entry changes or feature additions.
+    PATCH_VERSION is for internal use only and will increase upon patches, hotfixes, and other minimal changes.
 
     """
     _LOGGER.debug(
