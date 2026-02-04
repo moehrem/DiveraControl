@@ -7,3 +7,4 @@
 #   - Home Assistant test utilities
 pytest-homeassistant-custom-component>=0.13.300  # Python 3.13 compatible, fixes aiodns/pycares issue
 pytest-timeout==2.4.0
+aiodns>=4.0.0
