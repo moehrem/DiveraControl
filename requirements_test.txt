@@ -5,5 +5,5 @@
 #   - pytest-cov
 #   - syrupy
 #   - Home Assistant test utilities
-pytest-homeassistant-custom-component>=0.13.180  # Python 3.13 compatible
-pytest-timeout==2.3.1
+pytest-homeassistant-custom-component>=0.13.300  # Python 3.13 compatible, fixes aiodns/pycares issue
+pytest-timeout==2.4.0
