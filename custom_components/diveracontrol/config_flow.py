@@ -310,13 +310,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     D_UPDATE_INTERVAL_DATA,
                     default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
                 vol.Required(
                     D_UPDATE_INTERVAL_ALARM,
                     default=defaults.get(
                         D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
                     ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
                 vol.Required(
                     D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
                 ): str,
@@ -375,13 +375,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     D_UPDATE_INTERVAL_DATA,
                     default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
-                ): vol.All(vol.Coerce(int), vol.Range(min=30)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
                 vol.Required(
                     D_UPDATE_INTERVAL_ALARM,
                     default=defaults.get(
                         D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
                     ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=10)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
                 vol.Required(
                     D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
                 ): str,
@@ -420,10 +420,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     TextSelectorConfig(type="password")  # type: ignore[misc]
                 ),
                 vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
-                    vol.Coerce(int), vol.Range(min=30)
+                    vol.Coerce(int), vol.Range(min=5)
                 ),
                 vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
-                    vol.Coerce(int), vol.Range(min=10)
+                    vol.Coerce(int), vol.Range(min=5)
                 ),
                 vol.Required(D_BASE_API_URL, default=base_api_url): str,
             }
@@ -493,7 +493,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """Process device creation.
 
         Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
+            ConfigFlowResult: The result of the config flow step "reconfigure".
 
         """
 
