@@ -243,6 +243,49 @@ class StrListNormalizer(FieldNormalizer):
         )
 
 
+class IntNormalizer(FieldNormalizer):
+    """Normalize a value to an integer."""
+
+    def normalize(self, value: str | int | None) -> int | None:
+        """Normalize to an integer.
+
+        Args:
+            value: String, int, or None
+
+        Returns:
+            Integer value or None
+
+        Raises:
+            ServiceValidationError: If invalid format
+
+        """
+        if value is None or value == "":
+            return None
+
+        if isinstance(value, int):
+            return value
+
+        if isinstance(value, str):
+            try:
+                return int(value.strip())
+            except ValueError as err:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="invalid_id_format",
+                    translation_placeholders={"field": self.field_name},
+                ) from err
+
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="invalid_field_type",
+            translation_placeholders={
+                "field": self.field_name,
+                "expected_type": "integer or string",
+                "type": type(value).__name__,
+            },
+        )
+
+
 class VehicleIdNormalizer(FieldNormalizer):
     """Normalize vehicle IDs from entity IDs or direct IDs."""
 
@@ -383,8 +426,8 @@ class ServiceDataNormalizer:
             "crew": IntListNormalizer("crew"),
             "answers": IntListNormalizer("answers"),
             "sorting": IntListNormalizer("sorting"),
-            # String list fields
-            "status": StrListNormalizer("status"),
+            # integer fields
+            "status": IntNormalizer("status"),
             # Special fields
             "vehicle_id": VehicleIdNormalizer("vehicle_id"),
             # Datetime fields
