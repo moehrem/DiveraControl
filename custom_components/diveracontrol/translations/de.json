@@ -17,7 +17,8 @@
               "password": "Passwort",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
               "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL"
+              "base_api_url": "Basis-API-URL",
+              "use_webhooks": "Webhook verwenden"
             }
           },
           "api_key": {
@@ -27,7 +28,8 @@
               "api_key": "API-Schlüssel",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
               "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL"
+              "base_api_url": "Basis-API-URL",
+              "use_webhooks": "Webhook verwenden"
             }
           },
           "multi_cluster": {
@@ -37,6 +39,14 @@
               "clusters": "Einheiten"
             }
           },
+          "webhook_info": {
+            "title": "Webhook-Einrichtung",
+            "description": "Webhook-Unterstützung ist aktiviert. Öffne Divera, gehe zu: Verwaltung -> Schnittstellen -> Datenübergabe\nWähle \"Webhooks\" und gib folgende URL ein:\n\n{webhook_url}\n\nFormat: POST application/json\nInhalt: Ohne Inhalt\n\nFahre fort, nachdem du die URL in Divera gespeichert hast."
+          },
+          "webhook_error": {
+            "title": "Keine externe URL verfügbar",
+            "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird.\nWebhookunterstützung wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Webhook-Unterstützung wieder aktivieren über die Neukonfigurationsoption."
+          },
           "reconfigure": {
             "title": "Änderung der Konfiguration für DiveraControl",
             "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
@@ -44,13 +54,15 @@
               "api_key": "API-Schlüssel",
               "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
               "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL"
+              "base_api_url": "Basis-API-URL",
+              "use_webhooks": "Webhook verwenden"
             }
           }
       },
       "error": {
         "cannot_auth": "Ungültiger Benutzername oder Passwort.",
         "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
+        "no_external_url": "Keine externe URL konfiguriert.",
         "no_ucr": "Keine verbundenen Einheiten gefunden.",
         "unknown": "Unbekannter Fehler"
       },

@@ -6,10 +6,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, ConfigEntry
+from homeassistant.components.webhook import async_generate_id, async_generate_url
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import NoURLAvailableError
 from homeassistant.helpers.selector import (
+    BooleanSelector,
+    BooleanSelectorConfig,
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
@@ -26,6 +30,8 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USE_WEBHOOKS,
+    D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -60,6 +66,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         self.update_interval_data = ""
         self.update_interval_alarm = ""
         self.base_api_url = ""
+        self.use_webhooks = False
+        self.webhook_id = ""
+        self.webhook_url = ""
+        self._pending_entry: dict[str, Any] | None = None
+        self._finalize_entry = False
+        self._pending_reconfigure_entry_id: str | None = None
+        self._pending_reconfigure_data: dict[str, Any] | None = None
 
     async def async_step_user(
         self,
@@ -130,6 +143,78 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self._validate_and_proceed(dc.validate_api_key, user_input)
 
+    async def async_step_webhook_info(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        """Show webhook URL information before finishing setup."""
+
+        if not self.use_webhooks:
+            return self.async_abort(reason="unknown_step")
+
+        is_reconfigure = self._pending_reconfigure_data is not None
+        if not is_reconfigure and not self._pending_entry:
+            return self.async_abort(reason="unknown_step")
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="webhook_info",
+                data_schema=vol.Schema({}),
+                description_placeholders={"webhook_url": self.webhook_url},
+                errors=self.errors,
+            )
+
+        if is_reconfigure:
+            assert self._pending_reconfigure_data is not None
+            assert self._pending_reconfigure_entry_id is not None
+            self._pending_reconfigure_data[D_WEBHOOK_ID] = self.webhook_id
+            data_updates = self._pending_reconfigure_data
+            entry_id = self._pending_reconfigure_entry_id
+            self._pending_reconfigure_data = None
+            self._pending_reconfigure_entry_id = None
+            return self.async_update_reload_and_abort(
+                self.hass.config_entries.async_get_entry(entry_id),
+                data_updates=data_updates,
+            )
+
+        self._pending_entry[D_WEBHOOK_ID] = self.webhook_id
+        self._finalize_entry = True
+        return await self._process_clusters()
+
+    async def async_step_webhook_error(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        """Show webhook URL error before finishing setup."""
+
+        is_reconfigure = self._pending_reconfigure_data is not None
+        if not is_reconfigure and not self._pending_entry:
+            return self.async_abort(reason="unknown_step")
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="webhook_error",
+                data_schema=vol.Schema({}),
+                errors=self.errors,
+            )
+
+        if is_reconfigure:
+            assert self._pending_reconfigure_data is not None
+            assert self._pending_reconfigure_entry_id is not None
+            self._pending_reconfigure_data[D_USE_WEBHOOKS] = False
+            self._pending_reconfigure_data.pop(D_WEBHOOK_ID, None)
+            data_updates = self._pending_reconfigure_data
+            entry_id = self._pending_reconfigure_entry_id
+            self._pending_reconfigure_data = None
+            self._pending_reconfigure_entry_id = None
+            return self.async_update_reload_and_abort(
+                self.hass.config_entries.async_get_entry(entry_id),
+                data_updates=data_updates,
+            )
+
+        self._finalize_entry = True
+        return await self._process_clusters()
+
     async def async_step_multi_cluster(
         self,
         user_input: dict[str, Any] | None = None,
@@ -182,6 +267,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         current_api_key: str = config_entry.data.get(D_API_KEY, "")
         current_base_api_url: str = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
+        current_use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
 
         if user_input is None:
             return self._show_reconfigure_form(
@@ -189,12 +275,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 current_interval_alarm,
                 current_api_key,
                 current_base_api_url,
+                current_use_webhooks,
             )
 
         new_api_key = user_input[D_API_KEY]
         new_interval_data = user_input[D_UPDATE_INTERVAL_DATA]
         new_interval_alarm = user_input[D_UPDATE_INTERVAL_ALARM]
         new_base_api_url = user_input[D_BASE_API_URL]
+        new_use_webhooks = user_input[D_USE_WEBHOOKS]
 
         new_data = {
             **config_entry.data,
@@ -202,7 +290,28 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             D_UPDATE_INTERVAL_DATA: new_interval_data,
             D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
             D_BASE_API_URL: new_base_api_url,
+            D_USE_WEBHOOKS: new_use_webhooks,
         }
+
+        if not new_use_webhooks:
+            new_data.pop(D_WEBHOOK_ID, None)
+
+        if new_use_webhooks and not current_use_webhooks:
+            try:
+                self.webhook_id = async_generate_id()
+                self.webhook_url = async_generate_url(
+                    self.hass, self.webhook_id, allow_internal=False
+                )
+                self._pending_reconfigure_entry_id = entry_id
+                self._pending_reconfigure_data = new_data
+                self.use_webhooks = new_use_webhooks
+                return await self.async_step_webhook_info()
+            except NoURLAvailableError:
+                LOGGER.error("No external URL configured for webhooks")
+                self.errors["base"] = "no_external_url"
+                self._pending_reconfigure_entry_id = entry_id
+                self._pending_reconfigure_data = new_data
+                return await self.async_step_webhook_error()
 
         return self.async_update_reload_and_abort(
             config_entry,
@@ -241,6 +350,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
                 ),
                 D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
+                D_USE_WEBHOOKS: user_input.get(D_USE_WEBHOOKS, False),
             }
         elif cur_step_id == D_API_KEY:
             self._saved_api_key = {
@@ -262,6 +372,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
         )
         self.base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
+        self.use_webhooks = user_input.get(D_USE_WEBHOOKS, False)
 
         self.errors, self.clusters = await validation_method(
             self.errors, self.session, user_input, self.base_api_url
@@ -320,6 +431,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
                 ): str,
+                vol.Required(
+                    D_USE_WEBHOOKS,
+                    default=defaults.get(D_USE_WEBHOOKS, False),
+                ): BooleanSelector(BooleanSelectorConfig()),
             }
         )
 
@@ -385,6 +500,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
                 ): str,
+                vol.Required(
+                    D_USE_WEBHOOKS,
+                    default=defaults.get(D_USE_WEBHOOKS, False),
+                ): BooleanSelector(BooleanSelectorConfig()),
             }
         )
 
@@ -400,6 +519,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         interval_alarm: int,
         api_key: str,
         base_api_url: str,
+        use_webhooks: bool,
     ) -> ConfigFlowResult:
         """Display the reconfigure input form.
 
@@ -408,6 +528,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             interval_alarm (int): data update interval in case of alarm.
             api_key (str): The API key to access Divera API.
             base_api_url (str): The base API URL for Divera API.
+            use_webhooks (bool): Whether to use webhooks for updates.
 
         Returns:
             ConfigFLowResult: The result of the config flow step "reconfigure".
@@ -426,6 +547,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Coerce(int), vol.Range(min=5)
                 ),
                 vol.Required(D_BASE_API_URL, default=base_api_url): str,
+                vol.Required(D_USE_WEBHOOKS, default=use_webhooks): BooleanSelector(
+                    BooleanSelectorConfig()
+                ),
             }
         )
 
@@ -497,6 +621,15 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
+        if self._pending_entry and self._finalize_entry:
+            new_entry = self._pending_entry
+            self._pending_entry = None
+            self._finalize_entry = False
+            return self.async_create_entry(
+                title=new_entry[D_CLUSTER_NAME],
+                data=new_entry,
+            )
+
         if self.clusters:
             for ucr_id, cluster_data in self.clusters.items():
                 cluster_name: str = cluster_data[D_CLUSTER_NAME]
@@ -510,8 +643,26 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                     D_BASE_API_URL: self.base_api_url,
                     D_UPDATE_INTERVAL_DATA: self.update_interval_data,
                     D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
+                    D_USE_WEBHOOKS: self.use_webhooks,
                     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 }
+
+                if self.use_webhooks:
+                    try:
+                        self.webhook_id = async_generate_id()
+                        self.webhook_url = async_generate_url(
+                            self.hass, self.webhook_id, allow_internal=False
+                        )
+                        self._pending_entry = new_entry
+                        return await self.async_step_webhook_info()
+
+                    except NoURLAvailableError:
+                        LOGGER.error("No external URL configured for webhooks")
+                        self.errors["base"] = "no_external_url"
+                        new_entry[D_USE_WEBHOOKS] = False
+                        new_entry.pop(D_WEBHOOK_ID, None)
+                        self._pending_entry = new_entry
+                        return await self.async_step_webhook_error()
 
                 return self.async_create_entry(title=cluster_name, data=new_entry)
 

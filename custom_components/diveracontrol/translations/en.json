@@ -17,7 +17,8 @@
           "password": "Password",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
-          "base_api_url": "Base API URL"
+          "base_api_url": "Base API URL",
+          "use_webhooks": "Enable webhooks"
         }
       },
       "api_key": {
@@ -27,7 +28,8 @@
           "api_key": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
-          "base_api_url": "Base API URL"
+          "base_api_url": "Base API URL",
+          "use_webhooks": "Enable webhooks"
         }
       },
       "multi_cluster": {
@@ -37,6 +39,14 @@
           "clusters": "Units"
         }
       },
+      "webhook_info": {
+        "title": "Webhook setup",
+        "description": "Webhook support is enabled. Open Divera, go to: Administration -> Interfaces -> Data Transfer\nSelect \"Webhooks\" and enter the following URL:\n\n{webhook_url}\n\nFormat: POST application/json\nContent: No content\n\nContinue after saving the URL in Divera."
+      },
+      "webhook_error": {
+        "title": "No external URL available",
+          "description": "Your Home Assistant is currently not accessible via an external URL, which is required for webhooks.\nWebhook support will be disabled and the setup will continue. Once your Home Assistant has a valid external URL, you can re-enable webhook support via reconfigure option."
+      },
       "reconfigure": {
         "title": "Change configuration for DiveraControl",
         "description": "By changing the API key, a different user can be assigned to the unit. Additionally, both intervals can be reconfigured.",
@@ -44,13 +54,15 @@
           "api_key": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
-          "base_api_url": "Base API URL"
+          "base_api_url": "Base API URL",
+          "use_webhooks": "Enable webhooks"
         }
       }
     },
     "error": {
       "cannot_auth": "Invalid username or password.",
       "cannot_connect": "Unable to connect to Divera. Correct base URL? Is Divera reachable in the browser?",
+      "no_external_url": "No external URL configured.",
       "no_ucr": "No connected units found.",
       "unknown": "Unknown error"
     },
