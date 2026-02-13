@@ -71,6 +71,8 @@ D_STATUSPLAN = "statusplan"
 D_ACCESS = "access"
 D_VEHICLE = "vehicle"
 D_FMS_STATUS = "fms_status"
+D_USE_WEBHOOKS = "use_webhooks"
+D_WEBHOOK_ID = "webhook_id"
 
 # permissions
 PERM_MESSAGES = "messages"

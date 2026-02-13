@@ -83,7 +83,9 @@ async def test_async_migrate_entry_from_v0_8_succeeds(hass: HomeAssistant) -> No
         result = await async_migrate_entry(hass, old_entry)
 
     assert result is True
-    assert D_INTEGRATION_VERSION in old_entry.data
+    assert old_entry.version == 1
+    assert old_entry.minor_version == 2
+    assert D_INTEGRATION_VERSION not in old_entry.data
 
 
 @pytest.mark.parametrize(

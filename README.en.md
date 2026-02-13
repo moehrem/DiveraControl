@@ -151,6 +151,14 @@ Intervals are set **per unit** and control how often data is retrieved and updat
 
 > **Note:** The integration actively polls Divera even when no new data is available. To avoid excessive requests, values below 30s (outside of alarms) or 10s (during alarms) are not allowed.
 
+### **Basis-URL**
+
+The base address at which the Diverainstance can be accessed can be customised. The default URL is preset if the service is hosted directly by Divera.
+
+### **Webhook**
+
+The use of a webhook is optional but recommended. With an active webhook, the integration provides an endpoint including an URL that can be used to setup a webhook in Divera. The webhook is called by Divera as soon as a new alarm is created. In the integration, the call results in all data being retrieved from Divera immediately. This significantly shortens HomeAssistant's response times and also reduces unnecessary data queries to Divera.
+
 ---
 
 ## 🔨 Usage

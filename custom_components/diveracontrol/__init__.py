@@ -2,6 +2,7 @@
 
 import logging
 
+from homeassistant.components.webhook import async_register, async_unregister
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -17,6 +18,8 @@ from .const import (
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
     D_UCR_ID,
+    D_USE_WEBHOOKS,
+    D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -25,6 +28,7 @@ from .const import (
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPI
 from .service import async_register_services
+from .webhook import async_handle_webhook
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -56,6 +60,8 @@ async def async_setup_entry(
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
     api_key: str = config_entry.data.get(D_API_KEY) or ""
     base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
+    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
+    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
 
@@ -82,6 +88,16 @@ async def async_setup_entry(
 
         await coordinator.async_config_entry_first_refresh()
 
+        if use_webhooks and webhook_id:
+            async_register(
+                hass,
+                DOMAIN,
+                f"DiveraControl {cluster_name}",
+                webhook_id,
+                async_handle_webhook,
+            )
+            config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
+
         config_entry.async_on_unload(api.close)
         await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
@@ -106,11 +122,16 @@ async def async_unload_entry(
     """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
     ucr_id = config_entry.data.get(D_UCR_ID)
+    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
+    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
 
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
+
+    if use_webhooks and webhook_id:
+        async_unregister(hass, webhook_id)
 
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(ucr_id, None)
@@ -129,33 +150,31 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     the versions defined in ConfigFlow (VERSION and MINOR_VERSION).
 
     """
+
     _LOGGER.debug(
         "Checking migration from config_entry version %s.%s",
         config_entry.version,
         config_entry.minor_version,
     )
 
+    updated_data = {**config_entry.data}
+    migrated = False
+
     # changing to v1.2.0
-    if MINOR_VERSION == 2:
+    # add new integration_version parameter to config entry and create issue for breaking changes
+    if config_entry.version == 1 and config_entry.minor_version < 2:
         _LOGGER.info(
             "Migrating config entry to integration version %s.%s.%s",
             VERSION,
             MINOR_VERSION,
             PATCH_VERSION,
         )
-        if D_INTEGRATION_VERSION not in config_entry.data:
+        if D_INTEGRATION_VERSION not in updated_data:
             _LOGGER.info("Adding integration version to existing config entry")
-
-            # Update both the data AND the schema version
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data={
-                    **config_entry.data,
-                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-                },
-                version=VERSION,
-                minor_version=MINOR_VERSION,
+            updated_data[D_INTEGRATION_VERSION] = (
+                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
             )
+            migrated = True
 
         ir.async_create_issue(
             hass,
@@ -196,7 +215,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     # changing to v1.3.0
     # add new base_url parameter to config entry
-    if MINOR_VERSION == 3:
+
+    if config_entry.version == 1 and config_entry.minor_version < 3:
         _LOGGER.info(
             "Migrating config entry to integration version %s.%s.%s",
             VERSION,
@@ -204,24 +224,48 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             PATCH_VERSION,
         )
 
-        if D_BASE_API_URL not in config_entry.data:
+        if D_BASE_API_URL not in updated_data:
             _LOGGER.info("Adding base_url to existing config entry")
-
-            # Update both the data AND the schema version
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data={
-                    **config_entry.data,
-                    D_BASE_API_URL: BASE_API_URL,
-                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-                },
-                version=VERSION,
-                minor_version=MINOR_VERSION,
+            updated_data[D_BASE_API_URL] = BASE_API_URL
+            updated_data[D_INTEGRATION_VERSION] = (
+                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
             )
+            migrated = True
+
+    # changing to v1.4.0
+    # add new use_webhooks parameter to config entry
+    if config_entry.version == 1 and config_entry.minor_version < 4:
+        _LOGGER.info(
+            "Migrating config entry to integration version %s.%s.%s",
+            VERSION,
+            MINOR_VERSION,
+            PATCH_VERSION,
+        )
+
+        if D_USE_WEBHOOKS not in updated_data:
+            _LOGGER.info("Adding use_webhooks to existing config entry")
+            updated_data[D_USE_WEBHOOKS] = False
+            updated_data[D_INTEGRATION_VERSION] = (
+                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+            )
+            migrated = True
+
+    if (
+        migrated
+        or config_entry.version != VERSION
+        or config_entry.minor_version != MINOR_VERSION
+    ):
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=updated_data,
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
 
     _LOGGER.debug(
         "Migration complete, config_entry is now at version %s.%s",
         config_entry.version,
         config_entry.minor_version,
     )
+
     return True
