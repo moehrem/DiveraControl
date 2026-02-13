@@ -153,7 +153,15 @@ Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval w
 - **Außerhalb von Einsätzen**: längeres Intervall, das außerhalb aktiver Alarme genutzt wird
 - **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme genutzt wird
 
-> **Hinweis:** Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 30s für "außerhalb von Einsätzen" bzw 10s für "während Einsätzen" nicht möglich.
+> **Hinweis:** Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 5s nicht möglich. Für kürzere Reaktionszeiten kann ein Webhook eingerichtet werden.
+
+### **Basis-URL**
+
+Die Basis-Adresse, unter der die Diverainstanz erreichbar ist, kann individualisiert werden. Vorbelegt ist die Standard-URL, wenn die Dienst direkt bei DIvera gehostet werden.
+
+### **Webhook**
+
+Die Nutzung eines Webhooks ist optional, aber empfohlen. Mit aktivem Webhook stellt die Integration einen Endpunkt samt URL bereit, der in Divera als Webhookadresse eingegeben werden kann. Der Webhook wird von Divera aufgerufen, sobald ein neuer Alarm erstellt wird. In der Integration führt der Aufruf dazu, dass sofort alle Daten von Divera abgerufen werden. Dies verkürzt die Reaktionszeiten von HomeAssistant deutlich und reduziert außerdem die unnötigen Datenabfragen bei Divera.
 
 ## 🔨 Benutzung
 
