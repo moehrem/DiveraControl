@@ -10,7 +10,7 @@ from homeassistant.components.webhook import async_generate_id, async_generate_u
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.network import NoURLAvailableError
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.selector import (
     BooleanSelector,
     BooleanSelectorConfig,
@@ -650,8 +650,17 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 if self.use_webhooks:
                     try:
                         self.webhook_id = async_generate_id()
-                        self.webhook_url = async_generate_url(
-                            self.hass, self.webhook_id, allow_internal=False
+                        # self.webhook_url = async_generate_url(
+                        #     self.hass, self.webhook_id, allow_internal=False
+                        # )
+                        self.webhook_url = (
+                            get_url(
+                                self.hass,
+                                allow_internal=False,
+                                allow_cloud=True,
+                                require_ssl=True,
+                            ).rstrip("/")
+                            + f"/api/webhook/{self.webhook_id}"
                         )
                         self._pending_entry = new_entry
                         return await self.async_step_webhook_info()
