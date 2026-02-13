@@ -299,9 +299,19 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if new_use_webhooks and not current_use_webhooks:
             try:
                 self.webhook_id = async_generate_id()
-                self.webhook_url = async_generate_url(
-                    self.hass, self.webhook_id, allow_internal=False
+                # self.webhook_url = async_generate_url(
+                #     self.hass, self.webhook_id, allow_internal=False
+                # )
+                self.webhook_url = (
+                    get_url(
+                        self.hass,
+                        allow_internal=False,
+                        allow_cloud=True,
+                        prefer_cloud=True,
+                    ).rstrip("/")
+                    + f"/api/webhook/{self.webhook_id}"
                 )
+
                 self._pending_reconfigure_entry_id = entry_id
                 self._pending_reconfigure_data = new_data
                 self.use_webhooks = new_use_webhooks
@@ -658,7 +668,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                                 self.hass,
                                 allow_internal=False,
                                 allow_cloud=True,
-                                require_ssl=True,
+                                prefer_cloud=True,
                             ).rstrip("/")
                             + f"/api/webhook/{self.webhook_id}"
                         )
