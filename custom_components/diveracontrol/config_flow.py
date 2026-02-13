@@ -302,20 +302,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 # self.webhook_url = async_generate_url(
                 #     self.hass, self.webhook_id, allow_internal=False
                 # )
-                self.webhook_url = (
-                    get_url(
-                        self.hass,
-                        allow_internal=False,
-                        allow_cloud=True,
-                        prefer_cloud=True,
-                    ).rstrip("/")
-                    + f"/api/webhook/{self.webhook_id}"
-                )
-
+                self._read_url()
                 self._pending_reconfigure_entry_id = entry_id
                 self._pending_reconfigure_data = new_data
                 self.use_webhooks = new_use_webhooks
                 return await self.async_step_webhook_info()
+
             except NoURLAvailableError:
                 LOGGER.error("No external URL configured for webhooks")
                 self.errors["base"] = "no_external_url"
@@ -663,15 +655,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                         # self.webhook_url = async_generate_url(
                         #     self.hass, self.webhook_id, allow_internal=False
                         # )
-                        self.webhook_url = (
-                            get_url(
-                                self.hass,
-                                allow_internal=False,
-                                allow_cloud=True,
-                                prefer_cloud=True,
-                            ).rstrip("/")
-                            + f"/api/webhook/{self.webhook_id}"
-                        )
+                        self._read_url()
                         self._pending_entry = new_entry
                         return await self.async_step_webhook_info()
 
@@ -686,3 +670,30 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(title=cluster_name, data=new_entry)
 
         return self.async_abort(reason="no_new_hubs_found")
+
+    def _read_url(self) -> None:
+        """Read the external URL from Home Assistant for webhook setup.
+
+        Returns:
+            None
+        """
+
+        # First, try the cloud URL, then fall back to the external URL.
+        for allow_cloud, prefer_cloud in ((True, True), (False, False)):
+            try:
+                base_url = get_url(
+                    self.hass,
+                    allow_internal=False,
+                    allow_cloud=allow_cloud,
+                    prefer_cloud=prefer_cloud,
+                ).rstrip("/")
+                self.webhook_url = f"{base_url}/api/webhook/{self.webhook_id}"
+                return
+            except NoURLAvailableError:
+                continue
+
+        LOGGER.error("No external URL configured for webhooks")
+        self.errors["base"] = "no_external_url"
+        raise NoURLAvailableError(
+            "No cloud connection or external URL configured for webhooks"
+        )
