@@ -280,22 +280,19 @@ async def test_reconfigure_entry_not_found(hass: HomeAssistant) -> None:
 
     Scenario:
     - The reconfigure flow is started with a non-existent entry_id.
-    - The flow should abort with reason "hub_not_found".
+    - The flow should abort with reason "reconfigure_failed".
 
     """
-    # Starting the reconfigure flow with a non-existent entry id currently
-    # leads to an AttributeError inside the flow implementation (no
-    # config entry found). The config flow expects a valid entry_id to be
-    # provided by the caller. Assert that the AttributeError is raised so
-    # tests reflect the current behavior.
-    with pytest.raises(AttributeError):
-        await hass.config_entries.flow.async_init(
-            DOMAIN,
-            context={
-                "source": config_entries.SOURCE_RECONFIGURE,
-                "entry_id": "non_existent_entry_id",
-            },
-        )
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": "non_existent_entry_id",
+        },
+    )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_failed"
 
 
 async def test_multi_cluster_show_form_without_input(hass: HomeAssistant) -> None:
@@ -311,7 +308,7 @@ async def test_multi_cluster_show_form_without_input(hass: HomeAssistant) -> Non
     # Create a flow instance and set up the required state
     flow = DiveraControlConfigFlow()
     flow.hass = hass
-    flow.clusters = {
+    flow.possible_entries = {
         "123456": {
             "cluster_name": "Test Cluster 1",
             "ucr_id": "123456",

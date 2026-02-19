@@ -4,22 +4,12 @@ from collections.abc import Callable
 import logging
 from typing import Any
 
+import aiohttp
 import voluptuous as vol
 
-from homeassistant.components.webhook import async_generate_id, async_generate_url
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import (
-    BooleanSelector,
-    BooleanSelectorConfig,
-    SelectSelector,
-    SelectSelectorConfig,
-    TextSelector,
-    TextSelectorConfig,
-    TextSelectorType,
-)
 
 from .const import (
     BASE_API_URL,
@@ -40,6 +30,14 @@ from .const import (
     VERSION,
 )
 from .divera_credentials import DiveraCredentials as dc
+from .schemas import (
+    get_api_key_form_schema,
+    get_entry_form_schema,
+    get_login_form_schema,
+    get_multi_cluster_form_schema,
+    get_reconfigure_form_schema,
+)
+from .webhook_handler import WebhookHandler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,20 +57,15 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        self.session = None
+        self.session: aiohttp.ClientSession | None = None
+        self.reconf_config_entry: ConfigEntry | None = None
+        self.final_entry: dict[str, Any] | None = None
+        self.possible_entries: dict[str, dict[str, Any]] = {}
         self.errors: dict[str, str] = {}
-        self.clusters: dict[str, dict[str, Any]] = {}
-        self.usergroup_id = ""
-        self.update_interval_data = ""
-        self.update_interval_alarm = ""
-        self.base_api_url = ""
-        self.use_webhooks = False
-        self.webhook_id = ""
-        self.webhook_url = ""
-        self._pending_entry: dict[str, Any] | None = None
-        self._finalize_entry = False
-        self._pending_reconfigure_entry_id: str | None = None
-        self._pending_reconfigure_data: dict[str, Any] | None = None
+        self.reconfigure = False
+        self.webhook_handler: WebhookHandler | None = None
+        self._saved_login: dict[str, Any] = {}
+        self._saved_api_key: dict[str, Any] = {}
 
     async def async_step_user(
         self,
@@ -94,7 +87,11 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         # allows us to present errors on the same screen when validation
         # fails and to keep a consistent UI.
         if user_input is None:
-            return self._show_entry_form()
+            return self.async_show_form(
+                step_id="user",
+                data_schema=get_entry_form_schema(),
+                errors=self.errors,
+            )
 
         # choose next step depending on user selection
         method = user_input.get("method")
@@ -120,7 +117,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """
 
         if user_input is None:
-            return self._show_login_form()
+            defaults = getattr(self, "_saved_login", {})
+            return self.async_show_form(
+                step_id="login",
+                data_schema=get_login_form_schema(defaults),
+                errors=self.errors,
+            )
 
         return await self._validate_and_proceed(dc.validate_login, user_input)
 
@@ -139,7 +141,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """
 
         if user_input is None:
-            return self._show_api_key_form()
+            defaults = getattr(self, "_saved_api_key", {})
+            return self.async_show_form(
+                step_id=D_API_KEY,
+                data_schema=get_api_key_form_schema(defaults),
+                errors=self.errors,
+            )
 
         return await self._validate_and_proceed(dc.validate_api_key, user_input)
 
@@ -149,37 +156,32 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Show webhook URL information before finishing setup."""
 
-        if not self.use_webhooks:
-            return self.async_abort(reason="unknown_step")
-
-        is_reconfigure = self._pending_reconfigure_data is not None
-        if not is_reconfigure and not self._pending_entry:
-            return self.async_abort(reason="unknown_step")
-
         if user_input is None:
+            webhook_url = ""
+            if self.webhook_handler is not None:
+                webhook_url = self.webhook_handler.webhook_url
             return self.async_show_form(
                 step_id="webhook_info",
                 data_schema=vol.Schema({}),
-                description_placeholders={"webhook_url": self.webhook_url},
+                description_placeholders={"webhook_url": webhook_url},
                 errors=self.errors,
             )
 
-        if is_reconfigure:
-            assert self._pending_reconfigure_data is not None
-            assert self._pending_reconfigure_entry_id is not None
-            self._pending_reconfigure_data[D_WEBHOOK_ID] = self.webhook_id
-            data_updates = self._pending_reconfigure_data
-            entry_id = self._pending_reconfigure_entry_id
-            self._pending_reconfigure_data = None
-            self._pending_reconfigure_entry_id = None
+        if self.final_entry is None:
+            return self.async_abort(reason="no_new_hubs_found")
+
+        if self.reconfigure:
+            if self.reconf_config_entry is None:
+                return self.async_abort(reason="reconfigure_failed")
             return self.async_update_reload_and_abort(
-                self.hass.config_entries.async_get_entry(entry_id),
-                data_updates=data_updates,
+                self.reconf_config_entry,
+                data_updates=self.final_entry,
             )
 
-        self._pending_entry[D_WEBHOOK_ID] = self.webhook_id
-        self._finalize_entry = True
-        return await self._process_clusters()
+        return self.async_create_entry(
+            title=self.final_entry[D_CLUSTER_NAME],
+            data=self.final_entry,
+        )
 
     async def async_step_webhook_error(
         self,
@@ -187,33 +189,31 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Show webhook URL error before finishing setup."""
 
-        is_reconfigure = self._pending_reconfigure_data is not None
-        if not is_reconfigure and not self._pending_entry:
-            return self.async_abort(reason="unknown_step")
-
         if user_input is None:
             return self.async_show_form(
                 step_id="webhook_error",
                 data_schema=vol.Schema({}),
+                description_placeholders={
+                    "remote_docs_url": "https://www.home-assistant.io/docs/configuration/remote/"
+                },
                 errors=self.errors,
             )
 
-        if is_reconfigure:
-            assert self._pending_reconfigure_data is not None
-            assert self._pending_reconfigure_entry_id is not None
-            self._pending_reconfigure_data[D_USE_WEBHOOKS] = False
-            self._pending_reconfigure_data.pop(D_WEBHOOK_ID, None)
-            data_updates = self._pending_reconfigure_data
-            entry_id = self._pending_reconfigure_entry_id
-            self._pending_reconfigure_data = None
-            self._pending_reconfigure_entry_id = None
+        if self.final_entry is None:
+            return self.async_abort(reason="no_new_hubs_found")
+
+        if self.reconfigure:
+            if self.reconf_config_entry is None:
+                return self.async_abort(reason="reconfigure_failed")
             return self.async_update_reload_and_abort(
-                self.hass.config_entries.async_get_entry(entry_id),
-                data_updates=data_updates,
+                self.reconf_config_entry,
+                data_updates=self.final_entry,
             )
 
-        self._finalize_entry = True
-        return await self._process_clusters()
+        return self.async_create_entry(
+            title=self.final_entry[D_CLUSTER_NAME],
+            data=self.final_entry,
+        )
 
     async def async_step_multi_cluster(
         self,
@@ -230,17 +230,32 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """
 
         if user_input is None:
-            return self._show_multi_cluster_form()
+            cluster_names = [
+                entry_data[D_CLUSTER_NAME]
+                for entry_data in self.possible_entries.values()
+            ]
+            return self.async_show_form(
+                step_id="multi_cluster",
+                data_schema=get_multi_cluster_form_schema(cluster_names),
+                errors=self.errors,
+            )
 
-        selected_clusters = user_input["clusters"]
+        _selected_cluster = user_input["clusters"]
+        _selected_ucr = next(
+            (
+                ucr_id
+                for ucr_id, entry_data in self.possible_entries.items()
+                if entry_data[D_CLUSTER_NAME] == _selected_cluster
+            ),
+            None,
+        )
 
-        self.clusters = {
-            ucr_id: cluster_data
-            for ucr_id, cluster_data in self.clusters.items()
-            if cluster_data[D_CLUSTER_NAME] in selected_clusters
-        }
+        if _selected_ucr is None:
+            return self.async_abort(reason="unknown_step")
 
-        return await self._process_clusters()
+        self.final_entry = self.possible_entries.get(_selected_ucr)
+
+        return await self._create_cluster()
 
     async def async_step_reconfigure(
         self,
@@ -256,26 +271,41 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        entry_id: str = self.context["entry_id"]
-        config_entry: ConfigEntry = self.hass.config_entries.async_get_entry(entry_id)
+        entry_id: str | None = self.context.get("entry_id")
+        if entry_id is None:
+            return self.async_abort(reason="reconfigure_failed")
 
-        current_interval_data: int = config_entry.data.get(
+        self.reconf_config_entry = self.hass.config_entries.async_get_entry(entry_id)
+        if self.reconf_config_entry is None:
+            return self.async_abort(reason="reconfigure_failed")
+
+        self.reconfigure = True
+
+        current_interval_data: int = self.reconf_config_entry.data.get(
             D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
         )
-        current_interval_alarm: int = config_entry.data.get(
+        current_interval_alarm: int = self.reconf_config_entry.data.get(
             D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
         )
-        current_api_key: str = config_entry.data.get(D_API_KEY, "")
-        current_base_api_url: str = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
-        current_use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
+        current_api_key: str = self.reconf_config_entry.data.get(D_API_KEY, "")
+        current_base_api_url: str = self.reconf_config_entry.data.get(
+            D_BASE_API_URL, BASE_API_URL
+        )
+        current_use_webhooks: bool = self.reconf_config_entry.data.get(
+            D_USE_WEBHOOKS, False
+        )
 
         if user_input is None:
-            return self._show_reconfigure_form(
-                current_interval_data,
-                current_interval_alarm,
-                current_api_key,
-                current_base_api_url,
-                current_use_webhooks,
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=get_reconfigure_form_schema(
+                    current_interval_data,
+                    current_interval_alarm,
+                    current_api_key,
+                    current_base_api_url,
+                    current_use_webhooks,
+                ),
+                errors=self.errors,
             )
 
         new_api_key = user_input[D_API_KEY]
@@ -285,7 +315,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         new_use_webhooks = user_input[D_USE_WEBHOOKS]
 
         new_data = {
-            **config_entry.data,
+            **self.reconf_config_entry.data,
             D_API_KEY: new_api_key,
             D_UPDATE_INTERVAL_DATA: new_interval_data,
             D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
@@ -293,36 +323,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             D_USE_WEBHOOKS: new_use_webhooks,
         }
 
-        if not new_use_webhooks:
-            new_data.pop(D_WEBHOOK_ID, None)
+        self.final_entry = new_data
 
-        if new_use_webhooks and not current_use_webhooks:
-            try:
-                self.webhook_id = async_generate_id()
-                # self.webhook_url = async_generate_url(
-                #     self.hass, self.webhook_id, allow_internal=False
-                # )
-                self._read_url()
-                self._pending_reconfigure_entry_id = entry_id
-                self._pending_reconfigure_data = new_data
-                self.use_webhooks = new_use_webhooks
-                return await self.async_step_webhook_info()
-
-            except NoURLAvailableError:
-                LOGGER.error("No external URL configured for webhooks")
-                self.errors["base"] = "no_external_url"
-                self._pending_reconfigure_entry_id = entry_id
-                self._pending_reconfigure_data = new_data
-                return await self.async_step_webhook_error()
-
-        return self.async_update_reload_and_abort(
-            config_entry,
-            data_updates=new_data,
-        )
+        return await self._reconfigure_cluster()
 
     async def _validate_and_proceed(
         self,
-        validation_method: Callable[[dict[str, str], Any, dict[str, Any]], Any],
+        validation_method: Callable[[dict[str, str], Any, dict[str, Any], str], Any],
         user_input: dict[str, Any],
     ) -> ConfigFlowResult:
         """Validate user input and decide next steps.
@@ -367,223 +374,76 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             }
 
         # still update the working values used for processing
-        self.update_interval_data = user_input.get(
+        _update_interval_data = user_input.get(
             D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
         )
-        self.update_interval_alarm = user_input.get(
+        _update_interval_alarm = user_input.get(
             D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
         )
-        self.base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
-        self.use_webhooks = user_input.get(D_USE_WEBHOOKS, False)
+        _base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
+        _use_webhooks = user_input.get(D_USE_WEBHOOKS, False)
 
-        self.errors, self.clusters = await validation_method(
-            self.errors, self.session, user_input, self.base_api_url
+        self.errors, clusters = await validation_method(
+            self.errors, self.session, user_input, _base_api_url
         )
 
-        # error handling: show the initial menu so the user can switch
-        # between login and API key flow if validation failed
+        # error handling: show the current step again so the user can fix input
         if self.errors:
-            return self._show_entry_form(errors=self.errors)
+            if cur_step_id == "login":
+                defaults = getattr(self, "_saved_login", {})
+                return self.async_show_form(
+                    step_id="login",
+                    data_schema=get_login_form_schema(defaults),
+                    errors=self.errors,
+                )
+            if cur_step_id == D_API_KEY:
+                defaults = getattr(self, "_saved_api_key", {})
+                return self.async_show_form(
+                    step_id=D_API_KEY,
+                    data_schema=get_api_key_form_schema(defaults),
+                    errors=self.errors,
+                )
+            return self.async_show_form(
+                step_id="user",
+                data_schema=get_entry_form_schema(),
+                errors=self.errors,
+            )
 
-        # check and delete duplicate clusters
+        self.possible_entries = {
+            str(ucr_id): {
+                D_UCR_ID: cluster_data[D_UCR_ID],
+                D_CLUSTER_NAME: cluster_data[D_CLUSTER_NAME],
+                D_API_KEY: cluster_data[D_API_KEY],
+                D_BASE_API_URL: _base_api_url,
+                D_UPDATE_INTERVAL_DATA: _update_interval_data,
+                D_UPDATE_INTERVAL_ALARM: _update_interval_alarm,
+                D_USE_WEBHOOKS: _use_webhooks,
+                D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+            }
+            for ucr_id, cluster_data in clusters.items()
+        }
+
+        # check and delete duplicate entries
         self._handle_duplicates()
 
         # if more units available, ask user to choose a unit
-        if len(self.clusters) > 1:
-            return self._show_multi_cluster_form()
+        if len(self.possible_entries) > 1:
+            cluster_names = [
+                entry_data[D_CLUSTER_NAME]
+                for entry_data in self.possible_entries.values()
+            ]
+            return self.async_show_form(
+                step_id="multi_cluster",
+                data_schema=get_multi_cluster_form_schema(cluster_names),
+                errors=self.errors,
+            )
 
-        return await self._process_clusters()
+        # else set single entry as final entry for creation and proceed
+        if self.possible_entries:
+            _selected_ucr = next(iter(self.possible_entries))
+            self.final_entry = self.possible_entries.get(_selected_ucr)
 
-    def _show_login_form(self) -> ConfigFlowResult:
-        """Display the login input form.
-
-        Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
-
-        """
-
-        defaults = getattr(self, "_saved_login", {})
-
-        self.errors.clear()
-
-        data_schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_USERNAME, default=defaults.get(CONF_USERNAME, "")
-                ): TextSelector(
-                    TextSelectorConfig(
-                        type=TextSelectorType.EMAIL, autocomplete="username"
-                    )
-                ),
-                vol.Required(CONF_PASSWORD): TextSelector(
-                    TextSelectorConfig(
-                        type=TextSelectorType.PASSWORD, autocomplete="current-password"
-                    )
-                ),
-                vol.Required(
-                    D_UPDATE_INTERVAL_DATA,
-                    default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
-                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
-                vol.Required(
-                    D_UPDATE_INTERVAL_ALARM,
-                    default=defaults.get(
-                        D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
-                    ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
-                vol.Required(
-                    D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
-                ): str,
-                vol.Required(
-                    D_USE_WEBHOOKS,
-                    default=defaults.get(D_USE_WEBHOOKS, False),
-                ): BooleanSelector(BooleanSelectorConfig()),
-            }
-        )
-
-        return self.async_show_form(
-            step_id="login",
-            data_schema=data_schema,
-            errors=self.errors,
-        )
-
-    def _show_entry_form(
-        self, errors: dict[str, str] | None = None
-    ) -> ConfigFlowResult:
-        """Show the initial entry form (replaces menu) so errors can be displayed."""
-
-        data_schema = vol.Schema(
-            {
-                vol.Required("method", default="login"): SelectSelector(
-                    SelectSelectorConfig(
-                        options=[
-                            "login",
-                            "api_key",
-                        ],
-                        translation_key="entry_method_options",
-                        multiple=False,
-                    )
-                )
-            }
-        )
-
-        return self.async_show_form(
-            step_id="user", data_schema=data_schema, errors=errors or {}
-        )
-
-    def _show_api_key_form(self) -> ConfigFlowResult:
-        """Display the API key input form.
-
-        Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
-
-        """
-
-        defaults = getattr(self, "_saved_api_key", {})
-
-        self.errors.clear()
-
-        data_schema = vol.Schema(
-            {
-                vol.Required(
-                    D_API_KEY, default=defaults.get(D_API_KEY, "")
-                ): TextSelector(
-                    TextSelectorConfig(type="password")  # type: ignore[misc]
-                ),
-                vol.Required(
-                    D_UPDATE_INTERVAL_DATA,
-                    default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
-                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
-                vol.Required(
-                    D_UPDATE_INTERVAL_ALARM,
-                    default=defaults.get(
-                        D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
-                    ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=5)),
-                vol.Required(
-                    D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
-                ): str,
-                vol.Required(
-                    D_USE_WEBHOOKS,
-                    default=defaults.get(D_USE_WEBHOOKS, False),
-                ): BooleanSelector(BooleanSelectorConfig()),
-            }
-        )
-
-        return self.async_show_form(
-            step_id=D_API_KEY,
-            data_schema=data_schema,
-            errors=self.errors,
-        )
-
-    def _show_reconfigure_form(
-        self,
-        interval_data: int,
-        interval_alarm: int,
-        api_key: str,
-        base_api_url: str,
-        use_webhooks: bool,
-    ) -> ConfigFlowResult:
-        """Display the reconfigure input form.
-
-        Args:
-            interval_data (int): data update interval in case of no alarm.
-            interval_alarm (int): data update interval in case of alarm.
-            api_key (str): The API key to access Divera API.
-            base_api_url (str): The base API URL for Divera API.
-            use_webhooks (bool): Whether to use webhooks for updates.
-
-        Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
-
-        """
-
-        data_schema = vol.Schema(
-            {
-                vol.Required(D_API_KEY, default=api_key): TextSelector(
-                    TextSelectorConfig(type="password")  # type: ignore[misc]
-                ),
-                vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
-                    vol.Coerce(int), vol.Range(min=5)
-                ),
-                vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
-                    vol.Coerce(int), vol.Range(min=5)
-                ),
-                vol.Required(D_BASE_API_URL, default=base_api_url): str,
-                vol.Required(D_USE_WEBHOOKS, default=use_webhooks): BooleanSelector(
-                    BooleanSelectorConfig()
-                ),
-            }
-        )
-
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=data_schema,
-            errors=self.errors,
-        )
-
-    def _show_multi_cluster_form(self) -> ConfigFlowResult:
-        """Display the multi-cluster input form.
-
-        Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
-
-        """
-
-        cluster_names = [cluster[D_CLUSTER_NAME] for cluster in self.clusters.values()]
-
-        cluster_schema = vol.Schema(
-            {
-                vol.Required("clusters", default=cluster_names[0]): SelectSelector(
-                    SelectSelectorConfig(options=cluster_names, multiple=False)
-                )
-            }
-        )
-
-        return self.async_show_form(
-            step_id="multi_cluster",
-            data_schema=cluster_schema,
-            errors=self.errors,
-        )
+        return await self._create_cluster()
 
     def _handle_duplicates(self) -> None:
         """Mark for removal if duplicate and remove duplicates from the clusters dict.
@@ -594,28 +454,43 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """
 
         clusters_to_remove = []
+        existing_entries = list(self._async_current_entries())
+        existing_unique_ids = {
+            entry.unique_id for entry in existing_entries if entry.unique_id
+        }
+        existing_cluster_names = {
+            entry.data.get(D_CLUSTER_NAME)
+            for entry in existing_entries
+            if entry.data.get(D_CLUSTER_NAME) is not None
+        }
+        existing_ucr_ids = {
+            entry.data.get(D_UCR_ID)
+            for entry in existing_entries
+            if entry.data.get(D_UCR_ID) is not None
+        }
 
         # checking for existing cluster and mark for removal if duplicate
-        for ucr_id, cluster_data in self.clusters.items():
-            cluster_name = cluster_data[D_CLUSTER_NAME]
+        for ucr_id, entry_data in self.possible_entries.items():
+            cluster_name = entry_data[D_CLUSTER_NAME]
 
-            for entry in self._async_current_entries():
-                existing_ucr_id = entry.data.get(D_UCR_ID)
-
-                if existing_ucr_id == ucr_id or entry.title == cluster_name:
-                    LOGGER.debug(
-                        "Skipping duplicate hub creation for '%s' (ID: %s)",
-                        cluster_name,
-                        ucr_id,
-                    )
-                    clusters_to_remove.append(ucr_id)
-                    continue
+            if (
+                ucr_id in existing_unique_ids
+                or ucr_id in existing_ucr_ids
+                or cluster_name in existing_cluster_names
+            ):
+                LOGGER.debug(
+                    "Skipping duplicate hub creation for '%s' (ID: %s)",
+                    cluster_name,
+                    entry_data[D_UCR_ID],
+                )
+                clusters_to_remove.append(ucr_id)
+                continue
 
         # remove duplicates
         for ucr_id in clusters_to_remove:
-            del self.clusters[ucr_id]
+            self.possible_entries.pop(ucr_id, None)
 
-    async def _process_clusters(self) -> ConfigFlowResult:
+    async def _create_cluster(self) -> ConfigFlowResult:
         """Process device creation.
 
         Returns:
@@ -623,77 +498,48 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        if self._pending_entry and self._finalize_entry:
-            new_entry = self._pending_entry
-            self._pending_entry = None
-            self._finalize_entry = False
-            return self.async_create_entry(
-                title=new_entry[D_CLUSTER_NAME],
-                data=new_entry,
-            )
+        if self.final_entry is None:
+            return self.async_abort(reason="no_new_hubs_found")
 
-        if self.clusters:
-            for ucr_id, cluster_data in self.clusters.items():
-                cluster_name: str = cluster_data[D_CLUSTER_NAME]
-                api_key: str = cluster_data[D_API_KEY]
-                ucr_id: int = cluster_data[D_UCR_ID]
+        _selected_ucr = self.final_entry.get(D_UCR_ID)
 
-                new_entry: dict[str, Any] = {
-                    D_UCR_ID: ucr_id,
-                    D_CLUSTER_NAME: cluster_name,
-                    D_API_KEY: api_key,
-                    D_BASE_API_URL: self.base_api_url,
-                    D_UPDATE_INTERVAL_DATA: self.update_interval_data,
-                    D_UPDATE_INTERVAL_ALARM: self.update_interval_alarm,
-                    D_USE_WEBHOOKS: self.use_webhooks,
-                    D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-                }
+        await self.async_set_unique_id(_selected_ucr)
+        self._abort_if_unique_id_configured()
 
-                if self.use_webhooks:
-                    try:
-                        self.webhook_id = async_generate_id()
-                        # self.webhook_url = async_generate_url(
-                        #     self.hass, self.webhook_id, allow_internal=False
-                        # )
-                        self._read_url()
-                        self._pending_entry = new_entry
-                        return await self.async_step_webhook_info()
+        # if webhook option enabled, try to set up webhook and show info or error before creating the entry
+        if self.final_entry.get(D_USE_WEBHOOKS):
+            if self.webhook_handler is None:
+                self.webhook_handler = WebhookHandler(self)
+            return await self.webhook_handler.prepare_webhook_entry(self.final_entry)
 
-                    except NoURLAvailableError:
-                        LOGGER.error("No external URL configured for webhooks")
-                        self.errors["base"] = "no_external_url"
-                        new_entry[D_USE_WEBHOOKS] = False
-                        new_entry.pop(D_WEBHOOK_ID, None)
-                        self._pending_entry = new_entry
-                        return await self.async_step_webhook_error()
+        return self.async_create_entry(
+            title=self.final_entry[D_CLUSTER_NAME],
+            data=self.final_entry,
+        )
 
-                return self.async_create_entry(title=cluster_name, data=new_entry)
-
-        return self.async_abort(reason="no_new_hubs_found")
-
-    def _read_url(self) -> None:
-        """Read the external URL from Home Assistant for webhook setup.
+    async def _reconfigure_cluster(self) -> ConfigFlowResult:
+        """Process device reconfiguration.
 
         Returns:
-            None
+            ConfigFlowResult: The result of the config flow step "reconfigure".
+
         """
 
-        # First, try the cloud URL, then fall back to the external URL.
-        for allow_cloud, prefer_cloud in ((True, True), (False, False)):
-            try:
-                base_url = get_url(
-                    self.hass,
-                    allow_internal=False,
-                    allow_cloud=allow_cloud,
-                    prefer_cloud=prefer_cloud,
-                ).rstrip("/")
-                self.webhook_url = f"{base_url}/api/webhook/{self.webhook_id}"
-                return
-            except NoURLAvailableError:
-                continue
+        if self.final_entry is None:
+            return self.async_abort(reason="no_new_hubs_found")
 
-        LOGGER.error("No external URL configured for webhooks")
-        self.errors["base"] = "no_external_url"
-        raise NoURLAvailableError(
-            "No cloud connection or external URL configured for webhooks"
+        # if webhook option enabled, try to set up webhook and show info or error before creating the entry
+        _old_use_webhook = self.reconf_config_entry.data.get(D_USE_WEBHOOKS)
+        _new_use_webhook = self.final_entry.get(D_USE_WEBHOOKS)
+
+        if self.final_entry.get(D_USE_WEBHOOKS) and (
+            _old_use_webhook != _new_use_webhook
+        ):
+            if self.webhook_handler is None:
+                self.webhook_handler = WebhookHandler(self)
+            return await self.webhook_handler.prepare_webhook_entry(self.final_entry)
+
+        return self.async_update_reload_and_abort(
+            self.reconf_config_entry,
+            data_updates=self.final_entry,
         )
