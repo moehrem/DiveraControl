@@ -463,15 +463,15 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             for entry in existing_entries
             if entry.data.get(D_CLUSTER_NAME) is not None
         }
+        existing_ucr_ids = {
+            entry.data.get(D_UCR_ID)
+            for entry in existing_entries
+            if entry.data.get(D_UCR_ID) is not None
+        }
 
         # checking for existing cluster and mark for removal if duplicate
         for ucr_id, entry_data in self.possible_entries.items():
             cluster_name = entry_data[D_CLUSTER_NAME]
-            existing_ucr_ids = {
-                entry.data.get(D_UCR_ID)
-                for entry in existing_entries
-                if entry.data.get(D_UCR_ID) is not None
-            }
 
             if (
                 ucr_id in existing_unique_ids
