@@ -58,9 +58,13 @@ Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmier
 
 ## ⚠️ Disclaimer
 
-Der **Datenschutz** ist im BOS-Bereich besonders wichtig. Jeder Einsatz von HomeAssistant und dieser Integration in realen Lagen erfolgt **auf eigene Verantwortung**. Die Einhaltung der Datenschutzrichtlinien – insbesondere im Hinblick auf **Datenweitergabe, -verarbeitung und -sicherheit** – liegt vollständig beim Nutzer.
+Der Datenschutz ist im BOS-Umfeld besonders wichtig. Wenn du HomeAssistant und diese Integration produktiv einsetzt, prüfe bitte sorgfältig, ob Konfiguration, Berechtigungen und Datenflüsse zu deinen rechtlichen und organisatorischen Anforderungen passen.
 
-Diese Integration steht in **keiner Verbindung** zu und wird auch **nicht unterstützt** von der DIVERA GmbH.
+Diese Integration ist ein Community-Projekt und wird ohne Zusicherung für Verfügbarkeit, Fehlerfreiheit oder Eignung für einen bestimmten Zweck bereitgestellt. Bitte teste die Einrichtung vor dem produktiven Einsatz umfassend und plane geeignete Fallbacks für den Störungsfall ein.
+
+Für den sicheren und datenschutzkonformen Betrieb deiner HomeAssistant-Instanz bist du als Betreiber selbst verantwortlich – insbesondere, aber nicht ausschließlich, für Datenweitergabe, Zugriffsrechte, Protokollierung und Datensicherheit.
+
+Diese Integration steht in keiner Verbindung zur [DIVERA GmbH](https://www.divera247.com/) und wird von dieser nicht unterstützt.
 
 ---
 
@@ -140,28 +144,46 @@ Divera bietet verschiedene Nutzerformen an:
 - Monitornutzer
 - Fahrzeugnutzer
 
-> **Hinweis:** Für eine echte Berechtigungssteuerung sollte ein persönlicher, regulärer Nutzer oder ein Monitornutzer zur Anmeldung verwendet werden. Alle anderen Nutzerformen (auch der Sytemnutzer, der scheinbar flexibel berechtigt werden kann, tatsächlich aber Daten für TETRAcontrol (Status3IT) zurückgibt) werden ebenso funktionieren, unterliegen jedoch unterschiedlichen nicht änderbaren Beschränkungen der Berechtigungen, können also nicht alle Daten abfragen.
+> **Hinweis:** Für eine echte Berechtigungssteuerung sollte ein persönlicher, regulärer Nutzer oder ein Monitornutzer zur Anmeldung verwendet werden. Alle anderen Nutzerformen (auch der Systemnutzer, der scheinbar flexibel berechtigt werden kann, tatsächlich aber Daten für TETRAcontrol (Status3IT) zurückgibt) werden ebenso funktionieren, unterliegen jedoch unterschiedlichen nicht änderbaren Beschränkungen der Berechtigungen, können also nicht alle Daten abfragen.
 
 Falls die Anmeldung mit Benutzername/Passwort fehlschlägt oder es sich um **System-, Schnittstellen-, Monitor- oder Fahrzeugbenutzer** handelt, fragt die Integration direkt nach dem API-Schlüssel.
 
-Die Anmeldung eines Nutzers einer Einheit, die bereits integriert wurde, ist nicht möglich.
+Eine Einheit kann nur einmal registriert werden. Das gilt auch bei Nutzung abweichender Anmeldedaten oder API-Keys.
 
 ### ⏳ **Abfrageintervalle**
 
-Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Interval wird zur Datenabfrage und -aktualisierung genutzt.
+Die Intervalle werden immer je Einheit eingestellt. Das entsprechende Intervall wird zur Datenabfrage und -aktualisierung genutzt.
 
 - **Außerhalb von Einsätzen**: längeres Intervall, das außerhalb aktiver Alarme genutzt wird
 - **Während eines Einsatzes**: kürzeres Intervall, das im Falle offener Alarme genutzt wird
 
-> **Hinweis:** Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 5s nicht möglich. Für kürzere Reaktionszeiten kann ein Webhook eingerichtet werden.
+> **Hinweis:** Die Integration fragt die Daten regelmäßig aktiv bei Divera ab. Auch dann, wenn keine neuen Daten vorliegen. Um die Anzahl der Anfragen nicht unnötig in die Höhe zu treiben, ist die Einstellung eines Wertes niedriger als 5s nicht möglich. Für kürzere Reaktionszeiten kann ein Webhook (siehe unten) eingerichtet werden.
 
 ### **Basis-URL**
 
-Die Basis-Adresse, unter der die Diverainstanz erreichbar ist, kann individualisiert werden. Vorbelegt ist die Standard-URL, wenn die Dienst direkt bei DIvera gehostet werden.
+Die Basis-Adresse, unter der die Divera-Instanz erreichbar ist, kann individualisiert werden. Vorbelegt ist die Standard-URL, wenn der Dienst direkt bei Divera gehostet wird.
 
 ### **Webhook**
 
-Die Nutzung eines Webhooks ist optional, aber empfohlen. Mit aktivem Webhook stellt die Integration einen Endpunkt samt URL bereit, der in Divera als Webhookadresse eingegeben werden kann. Der Webhook wird von Divera aufgerufen, sobald ein neuer Alarm erstellt wird. In der Integration führt der Aufruf dazu, dass sofort alle Daten von Divera abgerufen werden. Dies verkürzt die Reaktionszeiten von HomeAssistant deutlich und reduziert außerdem die unnötigen Datenabfragen bei Divera.
+Die Nutzung eines Webhooks ist optional, aber empfohlen. Mit aktivem Webhook stellt die Integration einen Endpunkt samt URL bereit, der [in Divera als Webhookadresse](https://help.divera247.com/pages/viewpage.action?pageId=44171370) eingegeben werden kann. Der Webhook wird von Divera aufgerufen, sobald ein neuer Alarm erstellt wird. Dies verkürzt die Reaktionszeiten von HomeAssistant auf Alarmierungen deutlich.
+Zur Einrichtung in Divera gehe zu "Verwaltung" -> "Schnittstellen" -> "Datenübergabe" -> "Webhooks". Setze dort folgende Einstellungen:
+
+- **URL**: wird während des Setups der Integration einmalig angezeigt
+- **Format**: POST application/json
+- **Inhalt**: "Ohne Inhalt"
+
+Divera kann über den Webhook Daten übergeben. Diese Daten werden von DiveraControl jedoch nicht verarbeitet. Der Webhook dient ausschließlich als Auslöser einer sofortigen Datenabfrage bei Divera.
+
+> **Hinweis:** Falls in HomeAssistant keine externe URL erreichbar ist, wird die Webhook-Option während der Einrichtung automatisch deaktiviert und die Einrichtung ohne Webhook fortgesetzt.
+
+### 🔁 **Re-Konfiguration**
+
+Über das Drei-Punkte-Menü der Integration kann jederzeit eine Re-Konfiguration gestartet werden. Dabei können folgende Werte angepasst werden:
+
+- API-Schlüssel
+- Abfrageintervalle
+- Basis-URL
+- Webhook-Nutzung
 
 ## 🔨 Benutzung
 
@@ -178,12 +200,33 @@ Zur Interaktion mit Divera sind verschiedene Aktionen in HomeAssistant implement
 - Alarm ändern
 - Erstellen einer neuen Mitteilung
 
-Alle Aktionen sind geräteabhängig. Das heißt, dass jeder Ausführung die anzusprechende Einheit mitgegeben werden muss. Über Automationen und im Frontend kann als Auslöser einfach eine Einhet gewählt und die gewünschte Aktion ausgeführt werden. Hier sind viele Felder auch mit Auswahlhilfen versehen.
-In den Entwickleroptionen oder bei anderer Implementierunt der Aktionen muss ein target in Form der device_id eingegeben werden. Aus technischen Gründen können hier einige Felder nicht mit Auswahlhilfen versorgt werden. Das betrifft alle änderbaren Wertehilfen, zB Alarme, Fahrzeuge, Besatzung, Gruppen etc. In die Felder muss stattdessen die entsprechende ID, bei mehreren IDs durch Komma getrennt, eingegeben werden.
+Alle Aktionen sind geräteabhängig. Das heißt, dass jeder Ausführung die anzusprechende Einheit mitgegeben werden muss. Über Automationen und im Frontend kann als Auslöser einfach eine Einheit gewählt und die gewünschte Aktion ausgeführt werden. Hier sind viele Felder auch mit Auswahlhilfen versehen.
+In den Entwickleroptionen oder bei anderer Implementierung der Aktionen muss ein target in Form der device_id eingegeben werden. Aus technischen Gründen können hier einige Felder nicht mit Auswahlhilfen versorgt werden. Das betrifft alle änderbaren Wertehilfen, z.B. Alarme, Fahrzeuge, Besatzung, Gruppen etc. In die Felder muss stattdessen die entsprechende ID, bei mehreren IDs durch Komma getrennt, eingegeben werden.
 
 Weitere Details zu den Aktionen, insbesondere zu obligatorischen und optionalen Parametern, können im HomeAssistant unter "Entwicklungswerkzeuge" -> "Aktionen" eingesehen werden. Die Umsetzung umfasst sowohl den "YAML-Modus" als auch den "UI-Modus". Alle Aktionen beginnen mit "DiveraControl: ", gefolgt vom Namen und einer kurzen Beschreibung. Es ist dort außerdem möglich, Aktionen manuell zu testen. Weitere Informationen zur Funktionsweise und dem Einsatz von Aktionen [sind hier zu finden](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
 Aktionen, die bestehende Daten ändern, z.B. eine Fahrzeugposition, tun dies auch bei den lokalen Daten. Somit ist HomeAssistant immer aktuell und muss nicht auf eine Aktualisierung von Divera warten. Dies gilt jedoch nicht für neue Datensätze! So wird z.B. ein neuer Alarm oder eine neue Nachricht immer bei Divera erstellt und erst danach mit HomeAssistant synchronisiert.
+
+#### Technische Service-IDs
+
+Für YAML, Automationen und Entwicklerwerkzeuge sind folgende Service-IDs relevant:
+
+- `diveracontrol.post_vehicle_status`
+- `diveracontrol.post_alarm`
+- `diveracontrol.put_alarm`
+- `diveracontrol.post_close_alarm`
+- `diveracontrol.post_message`
+- `diveracontrol.post_using_vehicle_property`
+- `diveracontrol.post_using_vehicle_crew`
+- `diveracontrol.post_news`
+
+### 🧩 **Entitäten (Überblick)**
+
+Die Integration legt je Einheit dynamische Entitäten in mehreren Plattformen an:
+
+- **Sensoren**: u.a. Alarmsensoren, Fahrzeugsensoren, Verfügbarkeitssensoren, Open-Alarms-Zähler, Einheits-/Diagnose-Sensoren
+- **Device Tracker**: Alarmpositionen und Fahrzeugpositionen
+- **Kalender**: Termine aus Divera
 
 ## ⁉️ **Fehleranalyse**
 
@@ -191,4 +234,4 @@ Zur Analyse kann im Menü der Integration das "Debug-Protokoll" aktiviert werden
 
 Zu jeder erstellen Einheit können im Kontextmenü die "Diagnosedaten" heruntergeladen werden. Darin enthalten sind Details zum System, der Integration, sämtliche von Divera abgefragten Daten sowie die Logs der aktuellen Session, welche DiveraControl betreffen.
 
-> **Hinweis:** In der Ausgabedatei werden lediglich die API-Schlüssel maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte sind vollständig, wie von Divera übergeben, in der Ausgabe enthalten. Die Daten sollten daher nicht ungefiltert weitergegeben werden!
+> **Hinweis:** In den Diagnosedaten werden aktuell nur `api_key` und `accesskey` maskiert. Weitere Daten, inklusive u.a. personenbezogener Daten und Alarminhalte, sind vollständig enthalten. Die Daten sollten daher nie ungefiltert weitergegeben werden!
