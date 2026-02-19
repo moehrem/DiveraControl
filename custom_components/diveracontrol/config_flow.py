@@ -193,6 +193,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="webhook_error",
                 data_schema=vol.Schema({}),
+                description_placeholders={
+                    "remote_docs_url": "https://www.home-assistant.io/docs/configuration/remote/"
+                },
                 errors=self.errors,
             )
 

@@ -45,7 +45,7 @@
           },
           "webhook_error": {
             "title": "Fehler bei Webhook-Einrichtung",
-            "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird. Weitere Informationen findest du hier: https://www.home-assistant.io/docs/configuration/remote/\n\nDie Option 'Webhooks' wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Option über die Neukonfiguration wieder aktivieren."
+            "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird. Weitere Informationen findest du hier: {remote_docs_url}\n\nDie Option 'Webhooks' wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Option über die Neukonfiguration wieder aktivieren."
           },
           "reconfigure": {
             "title": "Änderung der Konfiguration für DiveraControl",
