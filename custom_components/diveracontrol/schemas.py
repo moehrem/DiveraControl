@@ -152,7 +152,7 @@ def get_reconfigure_form_schema(
     return vol.Schema(
         {
             vol.Required(D_API_KEY, default=api_key): TextSelector(
-                TextSelectorConfig(type="password")  # type: ignore[misc]
+                TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
             vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
                 vol.Coerce(int), vol.Range(min=5)
