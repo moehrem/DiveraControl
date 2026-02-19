@@ -41,11 +41,11 @@
       },
       "webhook_info": {
         "title": "Webhook setup",
-        "description": "Webhook support is enabled. Open Divera, go to: Administration -> Interfaces -> Data Transfer\nSelect \"Webhooks\" and enter the following URL:\n\n{webhook_url}\n\nFormat: POST application/json\nContent: No content\n\nContinue after saving the URL in Divera."
+        "description": "Webhook support is enabled. Open Divera, go to: 'Administration' -> 'Interfaces' -> 'Data Transfer'\nSelect 'Webhooks' and enter the following URL:\n\n{webhook_url}\n\nFormat: POST application/json\nContent: No content\n\nContinue after saving the URL in Divera."
       },
       "webhook_error": {
-        "title": "No external URL available",
-          "description": "Your Home Assistant is currently not accessible via an external URL, which is required for webhooks.\nWebhook support will be disabled and the setup will continue. Once your Home Assistant has a valid external URL, you can re-enable webhook support via reconfigure option."
+        "title": "Webhook setup error",
+        "description": "Your Home Assistant is currently not accessible via an external URL, which is required for webhooks. For more information, see: https://www.home-assistant.io/docs/configuration/remote/\n\nThe 'Webhooks' option will be disabled, and the setup will continue. Once your Home Assistant has a valid external URL, you can re-enable the option through reconfiguration."
       },
       "reconfigure": {
         "title": "Change configuration for DiveraControl",

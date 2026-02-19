@@ -19,7 +19,19 @@ async def async_handle_webhook(
     webhook_id: str,
     request: Request,
 ) -> Response:
-    """Handle incoming Divera webhooks."""
+    """Handle incoming Divera webhooks.
+
+    No data handling, even request body, is done here. This is purely a trigger to refresh the coordinator for the matching config entry.
+
+    Args:
+        hass: The Home Assistant instance.
+        webhook_id: The ID of the webhook being handled.
+        request: The incoming HTTP request.
+
+    Returns:
+        Response: An HTTP response indicating the result of handling the webhook.
+
+    """
     _LOGGER.debug("Received webhook %s", webhook_id)
 
     entry = next(
