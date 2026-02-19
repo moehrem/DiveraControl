@@ -73,6 +73,7 @@
       "no_new_hubs_found": "No new units were found.",
       "missing_entry_id": "Hub ID could not be determined.",
       "hub_not_found": "Hub was not found.",
+      "reconfigure_failed": "Reconfiguration failed. Check logs for details.",
       "reconfigure_successful": "Reconfiguration successful.",
       "unknown_step": "Unknown configuration step, setup aborted."
     }
