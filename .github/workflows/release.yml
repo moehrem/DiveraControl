@@ -19,7 +19,8 @@ jobs:
       - name: Build HACS ZIP
         run: |
           mkdir -p dist
-          zip -r dist/DiveraControl.zip custom_components/diveracontrol \
+          cd custom_components/diveracontrol
+          zip -r ../../dist/DiveraControl.zip . \
             -x "*/__pycache__/*" "*.pyc"
 
       - name: Upload asset to release
