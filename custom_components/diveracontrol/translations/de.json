@@ -1,81 +1,81 @@
 {
   "title": "DiveraControl",
   "config": {
-      "step": {
-          "user": {
-            "title": "Einrichtung von DiveraControl",
-            "description": "Bitte wähle eine Option zur Konfiguration aus.",
-            "data": {
-              "method": "Methode"
-            }
-          },
-          "login": {
-            "title": "Benutzeranmeldung",
-            "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
-            "data": {
-              "username": "Benutzername",
-              "password": "Passwort",
-              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL",
-              "use_webhooks": "Webhook verwenden"
-            }
-          },
-          "api_key": {
-            "title": "Eingabe des API-Schlüssel",
-            "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
-            "data": {
-              "api_key": "API-Schlüssel",
-              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL",
-              "use_webhooks": "Webhook verwenden"
-            }
-          },
-          "multi_cluster": {
-            "title": "Auswahl der Einheit",
-            "description": "Zm eingegebenen Nutzer wurden mehrere Einheiten gefunden. Bitte wähle die gewünschte Einheit aus. Weitere Einheiten müssen separat hinzugefügt werden.",
-            "data": {
-              "clusters": "Einheiten"
-            }
-          },
-          "webhook_info": {
-            "title": "Webhook-Einrichtung",
-            "description": "Webhook-Unterstützung ist aktiviert. Öffne Divera, gehe zu: 'Verwaltung' -> 'Schnittstellen' -> 'Datenübergabe'\nWähle dort 'Webhooks' und gib folgende URL ein:\n\n{webhook_url}\n\nFormat: POST application/json\nInhalt: Ohne Inhalt\n\nFahre fort, nachdem du die URL in Divera gespeichert hast."
-          },
-          "webhook_error": {
-            "title": "Fehler bei Webhook-Einrichtung",
-            "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird. Weitere Informationen findest du hier: {remote_docs_url}\n\nDie Option 'Webhooks' wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Option über die Neukonfiguration wieder aktivieren."
-          },
-          "reconfigure": {
-            "title": "Änderung der Konfiguration für DiveraControl",
-            "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
-            "data": {
-              "api_key": "API-Schlüssel",
-              "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
-              "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-              "base_api_url": "Basis-API-URL",
-              "use_webhooks": "Webhook verwenden"
-            }
-          }
+    "step": {
+      "user": {
+        "title": "Einrichtung von DiveraControl",
+        "description": "Bitte wähle eine Option zur Konfiguration aus.",
+        "data": {
+          "method": "Methode"
+        }
       },
-      "error": {
-        "cannot_auth": "Ungültiger Benutzername oder Passwort.",
-        "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
-        "no_external_url": "Keine externe URL konfiguriert.",
-        "no_ucr": "Keine verbundenen Einheiten gefunden.",
-        "unknown": "Unbekannter Fehler"
+      "login": {
+        "title": "Benutzeranmeldung",
+        "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
+        "data": {
+          "username": "Benutzername",
+          "password": "Passwort",
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL",
+          "use_webhooks": "Webhook verwenden"
+        }
       },
-      "abort":{
-        "new_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}",
-        "existing_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
-        "new_and_existing_data": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
-        "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden.",
-        "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
-        "hub_not_found": "Hub wurde nicht gefunden.",
-        "reconfigure_successful": "Neukonfiguration erfolgreich.",
-        "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      "api_key": {
+        "title": "Eingabe des API-Schlüssel",
+        "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
+        "data": {
+          "api_key": "API-Schlüssel",
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL",
+          "use_webhooks": "Webhook verwenden"
+        }
+      },
+      "multi_cluster": {
+        "title": "Auswahl der Einheit",
+        "description": "Zm eingegebenen Nutzer wurden mehrere Einheiten gefunden. Bitte wähle die gewünschte Einheit aus. Weitere Einheiten müssen separat hinzugefügt werden.",
+        "data": {
+          "clusters": "Einheiten"
+        }
+      },
+      "webhook_info": {
+        "title": "Webhook-Einrichtung",
+        "description": "Webhook-Unterstützung ist aktiviert. Öffne Divera, gehe zu: 'Verwaltung' -> 'Schnittstellen' -> 'Datenübergabe'\nWähle dort 'Webhooks' und gib folgende URL ein:\n\n{webhook_url}\n\nFormat: POST application/json\nInhalt: Ohne Inhalt\n\nFahre fort, nachdem du die URL in Divera gespeichert hast."
+      },
+      "webhook_error": {
+        "title": "Fehler bei Webhook-Einrichtung",
+        "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird. Weitere Informationen findest du hier: {remote_docs_url}\n\nDie Option 'Webhooks' wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Option über die Neukonfiguration wieder aktivieren."
+      },
+      "reconfigure": {
+        "title": "Änderung der Konfiguration für DiveraControl",
+        "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
+        "data": {
+          "api_key": "API-Schlüssel",
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL",
+          "use_webhooks": "Webhook verwenden"
+        }
       }
+    },
+    "error": {
+      "cannot_auth": "Ungültiger Benutzername oder Passwort.",
+      "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
+      "no_external_url": "Keine externe URL konfiguriert.",
+      "no_ucr": "Keine verbundenen Einheiten gefunden.",
+      "unknown": "Unbekannter Fehler"
+    },
+    "abort": {
+      "new_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}",
+      "existing_data_only": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
+      "new_and_existing_data": "Die Konfiguration wurde abgeschlossen.\n\nFolgende Einheiten wurden erstellt: {new_data}\n\nFolgende Einheiten existieren bereits und wurden nicht erstellt: {existing_data}",
+      "no_new_hubs_found": "Es wurden keine neuen Einheiten gefunden.",
+      "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
+      "hub_not_found": "Hub wurde nicht gefunden.",
+      "reconfigure_successful": "Neukonfiguration erfolgreich.",
+      "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+    }
   },
   "issues": {
     "breaking_changes_v1_2_0": {
@@ -121,13 +121,13 @@
         "reset": "Zurücksetzen"
       }
     },
-      "newssurvey_result_options": {
-        "options": {
-          "0": "Nur für Autor sichtbar",
-          "1": "Für alle mit Schreibrechten",
-          "2": "Für alle Teilnehmer"
-        }
+    "newssurvey_result_options": {
+      "options": {
+        "0": "Nur für Autor sichtbar",
+        "1": "Für alle mit Schreibrechten",
+        "2": "Für alle Teilnehmer"
       }
+    }
   },
   "device_automation": {
     "action_type": {
@@ -393,7 +393,7 @@
           "name": "Empfänger auf Status beschränken",
           "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
         },
-        "status":{
+        "status": {
           "name": "Nutzerstatus",
           "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
         },
@@ -503,6 +503,10 @@
       "name": "Alarm ändern",
       "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
       "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "(Erforderlich) Alarm ID des Alarms, der geändert werden soll."
+        },
         "title": {
           "name": "Stichwort",
           "description": "(Erforderlich) Alarmstichwort."
@@ -539,7 +543,7 @@
           "name": "Empfänger auf Status beschränken",
           "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
         },
-        "status":{
+        "status": {
           "name": "Nutzerstatus",
           "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
         },

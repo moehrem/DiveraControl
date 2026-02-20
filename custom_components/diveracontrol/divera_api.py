@@ -112,7 +112,12 @@ class DiveraAPI:
         parameters[D_UCR] = self.ucr_id
         url = f"{url}?{urlencode(parameters)}"
 
-        _LOGGER.debug("API request: %s %s", method, self._redact_url(url))
+        _LOGGER.debug(
+            "API request for cluster %s: %s %s",
+            self.ucr_id,
+            method,
+            self._redact_url(url),
+        )
 
         try:
             async with self.session.request(
@@ -124,7 +129,11 @@ class DiveraAPI:
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
-                _LOGGER.debug("API response: %s", self._redact_url(url))
+                _LOGGER.debug(
+                    "API response for cluster %s: %s",
+                    self.ucr_id,
+                    self._redact_url(url),
+                )
                 return data
 
             # this is needed, as https-response status could be OK, but Divera still returns "success" = false

@@ -30,6 +30,7 @@ async def test_async_setup(hass: HomeAssistant) -> None:
     assert result is True
     assert hass.services.has_service(DOMAIN, "post_vehicle_status")
     assert hass.services.has_service(DOMAIN, "post_alarm")
+    assert f"{DOMAIN}_logs_handler" in hass.data
 
 
 async def test_async_migrate_entry_from_v0_9(hass: HomeAssistant) -> None:
@@ -198,6 +199,7 @@ async def test_async_unload_entry_success(hass: HomeAssistant) -> None:
     )
 
     # Setup hass.data structure
+    hass.data[f"{DOMAIN}_logs_handler"] = MagicMock()
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN]["123456"] = {D_COORDINATOR: MagicMock()}
 

@@ -359,144 +359,144 @@
       "description": "Creates a new alarm in Divera 24/7.",
       "fields": {
         "title": {
-          "name": "Stichwort",
-          "description": "(Erforderlich) Alarmstichwort."
+          "name": "Keyword",
+          "description": "(Required) Alarm keyword"
         },
         "notification_type": {
-          "name": "Empfängertyp",
-          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+          "name": "Recipient type",
+          "description": "(Required) Recipient selection (1 = selected locations (PRO version only), 2 = all of the location, 3 = selected groups, 4 = selected users)"
         },
         "alarmcode_id": {
-          "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+          "name": "Alarm template",
+          "description": "(Optional) Template for pre-filling alarm fields"
         },
         "foreign_id": {
-          "name": "Einsatznummer/Fremdschlüssel",
-          "description": "(Optional) externe Referenz-ID."
+          "name": "Incident number/external key",
+          "description": "(Optional) External reference ID"
         },
         "group": {
-          "name": "Gruppen",
-          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere, durch Komma getrennt)."
+          "name": "Groups",
+          "description": "(Optional) Target group IDs (one or more, comma-separated)"
         },
         "user_cluster_relation": {
-          "name": "Benutzer",
-          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere, durch Komma getrennt)."
+          "name": "Users",
+          "description": "(Optional) Target user IDs (one or more, comma-separated)"
         },
         "notification_filter_vehicle": {
-          "name": "Empfänger auf Fahrzeuge beschränken",
-          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
+          "name": "Limit recipients to vehicles",
+          "description": "(Optional) Limit alarms to users assigned to specific vehicles"
         },
         "vehicle": {
-          "name": "Fahrzeuge",
-          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
+          "name": "Vehicles",
+          "description": "(Optional) Vehicle IDs to restrict recipients (one or more, comma-separated)"
         },
         "notification_filter_status": {
-          "name": "Empfänger auf Status beschränken",
-          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
+          "name": "Limit recipients by status",
+          "description": "(Optional) Limit alarms to users with specific user status"
         },
-        "status":{
-          "name": "Nutzerstatus",
-          "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
+        "status": {
+          "name": "User status",
+          "description": "(Optional) User status to alert (one or more, comma-separated)"
         },
         "priority": {
-          "name": "Priorität",
-          "description": "(Optional) Prioritätskennzeichen für den Alarm."
+          "name": "Priority",
+          "description": "(Optional) Priority flag for the alarm"
         },
         "text": {
           "name": "Text",
-          "description": "(Optional) Alarmbeschreibung."
+          "description": "(Optional) Alarm description"
         },
         "address": {
-          "name": "Adresse",
-          "description": "(Optional) Adresse oder Ortsbeschreibung."
+          "name": "Address",
+          "description": "(Optional) Address or location description"
         },
         "lat": {
-          "name": "Breitengrad",
-          "description": "(Optional) Breitengrad in Dezimalgrad (−90 bis 90)."
+          "name": "Latitude",
+          "description": "(Optional) Latitude in decimal degrees (−90 to 90)"
         },
         "lng": {
-          "name": "Längengrad",
-          "description": "(Optional) Längengrad in Dezimalgrad (−180 bis 180)."
+          "name": "Longitude",
+          "description": "(Optional) Longitude in decimal degrees (−180 to 180)"
         },
         "scene_object": {
-          "name": "Objektinformationen",
-          "description": "(Optional) Objektinformationen."
+          "name": "Object information",
+          "description": "(Optional) Object information"
         },
         "caller": {
-          "name": "Anrufer",
-          "description": "(Optional) Anruferinformationen."
+          "name": "Caller",
+          "description": "(Optional) Caller information"
         },
         "patient": {
           "name": "Patient",
-          "description": "(Optional) Patienteninformationen."
+          "description": "(Optional) Patient information"
         },
         "units": {
-          "name": "Alarmierte Einheiten",
-          "description": "(Optional) Informationen zu alarmierten Einheiten."
+          "name": "Alerted units",
+          "description": "(Optional) Information about alerted units"
         },
         "destination": {
-          "name": "Ziel",
-          "description": "(Optional) Gibt es ein Ziel?"
+          "name": "Destination",
+          "description": "(Optional) Whether a destination exists"
         },
         "destination_address": {
-          "name": "Zieladresse",
-          "description": "(Optional) Zieladresse."
+          "name": "Destination address",
+          "description": "(Optional) Destination address"
         },
         "destination_lat": {
-          "name": "Ziel-Breitengrad",
-          "description": "(Optional) Ziel-Breitengrad in Dezimalgrad (−90 bis 90)."
+          "name": "Destination latitude",
+          "description": "(Optional) Destination latitude in decimal degrees (−90 to 90)"
         },
         "destination_lng": {
-          "name": "Ziel-Längengrad",
-          "description": "(Optional) Ziel-Längengrad in Dezimalgrad (−180 bis 180)."
+          "name": "Destination longitude",
+          "description": "(Optional) Destination longitude in decimal degrees (−180 to 180)"
         },
         "remarks": {
-          "name": "Bemerkungen",
-          "description": "(Optional) Bemerkungen."
+          "name": "Remarks",
+          "description": "(Optional) Remarks"
         },
         "response_time": {
-          "name": "Rückmeldezeitraum",
-          "description": "(Optional) Zeitraum für Rückmeldungen in Sekunden."
+          "name": "Response time period",
+          "description": "(Optional) Time window for responses in seconds"
         },
         "send_push": {
-          "name": "Push-Benachrichtigung",
-          "description": "(Optional) Push-Benachrichtigungen senden."
+          "name": "Push notification",
+          "description": "(Optional) Send push notifications"
         },
         "send_sms": {
-          "name": "SMS-Benachrichtigung",
-          "description": "(Optional) SMS-Benachrichtigungen senden."
+          "name": "SMS notification",
+          "description": "(Optional) Send SMS notifications"
         },
         "send_call": {
-          "name": "Anruf-Benachrichtigung",
-          "description": "(Optional) Telefonanrufe als Benachrichtigung auslösen."
+          "name": "Call notification",
+          "description": "(Optional) Trigger phone calls as notifications"
         },
         "send_mail": {
-          "name": "E-Mail-Benachrichtigung",
-          "description": "(Optional) E-Mail-Benachrichtigungen senden."
+          "name": "Email notification",
+          "description": "(Optional) Send email notifications"
         },
         "send_pager": {
-          "name": "Pager-Benachrichtigung",
-          "description": "(Optional) Pager-Benachrichtigungen senden."
+          "name": "Pager notification",
+          "description": "(Optional) Send pager notifications"
         },
         "closed": {
-          "name": "Geschlossen",
-          "description": "(Optional) Alarm als geschlossen markieren."
+          "name": "Closed",
+          "description": "(Optional) Mark alarm as closed"
         },
         "message_channel": {
-          "name": "Nachrichtenkanal erstellen",
-          "description": "(Optional) Nachrichtenkanal erstellen."
+          "name": "Create message channel",
+          "description": "(Optional) Create message channel"
         },
         "notification_filter_access": {
-          "name": "Sichtbarkeit",
-          "description": "(Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen."
+          "name": "Visibility",
+          "description": "(Optional) Make incident visible to recipients who were not alerted"
         },
         "ts_publish": {
-          "name": "Veröffentlichungszeitpunkt",
-          "description": "(Optional) Datum und Uhrzeit der Veröffentlichung."
+          "name": "Publication time",
+          "description": "(Optional) Date and time of publication"
         },
         "ts_close": {
-          "name": "Schließungszeitpunkt",
-          "description": "(Optional) Datum und Uhrzeit der Schließung."
+          "name": "Closing time",
+          "description": "(Optional) Date and time of closing"
         }
       }
     },
@@ -504,145 +504,149 @@
       "name": "Change alarm",
       "description": "Changes an existing alarm in Divera 24/7.",
       "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "(Required) Alarm ID of the alarm to change"
+        },
         "title": {
-          "name": "Stichwort",
-          "description": "(Erforderlich) Alarmstichwort."
+          "name": "Keyword",
+          "description": "(Required) Alarm keyword"
         },
         "notification_type": {
-          "name": "Empfängertyp",
-          "description": "(Erforderlich) Empfänger-Auswahl (1 = Ausgewählte Standorte (nur in der PRO-Version), 2 = Alle des Standortes, 3 = Ausgewählte Gruppen, 4 = Ausgewählte Benutzer)."
+          "name": "Recipient type",
+          "description": "(Required) Recipient selection (1 = selected locations (PRO version only), 2 = all of the location, 3 = selected groups, 4 = selected users)"
         },
         "alarmcode_id": {
-          "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+          "name": "Alarm template",
+          "description": "(Optional) Template for pre-filling alarm fields"
         },
         "foreign_id": {
-          "name": "Einsatznummer/Fremdschlüssel",
-          "description": "(Optional) externe Referenz-ID."
+          "name": "Incident number/external key",
+          "description": "(Optional) External reference ID"
         },
         "group": {
-          "name": "Gruppen",
-          "description": "(Optional) Ziel-Gruppen-IDs (ein oder mehrere, durch Komma getrennt)."
+          "name": "Groups",
+          "description": "(Optional) Target group IDs (one or more, comma-separated)"
         },
         "user_cluster_relation": {
-          "name": "Benutzer",
-          "description": "(Optional) Ziel-Benutzer-IDs (ein oder mehrere, durch Komma getrennt)."
+          "name": "Users",
+          "description": "(Optional) Target user IDs (one or more, comma-separated)"
         },
         "notification_filter_vehicle": {
-          "name": "Empfänger auf Fahrzeuge beschränken",
-          "description": "(Optional) Alarme auf Nutzer begrenzen, die bestimmten Fahrzeugen zugeordnet sind."
+          "name": "Limit recipients to vehicles",
+          "description": "(Optional) Limit alarms to users assigned to specific vehicles"
         },
         "vehicle": {
-          "name": "Fahrzeuge",
-          "description": "(Optional) Fahrzeug-IDs zur Eingrenzung der Empfänger (ein oder mehrere, durch Komma getrennt)."
+          "name": "Vehicles",
+          "description": "(Optional) Vehicle IDs to restrict recipients (one or more, comma-separated)"
         },
         "notification_filter_status": {
-          "name": "Empfänger auf Status beschränken",
-          "description": "(Optional) Alarme auf Nutzer mit bestimmtem Nutzerstatus begrenzen."
+          "name": "Limit recipients by status",
+          "description": "(Optional) Limit alarms to users with specific user status"
         },
-        "status":{
-          "name": "Nutzerstatus",
-          "description": "(Optional) Nutzerstatus, der alarmiert werden soll (ein oder mehrere, durch Komma getrennt)."
+        "status": {
+          "name": "User status",
+          "description": "(Optional) User status to alert (one or more, comma-separated)"
         },
         "priority": {
-          "name": "Priorität",
-          "description": "(Optional) Prioritätskennzeichen für den Alarm."
+          "name": "Priority",
+          "description": "(Optional) Priority flag for the alarm"
         },
         "text": {
           "name": "Text",
-          "description": "(Optional) Alarmbeschreibung."
+          "description": "(Optional) Alarm description"
         },
         "address": {
-          "name": "Adresse",
-          "description": "(Optional) Adresse oder Ortsbeschreibung."
+          "name": "Address",
+          "description": "(Optional) Address or location description"
         },
         "lat": {
-          "name": "Breitengrad",
-          "description": "(Optional) Breitengrad in Dezimalgrad (−90 bis 90)."
+          "name": "Latitude",
+          "description": "(Optional) Latitude in decimal degrees (−90 to 90)"
         },
         "lng": {
-          "name": "Längengrad",
-          "description": "(Optional) Längengrad in Dezimalgrad (−180 bis 180)."
+          "name": "Longitude",
+          "description": "(Optional) Longitude in decimal degrees (−180 to 180)"
         },
         "scene_object": {
-          "name": "Objektinformationen",
-          "description": "(Optional) Objektinformationen."
+          "name": "Object information",
+          "description": "(Optional) Object information"
         },
         "caller": {
-          "name": "Anrufer",
-          "description": "(Optional) Anruferinformationen."
+          "name": "Caller",
+          "description": "(Optional) Caller information"
         },
         "patient": {
           "name": "Patient",
-          "description": "(Optional) Patienteninformationen."
+          "description": "(Optional) Patient information"
         },
         "units": {
-          "name": "Alarmierte Einheiten",
-          "description": "(Optional) Informationen zu alarmierten Einheiten."
+          "name": "Alerted units",
+          "description": "(Optional) Information about alerted units"
         },
         "destination": {
-          "name": "Ziel",
-          "description": "(Optional) Gibt es ein Ziel?"
+          "name": "Destination",
+          "description": "(Optional) Whether a destination exists"
         },
         "destination_address": {
-          "name": "Zieladresse",
-          "description": "(Optional) Zieladresse."
+          "name": "Destination address",
+          "description": "(Optional) Destination address"
         },
         "destination_lat": {
-          "name": "Ziel-Breitengrad",
-          "description": "(Optional) Ziel-Breitengrad in Dezimalgrad (−90 bis 90)."
+          "name": "Destination latitude",
+          "description": "(Optional) Destination latitude in decimal degrees (−90 to 90)"
         },
         "destination_lng": {
-          "name": "Ziel-Längengrad",
-          "description": "(Optional) Ziel-Längengrad in Dezimalgrad (−180 bis 180)."
+          "name": "Destination longitude",
+          "description": "(Optional) Destination longitude in decimal degrees (−180 to 180)"
         },
         "remarks": {
-          "name": "Bemerkungen",
-          "description": "(Optional) Bemerkungen."
+          "name": "Remarks",
+          "description": "(Optional) Remarks"
         },
         "response_time": {
-          "name": "Rückmeldezeitraum",
-          "description": "(Optional) Zeitraum für Rückmeldungen in Sekunden."
+          "name": "Response time period",
+          "description": "(Optional) Time window for responses in seconds"
         },
         "send_push": {
-          "name": "Push-Benachrichtigung",
-          "description": "(Optional) Push-Benachrichtigungen senden."
+          "name": "Push notification",
+          "description": "(Optional) Send push notifications"
         },
         "send_sms": {
-          "name": "SMS-Benachrichtigung",
-          "description": "(Optional) SMS-Benachrichtigungen senden."
+          "name": "SMS notification",
+          "description": "(Optional) Send SMS notifications"
         },
         "send_call": {
-          "name": "Anruf-Benachrichtigung",
-          "description": "(Optional) Telefonanrufe als Benachrichtigung auslösen."
+          "name": "Call notification",
+          "description": "(Optional) Trigger phone calls as notifications"
         },
         "send_mail": {
-          "name": "E-Mail-Benachrichtigung",
-          "description": "(Optional) E-Mail-Benachrichtigungen senden."
+          "name": "Email notification",
+          "description": "(Optional) Send email notifications"
         },
         "send_pager": {
-          "name": "Pager-Benachrichtigung",
-          "description": "(Optional) Pager-Benachrichtigungen senden."
+          "name": "Pager notification",
+          "description": "(Optional) Send pager notifications"
         },
         "closed": {
-          "name": "Geschlossen",
-          "description": "(Optional) Alarm als geschlossen markieren."
+          "name": "Closed",
+          "description": "(Optional) Mark alarm as closed"
         },
         "message_channel": {
-          "name": "Nachrichtenkanal erstellen",
-          "description": "(Optional) Nachrichtenkanal erstellen."
+          "name": "Create message channel",
+          "description": "(Optional) Create message channel"
         },
         "notification_filter_access": {
-          "name": "Sichtbarkeit",
-          "description": "(Optional) Einsatz auch für nicht alarmierte Empfänger sichtbar machen."
+          "name": "Visibility",
+          "description": "(Optional) Make incident visible to recipients who were not alerted"
         },
         "ts_publish": {
-          "name": "Veröffentlichungszeitpunkt",
-          "description": "(Optional) Datum und Uhrzeit der Veröffentlichung."
+          "name": "Publication time",
+          "description": "(Optional) Date and time of publication"
         },
         "ts_close": {
-          "name": "Schließungszeitpunkt",
-          "description": "(Optional) Datum und Uhrzeit der Schließung."
+          "name": "Closing time",
+          "description": "(Optional) Date and time of closing"
         }
       }
     },
