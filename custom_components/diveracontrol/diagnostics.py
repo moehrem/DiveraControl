@@ -21,7 +21,7 @@ async def async_get_config_entry_diagnostics(
 
     Args:
         hass (HomeAssistant): Home Assistant instance.
-        entry (ConfigEntry): ConfigEntry instance for the integration
+        config_entry (ConfigEntry): ConfigEntry instance for the integration
 
     Returns:
         dict: dictionary containing diagnostics data:
