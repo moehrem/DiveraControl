@@ -2,8 +2,6 @@ name: Release asset
 
 on:
   workflow_dispatch:
-
-on:
   release:
     types: [published]
 
