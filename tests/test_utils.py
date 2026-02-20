@@ -471,14 +471,10 @@ class TestSetUpdateInterval:
     """Test the set_update_interval function."""
 
     def test_set_update_interval_with_open_alarms(self) -> None:
-        """Test set_update_interval when there are open alarms."""
+        """Test set_update_interval when open alarms are already provided."""
         cluster_data = {
             D_ALARM: {
-                "items": {
-                    "alarm1": {"closed": False},
-                    "alarm2": {"closed": True},
-                    "alarm3": {"closed": False},
-                }
+                D_OPEN_ALARMS: 2,
             }
         }
         interval_data = {
@@ -489,13 +485,10 @@ class TestSetUpdateInterval:
         result = set_update_interval(cluster_data, interval_data, None)
 
         assert result == timedelta(seconds=30)  # Should use alarm interval
-        assert cluster_data[D_ALARM][D_OPEN_ALARMS] == 2  # Two open alarms
 
     def test_set_update_interval_no_open_alarms(self) -> None:
-        """Test set_update_interval when there are no open alarms."""
-        cluster_data = {
-            D_ALARM: {"items": {"alarm1": {"closed": True}, "alarm2": {"closed": True}}}
-        }
+        """Test set_update_interval when no open alarms are provided."""
+        cluster_data = {D_ALARM: {D_OPEN_ALARMS: 0}}
         interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
             D_UPDATE_INTERVAL_DATA: timedelta(minutes=5),
@@ -504,10 +497,9 @@ class TestSetUpdateInterval:
         result = set_update_interval(cluster_data, interval_data, None)
 
         assert result == timedelta(minutes=5)  # Should use data interval
-        assert cluster_data[D_ALARM][D_OPEN_ALARMS] == 0  # No open alarms
 
     def test_set_update_interval_empty_alarm_items(self) -> None:
-        """Test set_update_interval with empty alarm items."""
+        """Test set_update_interval defaults to data interval without open_alarms."""
         cluster_data = {D_ALARM: {"items": {}}}
         interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
@@ -517,10 +509,9 @@ class TestSetUpdateInterval:
         result = set_update_interval(cluster_data, interval_data, None)
 
         assert result == timedelta(minutes=5)
-        assert cluster_data[D_ALARM][D_OPEN_ALARMS] == 0
 
     def test_set_update_interval_no_alarm_data(self) -> None:
-        """Test set_update_interval with no alarm data."""
+        """Test set_update_interval with no alarm data uses data interval."""
         cluster_data = {}
         interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
@@ -530,7 +521,6 @@ class TestSetUpdateInterval:
         result = set_update_interval(cluster_data, interval_data, None)
 
         assert result == timedelta(minutes=5)
-        assert cluster_data[D_ALARM][D_OPEN_ALARMS] == 0
 
 
 class TestGetTranslation:

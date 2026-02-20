@@ -1,48 +1,47 @@
 """Tests for DiveraControl diagnostics."""
 
-from pathlib import Path
+import logging
 from unittest.mock import MagicMock
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.diveracontrol.const import D_API_KEY, D_CLUSTER_NAME, DOMAIN
+from custom_components.diveracontrol.const import (
+    D_API_KEY,
+    D_CLUSTER_NAME,
+    DOMAIN,
+)
 from custom_components.diveracontrol.diagnostics import (
     async_get_config_entry_diagnostics,
-    get_diveracontrol_logs,
+)
+from custom_components.diveracontrol.log_handler import (
+    async_get_diveracontrol_logs,
+    async_setup_diveracontrol_log_handler,
 )
 
 
-def test_get_diveracontrol_logs_file_missing(hass: HomeAssistant) -> None:
-    """Test logfile helper returns fallback message when logfile is missing."""
-    hass.config.path = MagicMock(return_value="/tmp/does-not-exist-diveracontrol.log")
+async def test_get_diveracontrol_logs_without_handler(hass: HomeAssistant) -> None:
+    """Test in-memory logs return fallback message when handler is missing."""
+    logs = await async_get_diveracontrol_logs(hass)
 
-    logs = get_diveracontrol_logs(hass)
-
-    assert logs == ["Logfile not found."]
+    assert logs == ["No in-memory logs available"]
 
 
-def test_get_diveracontrol_logs_filters_lines(
-    hass: HomeAssistant, tmp_path: Path
+async def test_get_diveracontrol_logs_uses_in_memory_handler(
+    hass: HomeAssistant,
 ) -> None:
-    """Test logfile helper only returns lines containing diveracontrol."""
-    log_file = tmp_path / "home-assistant.log"
-    log_file.write_text(
-        "INFO startup\n"
-        "ERROR diveracontrol failed\n"
-        "INFO DiveraControl mixed case\n"
-        "DEBUG diveracontrol update\n",
-        encoding="utf-8",
-    )
+    """Test in-memory logs include diveracontrol logger entries."""
+    async_setup_diveracontrol_log_handler(hass)
 
-    hass.config.path = MagicMock(return_value=str(log_file))
+    divera_logger = logging.getLogger("custom_components.diveracontrol")
+    other_logger = logging.getLogger("custom_components.other")
+    divera_logger.warning("Divera warning")
+    other_logger.warning("Other warning")
 
-    logs = get_diveracontrol_logs(hass)
+    logs = await async_get_diveracontrol_logs(hass)
 
-    assert logs == [
-        "ERROR diveracontrol failed\n",
-        "DEBUG diveracontrol update\n",
-    ]
+    assert any("Divera warning" in line for line in logs)
+    assert all("Other warning" not in line for line in logs)
 
 
 async def test_async_get_config_entry_diagnostics_redacts_sensitive_data(
@@ -57,8 +56,8 @@ async def test_async_get_config_entry_diagnostics_redacts_sensitive_data(
     config_entry.runtime_data = MagicMock(
         data={"accesskey": "secret_access", "value": 123}
     )
-
-    hass.config.path = MagicMock(return_value="/tmp/no-diagnostics-log.log")
+    async_setup_diveracontrol_log_handler(hass)
+    logging.getLogger("custom_components.diveracontrol").warning("Diagnostics test log")
 
     diagnostics = await async_get_config_entry_diagnostics(hass, config_entry)
 
@@ -67,4 +66,4 @@ async def test_async_get_config_entry_diagnostics_redacts_sensitive_data(
     assert diagnostics["config_entry data"]["plain"] == "ok"
     assert diagnostics["cluster data"]["accesskey"] == "**REDACTED**"
     assert diagnostics["cluster data"]["value"] == 123
-    assert diagnostics["logs"] == ["Logfile not found."]
+    assert any("Diagnostics test log" in line for line in diagnostics["logs"])

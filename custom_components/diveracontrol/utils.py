@@ -329,16 +329,7 @@ def set_update_interval(
     Returns:
         New update interval.
     """
-    # Count open alarms
-    alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
-    open_alarms = sum(
-        1
-        for alarm_details in alarm_items.values()
-        if not alarm_details.get("closed", True)
-    )
-
-    # Store open alarm count
-    cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
+    open_alarms = cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
 
     # Determine new interval
     new_interval = (

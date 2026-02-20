@@ -1,4 +1,6 @@
 {
     "name": "DiveraControl",
-    "country": ["AT", "CH", "DE"]
-  }
+  "country": ["AT", "CH", "DE"],
+  "zip_release": true,
+  "filename": "DiveraControl.zip"
+}

@@ -36,6 +36,9 @@ class WebhookHandler:
     ) -> ConfigFlowResult:
         """Prepare webhook setup for a new entry.
 
+        Creates a webhook ID if not already present, reads the external URL, and updates the config flow entry data accordingly.
+        "External URL" might be a cloud URL or an externally accessible URL configured in Home Assistant. If no URL is available, it handles the error and updates the config flow state.
+
         Args:
             entry_data: The entry data to prepare.
 

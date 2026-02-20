@@ -30,6 +30,10 @@ from .const import (
 )
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPI
+from .log_handler import (
+    async_remove_diveracontrol_log_handler,
+    async_setup_diveracontrol_log_handler,
+)
 from .service import async_register_services
 from .webhook import async_handle_webhook
 
@@ -41,6 +45,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up DiveraControl at Home Assistant start to register services."""
+    async_setup_diveracontrol_log_handler(hass)
     async_register_services(hass, DOMAIN)
     return True
 
@@ -67,6 +72,7 @@ async def async_setup_entry(
     webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
+    async_setup_diveracontrol_log_handler(hass)
 
     try:
         api = DiveraAPI(
@@ -140,6 +146,7 @@ async def async_unload_entry(
         hass.data[DOMAIN].pop(ucr_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN, None)
+            async_remove_diveracontrol_log_handler(hass)
 
     _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
     return True
