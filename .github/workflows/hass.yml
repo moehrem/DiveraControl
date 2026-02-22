@@ -7,7 +7,7 @@ on:
     - cron: "0 0 * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   # Bei Push: "HASS-push-dev", bei PR zu main: "HASS-pr-123"
