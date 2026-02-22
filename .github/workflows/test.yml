@@ -5,7 +5,7 @@ on:
     branches: [dev, main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   # Bei Push: "Tests-push-main", bei PR zu main: "Tests-pr-123"
