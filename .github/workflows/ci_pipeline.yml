@@ -7,7 +7,7 @@ on:
     - cron: "0 3 * * 1" # Läuft jeden Montag um 03:00 UTC für automatische Updates
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   # Bei Push: "CI-push-dev", bei PR zu main: "CI-pr-123"
