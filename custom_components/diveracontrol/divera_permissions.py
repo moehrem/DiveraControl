@@ -45,7 +45,7 @@ class DiveraPermissions:
         """Raise when a permission is not granted by the current permission cache.
 
         This is used when we need to fail-fast if a permission is missing.
-        Logging is handled by has_permission().
+        Logging and error raising are handled directly by this method.
 
         Args:
             perm_key: The permission key to check for.
