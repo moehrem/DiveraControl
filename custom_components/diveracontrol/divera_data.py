@@ -3,7 +3,6 @@
 import logging
 from typing import Any
 
-from aiohttp import ClientError
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
@@ -58,22 +57,30 @@ def _convert_empty_lists_to_dicts(data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str, Any]:
-    """Update operational data from the Divera API.
+async def update_data(
+    api: DiveraAPI,
+    raw_ucr_data: dict[str, Any],
+    cluster_data: dict[str, Any],
+) -> dict[str, Any]:
+    """Update operational data using a pre-fetched Divera API payload.
 
-    This method fetches all short live data from the Divera API and updates
-    the given data dictionary accordingly.
+    This coroutine takes the already fetched short-lived data (e.g. from the
+    Divera ``pull/all`` endpoint) provided via ``raw_ucr_data`` and merges it
+    into the given ``cluster_data`` dictionary. It does not perform any network
+    requests itself; the network call must be done outside this function.
 
     Args:
-        api (DiveraAPI): The API instance used to communicate with Divera.
-        cluster_data (dict): A dictionary to store and update Divera operational data.
+        api (DiveraAPI): The API instance associated with this data (no I/O here).
+        raw_ucr_data (dict): Raw response payload from the Divera ``pull/all`` endpoint.
+        cluster_data (dict): Existing Divera operational data structure to initialize
+            (if empty) and update with values from ``raw_ucr_data``.
 
-    Exceptions:
-        Logs errors for network issues, invalid data, or missing keys in API responses.
-        Sets alarm and vehicle data to empty if any issues occur.
+    Logging:
+        Logs errors for invalid data or missing keys in the provided payload.
+        Sets alarm and vehicle data to empty if any issues occur while updating.
 
     Returns:
-        cluster_data (dict): The updated data dictionary with the latest Divera information.
+        dict: The updated ``cluster_data`` dictionary with the latest Divera information.
 
     """
 
@@ -98,19 +105,11 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
             D_STATUSPLAN: {},
         }
 
-    # request divera data
-    try:
-        raw_ucr_data = await api.get_ucr_data()
-
-        if not raw_ucr_data.get("success", False):
-            _LOGGER.error(
-                "Unexpected data format or API request failed: %s",
-                raw_ucr_data,
-            )
-            return cluster_data
-
-    except (ClientError, ValueError, KeyError) as e:
-        _LOGGER.error("Error in data request: %s", e)
+    if not raw_ucr_data.get("success", False):
+        _LOGGER.error(
+            "Unexpected data format or API request failed: %s",
+            raw_ucr_data,
+        )
         return cluster_data
 
     # set local data
@@ -150,10 +149,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
         for key in raw_cluster.get(D_VEHICLE, {}):
             try:
                 raw_vehicle_property = await api.get_vehicle_property(key)
-            except HomeAssistantError as e:
-                _LOGGER.error(
-                    "Error fetching vehicle property for vehicle id '%s': %s", key, e
-                )
+            except HomeAssistantError:
                 continue
 
             if raw_vehicle_property:

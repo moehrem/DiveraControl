@@ -24,9 +24,9 @@ async def test_coordinator_update_failed(
     This test covers lines 91-92 (the except Exception block).
 
     """
-    # Create a mock API that raises an exception
+    # Create a mock API that returns a valid raw payload
     mock_api = AsyncMock(spec=DiveraAPI)
-    mock_api.get_ucr_data = AsyncMock(side_effect=Exception("API connection failed"))
+    mock_api.get_ucr_data = AsyncMock(return_value={"success": True, "data": {}})
 
     # Create coordinator with the failing API
     coordinator = DiveraCoordinator(

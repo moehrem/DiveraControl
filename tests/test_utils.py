@@ -14,6 +14,7 @@ from custom_components.diveracontrol.const import (
     D_CLUSTER,
     D_CLUSTER_NAME,
     D_COORDINATOR,
+    D_DATA,
     D_OPEN_ALARMS,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
@@ -26,78 +27,58 @@ from custom_components.diveracontrol.const import (
     MINOR_VERSION,
     PATCH_VERSION,
 )
+from custom_components.diveracontrol.divera_permissions import DiveraPermissions
 from custom_components.diveracontrol.utils import (
     get_coordinator_key_from_device,
     get_device_info,
     get_translation,
     handle_entity,
-    permission_check,
     set_update_interval,
 )
 
 
-class TestPermissionCheck:
-    """Test the permission_check function."""
+class TestDiveraPermissions:
+    """Test DiveraPermissions behavior."""
 
-    def test_permission_check_management_granted(self, hass: HomeAssistant) -> None:
+    def test_management_granted(self, hass: HomeAssistant) -> None:
         """Test permission check with management permission granted."""
-        mock_coordinator = MagicMock()
-        mock_coordinator.cluster_name = "Test Cluster"
-        mock_coordinator.data = {
-            D_USER: {D_ACCESS: {PERM_MANAGEMENT: True, "some_perm": False}}
-        }
+        permissions = DiveraPermissions()
+        permissions.ucr_id = "123"
+        permissions.replace_permissions_from_ucr_data(
+            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: True, "some_perm": False}}}}
+        )
 
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
+        permissions.check("some_perm")
 
-        result = permission_check(hass, "123", "some_perm")
-
-        assert result is True
-
-    def test_permission_check_specific_granted(self, hass: HomeAssistant) -> None:
+    def test_specific_granted(self, hass: HomeAssistant) -> None:
         """Test permission check with specific permission granted."""
-        mock_coordinator = MagicMock()
-        mock_coordinator.cluster_name = "Test Cluster"
-        mock_coordinator.data = {
-            D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": True}}
-        }
+        permissions = DiveraPermissions()
+        permissions.ucr_id = "123"
+        permissions.replace_permissions_from_ucr_data(
+            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": True}}}}
+        )
 
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
+        permissions.check("test_perm")
 
-        result = permission_check(hass, "123", "test_perm")
-
-        assert result is False  # Function returns False when permission granted
-
-    def test_permission_check_denied(self, hass: HomeAssistant) -> None:
+    def test_permission_denied(self, hass: HomeAssistant) -> None:
         """Test permission check with permission denied."""
-        mock_coordinator = MagicMock()
-        mock_coordinator.cluster_name = "Test Cluster"
-        mock_coordinator.data = {
-            D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": False}}
-        }
-
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
+        permissions = DiveraPermissions()
+        permissions.ucr_id = "123"
+        permissions.replace_permissions_from_ucr_data(
+            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": False}}}}
+        )
 
         with pytest.raises(HomeAssistantError, match="Permission 'test_perm' denied"):
-            permission_check(hass, "123", "test_perm")
+            permissions.check("test_perm")
 
-    def test_permission_check_no_coordinator(self, hass: HomeAssistant) -> None:
-        """Test permission check with no coordinator available."""
-        with pytest.raises(
-            HomeAssistantError, match="No permission data available yet"
-        ):
-            permission_check(hass, "123", "test_perm")
-
-    def test_permission_check_no_data(self, hass: HomeAssistant) -> None:
-        """Test permission check with coordinator but no data."""
-        mock_coordinator = MagicMock()
-        mock_coordinator.data = None
-
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
+    def test_no_permission_data(self, hass: HomeAssistant) -> None:
+        """Test permission check with no cached permissions."""
+        permissions = DiveraPermissions()
 
         with pytest.raises(
             HomeAssistantError, match="No permission data available yet"
         ):
-            permission_check(hass, "123", "test_perm")
+            permissions.check("test_perm")
 
 
 class TestGetDeviceInfo:

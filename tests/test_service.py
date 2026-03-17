@@ -221,8 +221,8 @@ class TestHandlePostVehicleStatus:
         )
         mock_translation.return_value = "Error message"
 
-        # Should not raise, just log
-        await handle_post_vehicle_status(mock_hass, mock_service_call)
+        with pytest.raises(HomeAssistantError):
+            await handle_post_vehicle_status(mock_hass, mock_service_call)
 
         mock_translation.assert_called_once()
 
@@ -285,7 +285,8 @@ class TestHandlePostAlarm:
         mock_api_instance.post_alarms.side_effect = HomeAssistantError("API Error")
         mock_translation.return_value = "Error message"
 
-        await handle_post_alarm(mock_hass, mock_service_call)
+        with pytest.raises(HomeAssistantError):
+            await handle_post_alarm(mock_hass, mock_service_call)
 
         mock_translation.assert_called_once()
 
