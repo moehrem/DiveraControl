@@ -48,7 +48,7 @@ Hier kommt **DiveraControl** ins Spiel: Es stellt die Schnittstelle zur Alarmier
 - **Besitzer** und **Administratoren** einer Divera-Einheit
 - **Neugierige Nutzer**, die die Möglichkeiten der Divera-API erkunden wollen
 
-> **Hinweis:** Die Integration funktioniert auch mit eingeschränkten Rechten, dann allerdings mit reduziertem Funktionsumfang. Für reine Nutzer einer Einheit ohne erweiterte Berechtigungen empfiehlt sich die bestehende [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera).
+> **Hinweis:** Die Integration funktioniert auch mit eingeschränkten Rechten, dann allerdings mit reduziertem Funktionsumfang. Für reine Nutzer einer Einheit ohne erweiterte Berechtigungen empfiehlt sich die [Divera 24/7 Integration for Home Assistant](https://github.com/moehrem/ha-divera).
 
 ---
 
