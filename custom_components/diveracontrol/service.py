@@ -687,9 +687,6 @@ async def handle_post_news(
 
     """
 
-    # permission check first before doing any processing
-
-
     # check mandatory fields
     data: dict[str, Any] = normalize_service_call_data(call.data)
     _validate_data(data, POST_NEWS_VALIDATION_RULES)
