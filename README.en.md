@@ -48,7 +48,7 @@ This is where **DiveraControl** comes in: it provides the interface to alerting 
 - **Owners** and **administrators** of a Divera unit
 - **Curious users** who want to explore the possibilities of the Divera API
 
-> **Note:** The integration also works with limited permissions, but with reduced functionality. For regular users of a unit without extended permissions, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) is recommended.
+> **Note:** The integration also works with limited permissions, but with reduced functionality. For regular users of a unit without extended permissions, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/moehrem/ha-divera) is recommended.
 
 ---
 
@@ -203,6 +203,8 @@ In developer tools or other technical usage, you must provide a target via `devi
 More details on actions and required/optional parameters are available in Home Assistant under "Developer Tools" -> "Actions". Both YAML mode and UI mode are supported. All actions begin with "DiveraControl:" followed by name and short description. You can also run actions manually there. More information about action usage can be found [here](https://www.home-assistant.io/docs/scripts/perform-actions/).
 
 Actions that modify existing data (for example vehicle position) also update local integration data. This keeps Home Assistant up to date without waiting for the next Divera sync. This does not apply to new records: new alarms or messages are always created in Divera first and then synchronized to Home Assistant.
+
+> **Note:** Actions are subject to permissions granted! Each unit (registered as device) shows only such actions the user is allowed to execute. Despite that a permission check is done every time an action is executed. If permission is not granted, the action will abort.
 
 #### Technical service IDs
 

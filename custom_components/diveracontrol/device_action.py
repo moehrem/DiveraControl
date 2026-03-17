@@ -18,9 +18,9 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
     SelectOptionDict,
 )
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
-    D_UCR_ID,
     DOMAIN,
     PERM_ALARM,
     PERM_MANAGEMENT,
@@ -28,7 +28,7 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_coordinator_key_from_device, get_translation, permission_check
+from .utils import get_coordinator_key_from_device, get_translation
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -186,19 +186,17 @@ async def async_get_actions(
     if not device or not device.config_entries:
         return []
 
+    try:
+        api = get_coordinator_key_from_device(hass, device_id, "api")
+    except HomeAssistantError:
+        return []
+
+    permissions = api.permissions
+
     action_types: list[str] = []
 
-    # check action type permissions
-    entry_id = next(iter(device.config_entries))
-    config_entry = hass.config_entries.async_get_entry(entry_id)
-    if not config_entry:
-        return []
-
-    ucr_id: str | None = config_entry.data.get(D_UCR_ID)
-    if not ucr_id:
-        return []
-
-    if permission_check(hass, ucr_id, PERM_MANAGEMENT):
+    try:
+        permissions.check(PERM_MANAGEMENT)
         action_types = [
             "post_vehicle_status",
             "post_alarm",
@@ -209,9 +207,9 @@ async def async_get_actions(
             "post_using_vehicle_crew",
             "post_news",
         ]
-
-    else:
-        if permission_check(hass, ucr_id, PERM_STATUS_VEHICLE):
+    except HomeAssistantError:
+        try:
+            permissions.check(PERM_STATUS_VEHICLE)
             action_types.extend(
                 [
                     "post_vehicle_status",
@@ -219,12 +217,23 @@ async def async_get_actions(
                     "post_using_vehicle_crew",
                 ]
             )
-        if permission_check(hass, ucr_id, PERM_ALARM):
+        except HomeAssistantError:
+            pass
+        try:
+            permissions.check(PERM_ALARM)
             action_types.extend(["post_alarm", "put_alarm", "post_close_alarm"])
-        if permission_check(hass, ucr_id, PERM_MESSAGES):
+        except HomeAssistantError:
+            pass
+        try:
+            permissions.check(PERM_MESSAGES)
             action_types.append("post_message")
-        if permission_check(hass, ucr_id, PERM_NEWS):
+        except HomeAssistantError:
+            pass
+        try:
+            permissions.check(PERM_NEWS)
             action_types.append("post_news")
+        except HomeAssistantError:
+            pass
 
     return [
         {"domain": DOMAIN, "type": action_type, "device_id": device_id}

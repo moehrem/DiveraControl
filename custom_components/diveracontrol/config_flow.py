@@ -21,7 +21,6 @@ from .const import (
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
-    D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -77,7 +76,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input: The user input data of step "user".
 
         Returns:
-            ConfigFLowResult: The result of the config flow step "user".
+            ConfigFlowResult: The result of the config flow step "user".
 
         """
 
@@ -100,7 +99,11 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if method == "api_key":
             return await self.async_step_api_key()
 
-        return self.async_abort(reason="unknown_step")
+        return self.async_show_form(
+            step_id="user",
+            data_schema=get_entry_form_schema(),
+            errors=self.errors,
+        )
 
     async def async_step_login(
         self,
@@ -112,7 +115,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input: The user input data of step "login".
 
         Returns:
-            ConfigFLowResult: The result of the config flow step "login".
+            ConfigFlowResult: The result of the config flow step "login".
 
         """
 
@@ -136,7 +139,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input: The user input data of step "api_key".
 
         Returns:
-            ConfigFLowResult: The result of the config flow step "api_key".
+            ConfigFlowResult: The result of the config flow step "api_key".
 
         """
 

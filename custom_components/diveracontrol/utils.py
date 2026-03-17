@@ -12,7 +12,6 @@ from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     BASE_API_URL,
-    D_ACCESS,
     D_ALARM,
     D_CLUSTER,
     D_CLUSTER_NAME,
@@ -20,59 +19,15 @@ from .const import (
     D_OPEN_ALARMS,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USER,
     D_VEHICLE,
     DOMAIN,
     MANUFACTURER,
     MINOR_VERSION,
     PATCH_VERSION,
-    PERM_MANAGEMENT,
     VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def permission_check(
-    hass: HomeAssistant,
-    ucr_id: str,
-    perm_key: str,
-) -> bool:
-    """Check permission and return success.
-
-    Args:
-        hass: HomeAssistant instance.
-        ucr_id: User cluster relation ID.
-        perm_key: Permission key to check.
-
-    Returns:
-        True if permission granted, False if denied.
-    """
-    coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
-    if not coordinator:
-        raise HomeAssistantError("No permission data available yet, permission denied")
-
-    cluster_data = coordinator.data
-
-    if cluster_data is None:
-        raise HomeAssistantError("No permission data available yet, permission denied")
-
-    user_access = cluster_data.get(D_USER, {}).get(D_ACCESS, {})
-
-    # Management permission grants all access
-    if user_access.get(PERM_MANAGEMENT):
-        _LOGGER.debug(
-            "Management permission granted for cluster '%s'",
-            coordinator.cluster_name,
-        )
-        return True
-
-    if not user_access.get(perm_key):
-        raise HomeAssistantError(
-            f"Permission '{perm_key}' denied for cluster '{coordinator.cluster_name}'"
-        )
-
-    return False
 
 
 def get_device_info(cluster_name: str) -> DeviceInfo:

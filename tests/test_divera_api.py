@@ -250,16 +250,13 @@ class TestAPIEndpoints:
         vehicle_id = 789
         payload = {"status_id": 3, "fms_real": 1}
 
-        # Mock permission check to pass
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_vehicle_status(vehicle_id, payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_USING_VEHICLE_SET_SINGLE in call_args[0][0]
@@ -274,14 +271,12 @@ class TestAPIEndpoints:
         payload = {"title": "Test Alarm", "priority": 1}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_alarms(payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("alarm")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_ALARM in call_args[0][0]
@@ -294,14 +289,12 @@ class TestAPIEndpoints:
         payload = {"title": "Updated Alarm"}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.put_alarms(alarm_id, payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("alarm")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_ALARM in call_args[0][0]
@@ -317,14 +310,12 @@ class TestAPIEndpoints:
         payload = {"text": "Closing alarm"}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_close_alarm(payload, alarm_id)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("alarm")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_ALARM in call_args[0][0]
@@ -340,14 +331,12 @@ class TestAPIEndpoints:
         payload = {"title": "Test Message", "text": "Message content"}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_message(payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("messages")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_MESSAGES in call_args[0][0]
@@ -362,9 +351,7 @@ class TestAPIEndpoints:
         expected_data = {"properties": {"water": 1000}}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(
                 api_client, "api_request", return_value=expected_data
             ) as mock_request,
@@ -372,7 +359,7 @@ class TestAPIEndpoints:
             result = await api_client.get_vehicle_property(vehicle_id)
 
             assert result == expected_data
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_USING_VEHICLE_PROP in call_args[0][0]
@@ -388,14 +375,12 @@ class TestAPIEndpoints:
         payload = {"water": 800}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_property(vehicle_id, payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_USING_VEHICLE_PROP in call_args[0][0]
@@ -412,14 +397,12 @@ class TestAPIEndpoints:
         payload = {"user_ids": [1, 2, 3]}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "add", payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_USING_VEHICLE_CREW in call_args[0][0]
@@ -436,14 +419,12 @@ class TestAPIEndpoints:
         payload = {"user_ids": [1]}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "remove", payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert "remove" in call_args[0][0]
@@ -457,14 +438,12 @@ class TestAPIEndpoints:
         payload = {}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "reset", payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("status_vehicle")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert "reset" in call_args[0][0]
@@ -477,7 +456,7 @@ class TestAPIEndpoints:
         vehicle_id = 789
         payload = {}
 
-        with patch("custom_components.diveracontrol.divera_api.permission_check"):
+        with patch.object(api_client.permissions, "check"):
             with pytest.raises(HomeAssistantError) as exc_info:
                 await api_client.post_using_vehicle_crew(
                     vehicle_id, "invalid_mode", payload
@@ -491,14 +470,12 @@ class TestAPIEndpoints:
         payload = {"title": "Important News", "text": "News content"}
 
         with (
-            patch(
-                "custom_components.diveracontrol.divera_api.permission_check"
-            ) as mock_perm,
+            patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(api_client, "api_request") as mock_request,
         ):
             await api_client.post_news(payload)
 
-            mock_perm.assert_called_once()
+            mock_perm.assert_called_once_with("news")
             mock_request.assert_called_once()
             call_args = mock_request.call_args
             assert API_NEWS in call_args[0][0]

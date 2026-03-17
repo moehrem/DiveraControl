@@ -7,6 +7,7 @@ import voluptuous as vol
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 
 from custom_components.diveracontrol.const import (
@@ -348,12 +349,18 @@ class TestGetSelectorOptions:
 class TestAsyncGetActions:
     """Test async_get_actions function."""
 
-    @patch("custom_components.diveracontrol.device_action.permission_check")
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
     async def test_get_actions_with_management_permission(
-        self, mock_permission, hass, mock_device, mock_config_entry
+        self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
         """Test getting actions with management permission."""
-        mock_permission.return_value = True
+        mock_permissions = MagicMock()
+        mock_permissions.check.side_effect = lambda perm: None
+        mock_api = MagicMock()
+        mock_api.permissions = mock_permissions
+        mock_get_coordinator.return_value = mock_api
 
         actions = await async_get_actions(hass, mock_device.id)
 
@@ -361,22 +368,28 @@ class TestAsyncGetActions:
         assert all(action["domain"] == DOMAIN for action in actions)
         assert all(action["device_id"] == mock_device.id for action in actions)
 
-    @patch("custom_components.diveracontrol.device_action.permission_check")
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
     async def test_get_actions_with_specific_permissions(
-        self, mock_permission, hass, mock_device, mock_config_entry
+        self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
         """Test getting actions with specific permissions."""
 
-        def permission_side_effect(hass, ucr_id, perm):
+        def permission_side_effect(perm):
             if perm == PERM_MANAGEMENT:
-                return False
+                raise HomeAssistantError("Denied")
             if perm == PERM_STATUS_VEHICLE:
-                return True
+                return None
             if perm == PERM_ALARM:
-                return True
-            return False
+                return None
+            raise HomeAssistantError("Denied")
 
-        mock_permission.side_effect = permission_side_effect
+        mock_permissions = MagicMock()
+        mock_permissions.check.side_effect = permission_side_effect
+        mock_api = MagicMock()
+        mock_api.permissions = mock_permissions
+        mock_get_coordinator.return_value = mock_api
 
         actions = await async_get_actions(hass, mock_device.id)
 
@@ -385,12 +398,18 @@ class TestAsyncGetActions:
         assert "post_alarm" in action_types
         assert "post_message" not in action_types  # No PERM_MESSAGES
 
-    @patch("custom_components.diveracontrol.device_action.permission_check")
+    @patch(
+        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
+    )
     async def test_get_actions_no_permissions(
-        self, mock_permission, hass, mock_device, mock_config_entry
+        self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
         """Test getting actions with no permissions."""
-        mock_permission.return_value = False
+        mock_permissions = MagicMock()
+        mock_permissions.check.side_effect = HomeAssistantError("Denied")
+        mock_api = MagicMock()
+        mock_api.permissions = mock_permissions
+        mock_get_coordinator.return_value = mock_api
 
         actions = await async_get_actions(hass, mock_device.id)
 
