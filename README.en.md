@@ -48,7 +48,7 @@ This is where **DiveraControl** comes in: it provides the interface to alerting 
 - **Owners** and **administrators** of a Divera unit
 - **Curious users** who want to explore the possibilities of the Divera API
 
-> **Note:** The integration also works with limited permissions, but with reduced functionality. For regular users of a unit without extended permissions, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/fwmarcel/home-assistant-divera) is recommended.
+> **Note:** The integration also works with limited permissions, but with reduced functionality. For regular users of a unit without extended permissions, the existing [Divera 24/7 Integration for Home Assistant](https://github.com/moehrem/ha-divera) is recommended.
 
 ---
 
