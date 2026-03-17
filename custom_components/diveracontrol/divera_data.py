@@ -3,7 +3,6 @@
 import logging
 from typing import Any
 
-from aiohttp import ClientError
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
@@ -58,7 +57,11 @@ def _convert_empty_lists_to_dicts(data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str, Any]:
+async def update_data(
+    api: DiveraAPI,
+    raw_ucr_data: dict[str, Any],
+    cluster_data: dict[str, Any],
+) -> dict[str, Any]:
     """Update operational data from the Divera API.
 
     This method fetches all short live data from the Divera API and updates
@@ -66,6 +69,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
 
     Args:
         api (DiveraAPI): The API instance used to communicate with Divera.
+        raw_ucr_data (dict): Raw response from Divera pull/all endpoint.
         cluster_data (dict): A dictionary to store and update Divera operational data.
 
     Exceptions:
@@ -98,19 +102,11 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
             D_STATUSPLAN: {},
         }
 
-    # request divera data
-    try:
-        raw_ucr_data = await api.get_ucr_data()
-
-        if not raw_ucr_data.get("success", False):
-            _LOGGER.error(
-                "Unexpected data format or API request failed: %s",
-                raw_ucr_data,
-            )
-            return cluster_data
-
-    except (ClientError, ValueError, KeyError) as e:
-        _LOGGER.error("Error in data request: %s", e)
+    if not raw_ucr_data.get("success", False):
+        _LOGGER.error(
+            "Unexpected data format or API request failed: %s",
+            raw_ucr_data,
+        )
         return cluster_data
 
     # set local data
@@ -150,10 +146,7 @@ async def update_data(api: DiveraAPI, cluster_data: dict[str, Any]) -> dict[str,
         for key in raw_cluster.get(D_VEHICLE, {}):
             try:
                 raw_vehicle_property = await api.get_vehicle_property(key)
-            except HomeAssistantError as e:
-                _LOGGER.error(
-                    "Error fetching vehicle property for vehicle id '%s': %s", key, e
-                )
+            except HomeAssistantError:
                 continue
 
             if raw_vehicle_property:

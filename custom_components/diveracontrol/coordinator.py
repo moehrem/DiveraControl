@@ -83,7 +83,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         try:
             # read data from Divera API
-            new_cluster_data = await update_data(self.api, self.data)
+            raw_ucr_data = await self.api.get_ucr_data()
+            new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
 
             # dynamically change update interval
             self.update_interval = set_update_interval(

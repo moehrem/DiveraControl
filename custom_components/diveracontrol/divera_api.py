@@ -23,7 +23,6 @@ from .const import (
     API_USING_VEHICLE_CREW,
     API_USING_VEHICLE_PROP,
     API_USING_VEHICLE_SET_SINGLE,
-    BASE_API_URL,
     BASE_API_V2_URL,
     D_UCR,
     PERM_ALARM,
@@ -31,7 +30,7 @@ from .const import (
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
 )
-from .utils import permission_check
+from .divera_permissions import DiveraPermissions
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +61,8 @@ class DiveraAPI:
         self.ucr_id = ucr_id
         self.hass = hass
         self.base_url = base_url
+        self.permissions = DiveraPermissions()
+        self.permissions.ucr_id = self.ucr_id
 
         self.session = async_get_clientsession(hass)
 
@@ -161,7 +162,8 @@ class DiveraAPI:
             ) from err
 
         except ClientError as err:
-            url = self._redact_url(err.url.path_qs)
+            request_url = getattr(getattr(err, "request_info", None), "real_url", None)
+            url = self._redact_url(str(request_url)) if request_url else "unknown"
             raise HomeAssistantError(
                 f"Failed to connect to Divera API at URL: {url}"
             ) from err
@@ -171,7 +173,7 @@ class DiveraAPI:
 
     async def get_ucr_data(
         self,
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         """GET all data for user cluster relation from the Divera API. No permission check.
 
         Args:
@@ -184,7 +186,12 @@ class DiveraAPI:
         _LOGGER.debug("Fetching all data for cluster %s", self.ucr_id)
         part_url = f"{BASE_API_V2_URL}{API_PULL_ALL}"
         method = "GET"
-        return await self.api_request(part_url, method)
+        data = await self.api_request(part_url, method)
+
+        if data.get("success", False):
+            self.permissions.replace_permissions_from_ucr_data(data)
+
+        return data
 
     async def post_vehicle_status(
         self,
@@ -200,7 +207,7 @@ class DiveraAPI:
         """
         _LOGGER.debug("Posting vehicle status and data for cluster %s", self.ucr_id)
 
-        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
+        self.permissions.check(PERM_STATUS_VEHICLE)
 
         part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_SET_SINGLE}/{vehicle_id}"
         method = "POST"
@@ -219,7 +226,7 @@ class DiveraAPI:
         """
         _LOGGER.debug("Posting alarms for unit %s", self.ucr_id)
 
-        permission_check(self.hass, self.ucr_id, PERM_ALARM)
+        self.permissions.check(PERM_ALARM)
 
         part_url = f"{BASE_API_V2_URL}{API_ALARM}"
         method = "POST"
@@ -242,7 +249,7 @@ class DiveraAPI:
             "Putting changes to alarm %s for cluster %s", alarm_id, self.ucr_id
         )
 
-        permission_check(self.hass, self.ucr_id, PERM_ALARM)
+        self.permissions.check(PERM_ALARM)
 
         part_url = f"{BASE_API_V2_URL}{API_ALARM}/{alarm_id}"
         method = "PUT"
@@ -264,7 +271,7 @@ class DiveraAPI:
 
         _LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
 
-        permission_check(self.hass, self.ucr_id, PERM_ALARM)
+        self.permissions.check(PERM_ALARM)
 
         part_url = f"{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
         method = "POST"
@@ -283,7 +290,7 @@ class DiveraAPI:
         """
         _LOGGER.debug("Posting message for cluster %s", self.ucr_id)
 
-        permission_check(self.hass, self.ucr_id, PERM_MESSAGES)
+        self.permissions.check(PERM_MESSAGES)
 
         part_url = f"{BASE_API_V2_URL}{API_MESSAGES}"
         method = "POST"
@@ -307,7 +314,7 @@ class DiveraAPI:
             "Getting individual vehicle properties for vehicle id %s", vehicle_id
         )
 
-        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
+        self.permissions.check(PERM_STATUS_VEHICLE)
 
         part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}"
         method = "GET"
@@ -330,7 +337,7 @@ class DiveraAPI:
             "Posting individual vehicle properties for cluster %s", self.ucr_id
         )
 
-        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
+        self.permissions.check(PERM_STATUS_VEHICLE)
 
         part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/set/{vehicle_id}"
         method = "POST"
@@ -365,7 +372,7 @@ class DiveraAPI:
             self.ucr_id,
         )
 
-        permission_check(self.hass, self.ucr_id, PERM_STATUS_VEHICLE)
+        self.permissions.check(PERM_STATUS_VEHICLE)
 
         part_url = f"{BASE_API_V2_URL}{API_USING_VEHICLE_CREW}/{mode}/{vehicle_id}"
         if mode in {"add", "remove"}:
@@ -394,7 +401,7 @@ class DiveraAPI:
             self.ucr_id,
         )
 
-        permission_check(self.hass, self.ucr_id, PERM_NEWS)
+        self.permissions.check(PERM_NEWS)
 
         part_url = f"{BASE_API_V2_URL}{API_NEWS}"
         method = "POST"

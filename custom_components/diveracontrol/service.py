@@ -339,7 +339,7 @@ async def handle_post_vehicle_status(
                 {"vehicle": vehicle, "err": str(err)},
             )
             _LOGGER.error(error_msg)
-            continue
+            raise
 
 
 async def handle_post_alarm(
@@ -386,6 +386,7 @@ async def handle_post_alarm(
             {"title": data.get("title"), "err": str(err)},
         )
         _LOGGER.error(error_msg)
+        raise
 
 
 async def handle_put_alarm(
@@ -429,6 +430,7 @@ async def handle_put_alarm(
             {"alarm_id": alarm_id, "err": str(err)},
         )
         _LOGGER.error(error_msg)
+        raise
 
 
 async def handle_post_close_alarm(
@@ -472,7 +474,7 @@ async def handle_post_close_alarm(
             {"alarm_id": alarm_id, "err": str(err)},
         )
         _LOGGER.error(error_msg)
-        return
+        raise
 
 
 async def handle_post_message(
@@ -547,7 +549,7 @@ async def handle_post_message(
             {"message_channel_id": message_channel_id, "err": str(err)},
         )
         _LOGGER.error(error_msg)
-        return
+        raise
 
 
 async def handle_post_using_vehicle_property(
@@ -602,7 +604,7 @@ async def handle_post_using_vehicle_property(
                 {"vehicle": vehicle, "err": str(err)},
             )
             _LOGGER.error(error_msg)
-            continue
+            raise
 
 
 async def handle_post_using_vehicle_crew(
@@ -667,7 +669,7 @@ async def handle_post_using_vehicle_crew(
                 {"vehicle": vehicle, "err": str(err)},
             )
             _LOGGER.error(error_msg)
-            continue
+            raise
 
 
 async def handle_post_news(
@@ -684,6 +686,9 @@ async def handle_post_news(
         None
 
     """
+
+    # permission check first before doing any processing
+
 
     # check mandatory fields
     data: dict[str, Any] = normalize_service_call_data(call.data)
@@ -722,6 +727,7 @@ async def handle_post_news(
             {"title": title, "err": str(err)},
         )
         _LOGGER.error(error_msg)
+        raise
 
 
 def async_register_services(hass: HomeAssistant, domain: str) -> None:
