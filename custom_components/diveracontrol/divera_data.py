@@ -62,22 +62,25 @@ async def update_data(
     raw_ucr_data: dict[str, Any],
     cluster_data: dict[str, Any],
 ) -> dict[str, Any]:
-    """Update operational data from the Divera API.
+    """Update operational data using a pre-fetched Divera API payload.
 
-    This method fetches all short live data from the Divera API and updates
-    the given data dictionary accordingly.
+    This coroutine takes the already fetched short-lived data (e.g. from the
+    Divera ``pull/all`` endpoint) provided via ``raw_ucr_data`` and merges it
+    into the given ``cluster_data`` dictionary. It does not perform any network
+    requests itself; the network call must be done outside this function.
 
     Args:
-        api (DiveraAPI): The API instance used to communicate with Divera.
-        raw_ucr_data (dict): Raw response from Divera pull/all endpoint.
-        cluster_data (dict): A dictionary to store and update Divera operational data.
+        api (DiveraAPI): The API instance associated with this data (no I/O here).
+        raw_ucr_data (dict): Raw response payload from the Divera ``pull/all`` endpoint.
+        cluster_data (dict): Existing Divera operational data structure to initialize
+            (if empty) and update with values from ``raw_ucr_data``.
 
-    Exceptions:
-        Logs errors for network issues, invalid data, or missing keys in API responses.
-        Sets alarm and vehicle data to empty if any issues occur.
+    Logging:
+        Logs errors for invalid data or missing keys in the provided payload.
+        Sets alarm and vehicle data to empty if any issues occur while updating.
 
     Returns:
-        cluster_data (dict): The updated data dictionary with the latest Divera information.
+        dict: The updated ``cluster_data`` dictionary with the latest Divera information.
 
     """
 
