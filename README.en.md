@@ -204,7 +204,7 @@ More details on actions and required/optional parameters are available in Home A
 
 Actions that modify existing data (for example vehicle position) also update local integration data. This keeps Home Assistant up to date without waiting for the next Divera sync. This does not apply to new records: new alarms or messages are always created in Divera first and then synchronized to Home Assistant.
 
-> **Note:**: Actions are subject to permissions granted! Each unit (registered as device) shows only such actions the user is allowed to execute. Despite that a persmission check is done every time an action is executed. If permission is not granted, the action will abort.
+> **Note:** Actions are subject to permissions granted! Each unit (registered as device) shows only such actions the user is allowed to execute. Despite that a permission check is done every time an action is executed. If permission is not granted, the action will abort.
 
 #### Technical service IDs
 
