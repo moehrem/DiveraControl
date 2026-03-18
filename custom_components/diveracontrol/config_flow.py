@@ -14,9 +14,11 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     BASE_API_URL,
     D_API_KEY,
+    D_CLUSTER_ID,
     D_BASE_API_URL,
     D_CLUSTER_NAME,
     D_INTEGRATION_VERSION,
+    D_RELATIONS_KEY,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
@@ -28,7 +30,7 @@ from .const import (
     UPDATE_INTERVAL_DATA,
     VERSION,
 )
-from .divera_credentials import DiveraCredentials as dc
+from .divera_api import DiveraConfigFlowAPI
 from .schemas import (
     get_api_key_form_schema,
     get_entry_form_schema,
@@ -127,7 +129,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=self.errors,
             )
 
-        return await self._validate_and_proceed(dc.validate_login, user_input)
+        return await self._validate_and_proceed(
+            DiveraConfigFlowAPI.validate_login, user_input
+        )
 
     async def async_step_api_key(
         self,
@@ -151,7 +155,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=self.errors,
             )
 
-        return await self._validate_and_proceed(dc.validate_api_key, user_input)
+        return await self._validate_and_proceed(
+            DiveraConfigFlowAPI.validate_api_key, user_input
+        )
 
     async def async_step_webhook_info(
         self,
@@ -244,21 +250,21 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         _selected_cluster = user_input["clusters"]
-        _selected_ucr = next(
+        _selected_cluster_id = next(
             (
-                ucr_id
-                for ucr_id, entry_data in self.possible_entries.items()
+                cluster_id
+                for cluster_id, entry_data in self.possible_entries.items()
                 if entry_data[D_CLUSTER_NAME] == _selected_cluster
             ),
             None,
         )
 
-        if _selected_ucr is None:
+        if _selected_cluster_id is None:
             return self.async_abort(reason="unknown_step")
 
-        self.final_entry = self.possible_entries.get(_selected_ucr)
+        self.final_entry = self.possible_entries.get(_selected_cluster_id)
 
-        return await self._create_cluster()
+        return await self._upsert_cluster()
 
     async def async_step_reconfigure(
         self,
@@ -270,7 +276,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input: The user input data of step "reconfigure".
 
         Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
+            ConfigFlowResult: The result of the config flow step "reconfigure".
 
         """
 
@@ -330,26 +336,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self._reconfigure_cluster()
 
-    async def _validate_and_proceed(
-        self,
-        validation_method: Callable[[dict[str, str], Any, dict[str, Any], str], Any],
-        user_input: dict[str, Any],
-    ) -> ConfigFlowResult:
-        """Validate user input and decide next steps.
+    async def _persist_input(self, user_input: dict[str, Any]) -> None:
+        """Persist non-sensitive user input for form defaults.
 
         Args:
-            validation_method (callable): The validation method to be used, might be `dc.validate_login` or `dc.validate_api_key`.
-            user_input (dict[str, Any]): The user input data of step "reconfigure".
-
-        Returns:
-            ConfigFLowResult: The result of the config flow step "reconfigure".
+            user_input: The user input data of the current step.
 
         """
 
-        self.errors.clear()
-
-        # persist non-sensitive input so we can prefill forms if the user
-        # returns to the menu after validation errors
         cur_step_id = self.cur_step.get("step_id") if self.cur_step else None
         if cur_step_id == "login":
             # do not persist password
@@ -376,7 +370,27 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
             }
 
-        # still update the working values used for processing
+    async def _validate_and_proceed(
+        self,
+        validation_method: Callable[[dict[str, str], Any, dict[str, Any], str], Any],
+        user_input: dict[str, Any],
+    ) -> ConfigFlowResult:
+        """Validate user input and decide next steps.
+
+        Args:
+            validation_method (callable): The validation method to be used, might be `DiveraConfigFlowAPI.validate_login` or `DiveraConfigFlowAPI.validate_api_key`.
+            user_input (dict[str, Any]): The user input data of step "reconfigure".
+
+        Returns:
+            ConfigFLowResult: The result of the config flow step "reconfigure".
+
+        """
+
+        self.errors.clear()
+
+        await self._persist_input(user_input)
+
+        # set base values
         _update_interval_data = user_input.get(
             D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
         )
@@ -386,12 +400,15 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         _base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
         _use_webhooks = user_input.get(D_USE_WEBHOOKS, False)
 
-        self.errors, clusters = await validation_method(
-            self.errors, self.session, user_input, _base_api_url
+        # validate api_key or user login
+        # get possible entries
+        self.errors, self.possible_entries = await validation_method(
+            self.session, user_input, _base_api_url
         )
 
         # error handling: show the current step again so the user can fix input
         if self.errors:
+            cur_step_id = self.cur_step.get("step_id") if self.cur_step else None
             if cur_step_id == "login":
                 defaults = getattr(self, "_saved_login", {})
                 return self.async_show_form(
@@ -412,21 +429,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=self.errors,
             )
 
-        self.possible_entries = {
-            str(ucr_id): {
-                D_UCR_ID: cluster_data[D_UCR_ID],
-                D_CLUSTER_NAME: cluster_data[D_CLUSTER_NAME],
-                D_API_KEY: cluster_data[D_API_KEY],
-                D_BASE_API_URL: _base_api_url,
-                D_UPDATE_INTERVAL_DATA: _update_interval_data,
-                D_UPDATE_INTERVAL_ALARM: _update_interval_alarm,
-                D_USE_WEBHOOKS: _use_webhooks,
-                D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-            }
-            for ucr_id, cluster_data in clusters.items()
-        }
+        # set missing parameters
+        for cluster_data in self.possible_entries.values():
+            cluster_data[D_UPDATE_INTERVAL_ALARM] = _update_interval_alarm
+            cluster_data[D_UPDATE_INTERVAL_DATA] = _update_interval_data
+            cluster_data[D_USE_WEBHOOKS] = _use_webhooks
 
-        # check and delete duplicate entries
+        # check duplicate entries and users
         self._handle_duplicates()
 
         # if more units available, ask user to choose a unit
@@ -443,71 +452,191 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # else set single entry as final entry for creation and proceed
         if self.possible_entries:
-            _selected_ucr = next(iter(self.possible_entries))
-            self.final_entry = self.possible_entries.get(_selected_ucr)
+            _selected_cluster = next(iter(self.possible_entries))
+            self.final_entry = self.possible_entries.get(_selected_cluster)
 
-        return await self._create_cluster()
+        return await self._upsert_cluster()
 
     def _handle_duplicates(self) -> None:
-        """Mark for removal if duplicate and remove duplicates from the clusters dict.
+        """Handle duplicate clusters and users.
+
+        Check for duplicate clusters/config entries. If so, check the clusters for duplicate users.
+        Delete duplicate users. And delete empty clusters without users.
+
+        Args:
+            None
 
         Returns:
             None
 
         """
 
-        clusters_to_remove = []
         existing_entries = list(self._async_current_entries())
-        existing_unique_ids = {
-            entry.unique_id for entry in existing_entries if entry.unique_id
-        }
-        existing_cluster_names = {
-            entry.data.get(D_CLUSTER_NAME)
-            for entry in existing_entries
-            if entry.data.get(D_CLUSTER_NAME) is not None
-        }
-        existing_ucr_ids = {
-            entry.data.get(D_UCR_ID)
-            for entry in existing_entries
-            if entry.data.get(D_UCR_ID) is not None
-        }
+        clusters_to_remove: list[str] = []
 
-        # checking for existing cluster and mark for removal if duplicate
-        for ucr_id, entry_data in self.possible_entries.items():
-            cluster_name = entry_data[D_CLUSTER_NAME]
+        for cluster_id, cluster_data in self.possible_entries.items():
+            new_relations = cluster_data.get(D_RELATIONS_KEY, {})
 
-            if (
-                ucr_id in existing_unique_ids
-                or ucr_id in existing_ucr_ids
-                or cluster_name in existing_cluster_names
-            ):
-                LOGGER.debug(
-                    "Skipping duplicate hub creation for '%s' (ID: %s)",
-                    cluster_name,
-                    entry_data[D_UCR_ID],
-                )
-                clusters_to_remove.append(ucr_id)
+            if not isinstance(new_relations, dict):
+                clusters_to_remove.append(cluster_id)
                 continue
 
-        # remove duplicates
-        for ucr_id in clusters_to_remove:
-            self.possible_entries.pop(ucr_id, None)
+            existing_entry = next(
+                (
+                    entry
+                    for entry in existing_entries
+                    if str(entry.data.get(D_CLUSTER_ID, "")) == cluster_id
+                ),
+                None,
+            )
+
+            # Cluster is not configured yet: keep all new users.
+            if existing_entry is None:
+                continue
+
+            existing_relations = existing_entry.data.get(D_RELATIONS_KEY, {})
+            existing_ucr_ids: set[str] = set()
+
+            # New format: users are stored in user_cluster_relations.
+            if isinstance(existing_relations, dict):
+                for ucr_key, relation_data in existing_relations.items():
+                    existing_ucr_ids.add(str(ucr_key))
+                    if isinstance(relation_data, dict) and relation_data.get(D_UCR_ID):
+                        existing_ucr_ids.add(str(relation_data[D_UCR_ID]))
+
+            if not existing_ucr_ids:
+                continue
+
+            duplicate_ucr_ids = {
+                str(ucr_id)
+                for ucr_id, relation_data in new_relations.items()
+                if str(ucr_id) in existing_ucr_ids
+                or (
+                    isinstance(relation_data, dict)
+                    and str(relation_data.get(D_UCR_ID, "")) in existing_ucr_ids
+                )
+            }
+
+            if duplicate_ucr_ids:
+                LOGGER.debug(
+                    "Skipping duplicate users for cluster '%s': %s",
+                    cluster_id,
+                    ", ".join(sorted(duplicate_ucr_ids)),
+                )
+
+            for ucr_id in duplicate_ucr_ids:
+                new_relations.pop(ucr_id, None)
+
+            # Remove empty clusters that no longer contain new users.
+            if not new_relations:
+                clusters_to_remove.append(cluster_id)
+
+        for cluster_id in clusters_to_remove:
+            self.possible_entries.pop(cluster_id, None)
+
+    def _find_existing_cluster_entry(self, cluster_id: str) -> ConfigEntry | None:
+        """Return existing config entry for a cluster id, if configured."""
+
+        return next(
+            (
+                entry
+                for entry in self._async_current_entries()
+                if str(entry.data.get(D_CLUSTER_ID, "")) == str(cluster_id)
+            ),
+            None,
+        )
+
+    async def _upsert_cluster(self) -> ConfigFlowResult:
+        """Create a new cluster entry or merge users into an existing one."""
+
+        if self.final_entry is None:
+            return self.async_abort(reason="no_new_hubs_found")
+
+        selected_cluster_id = str(self.final_entry.get(D_CLUSTER_ID, ""))
+        if not selected_cluster_id:
+            return self.async_abort(reason="no_new_hubs_found")
+
+        existing_entry = self._find_existing_cluster_entry(selected_cluster_id)
+        if existing_entry is None:
+            return await self._create_cluster()
+
+        new_relations = self.final_entry.get(D_RELATIONS_KEY, {})
+        if not isinstance(new_relations, dict) or not new_relations:
+            return self.async_abort(reason="already_configured")
+
+        existing_relations = existing_entry.data.get(D_RELATIONS_KEY, {})
+        if not isinstance(existing_relations, dict):
+            existing_relations = {}
+
+        merged_relations = {
+            **existing_relations,
+            **new_relations,
+        }
+
+        if merged_relations == existing_relations:
+            return self.async_abort(reason="already_configured")
+
+        merged_data = {
+            **existing_entry.data,
+            D_CLUSTER_ID: self.final_entry.get(
+                D_CLUSTER_ID, existing_entry.data.get(D_CLUSTER_ID)
+            ),
+            D_CLUSTER_NAME: self.final_entry.get(
+                D_CLUSTER_NAME,
+                existing_entry.data.get(D_CLUSTER_NAME),
+            ),
+            D_BASE_API_URL: self.final_entry.get(
+                D_BASE_API_URL,
+                existing_entry.data.get(D_BASE_API_URL, BASE_API_URL),
+            ),
+            D_UPDATE_INTERVAL_DATA: self.final_entry.get(
+                D_UPDATE_INTERVAL_DATA,
+                existing_entry.data.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
+            ),
+            D_UPDATE_INTERVAL_ALARM: self.final_entry.get(
+                D_UPDATE_INTERVAL_ALARM,
+                existing_entry.data.get(
+                    D_UPDATE_INTERVAL_ALARM,
+                    UPDATE_INTERVAL_ALARM,
+                ),
+            ),
+            D_USE_WEBHOOKS: self.final_entry.get(
+                D_USE_WEBHOOKS,
+                existing_entry.data.get(D_USE_WEBHOOKS, False),
+            ),
+            D_INTEGRATION_VERSION: self.final_entry.get(
+                D_INTEGRATION_VERSION,
+                existing_entry.data.get(D_INTEGRATION_VERSION),
+            ),
+            D_RELATIONS_KEY: merged_relations,
+        }
+
+        LOGGER.debug(
+            "Merging %s user relation(s) into existing cluster '%s'",
+            len(new_relations),
+            selected_cluster_id,
+        )
+
+        return self.async_update_reload_and_abort(
+            existing_entry,
+            data_updates=merged_data,
+        )
 
     async def _create_cluster(self) -> ConfigFlowResult:
         """Process device creation.
 
         Returns:
-            ConfigFlowResult: The result of the config flow step "reconfigure".
+            ConfigFlowResult: The result of the config flow step "configure".
 
         """
 
         if self.final_entry is None:
             return self.async_abort(reason="no_new_hubs_found")
 
-        _selected_ucr = self.final_entry.get(D_UCR_ID)
+        selected_cluster_id = self.final_entry.get(D_CLUSTER_ID)
 
-        await self.async_set_unique_id(_selected_ucr)
-        self._abort_if_unique_id_configured()
+        await self.async_set_unique_id(selected_cluster_id)
+        # self._abort_if_unique_id_configured()
 
         # if webhook option enabled, try to set up webhook and show info or error before creating the entry
         if self.final_entry.get(D_USE_WEBHOOKS):

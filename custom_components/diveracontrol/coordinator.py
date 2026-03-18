@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
@@ -30,6 +31,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         api: "DiveraAPI",
+        ucr_id: str,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize DiveraControl coordinator.
@@ -46,8 +48,12 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         self.api = api
 
+        self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
-        self.ucr_id: str = config_entry.data.get(D_UCR_ID, "")
+        self.ucr_id: str = ucr_id
+        self.user_name: str = (
+            ""  # Placeholder, will be set in the coordinator after fetching data
+        )
 
         self.interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
@@ -85,6 +91,13 @@ class DiveraCoordinator(DataUpdateCoordinator):
             # read data from Divera API
             raw_ucr_data = await self.api.get_ucr_data()
             new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
+
+            # set user name if not already set (first update)
+            # TODO Do we still need this?
+            if not self.user_name:
+                firstname = new_cluster_data.get("user", {}).get("firstname", "")
+                lastname = new_cluster_data.get("user", {}).get("lastname", "")
+                self.user_name = f"{firstname} {lastname}".strip()
 
             # dynamically change update interval
             self.update_interval = set_update_interval(

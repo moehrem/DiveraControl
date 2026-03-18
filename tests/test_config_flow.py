@@ -10,6 +10,7 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.diveracontrol.const import (
     D_API_KEY,
+    D_CLUSTER_ID,
     D_UCR_ID,
     DOMAIN,
 )
@@ -52,6 +53,7 @@ async def test_user_creds_single_ucr(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Löschzug Musterstadt"
+    assert result["data"][D_CLUSTER_ID] == "8"
     assert result["data"][D_UCR_ID] == "123456"
 
 
@@ -101,6 +103,7 @@ async def test_user_creds_multi_ucr(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Rüstzug Musterstadt"
+    assert result["data"][D_CLUSTER_ID] == "98765"
     assert result["data"][D_UCR_ID] == "456789"
     assert result["data"][D_API_KEY] == "test_api_key_123456"
 
@@ -119,9 +122,7 @@ async def test_user_creds_network_error(
     """
     from aiohttp import ClientError
 
-    with patch(
-        "custom_components.diveracontrol.divera_credentials.ClientSession.post"
-    ) as mock_post:
+    with patch("aiohttp.client.ClientSession.post") as mock_post:
         # ✅ Synchrone Funktion die Exception wirft
         def raise_error(*args, **kwargs):
             raise ClientError("Network error")
@@ -197,6 +198,7 @@ async def test_api_key_multi_ucr(hass: HomeAssistant, user_input_api_key: dict) 
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Rüstzug Musterstadt"
+    assert result["data"][D_CLUSTER_ID] == "22222"
     assert result["data"][D_UCR_ID] == "456789"
     assert result["data"][D_API_KEY] == "test_api_key_123456"
 
@@ -345,9 +347,7 @@ async def test_api_key_network_error(
     """
     from aiohttp import ClientError
 
-    with patch(
-        "custom_components.diveracontrol.divera_credentials.ClientSession.request"
-    ) as mock_request:
+    with patch("aiohttp.client.ClientSession.request") as mock_request:
 
         def raise_error(*args, **kwargs):
             raise ClientError("Network error")

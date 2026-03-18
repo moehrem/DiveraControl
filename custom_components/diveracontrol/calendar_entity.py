@@ -12,7 +12,7 @@ from homeassistant.util.dt import parse_datetime, utc_from_timestamp
 
 from .const import D_EVENTS
 from .coordinator import DiveraCoordinator
-from .utils import get_device_info
+from .utils import get_user_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class DiveraCalendar(CoordinatorEntity, CalendarEntity):
         super().__init__(coordinator)
 
         self.ucr_id = ucr_id
-        self._attr_device_info = get_device_info(coordinator.cluster_name)
+        self._attr_device_info = get_user_device_info(ucr_id, coordinator.user_name)
         self._attr_unique_id = f"{ucr_id}_calendar"
         self.entity_id = f"calendar.{ucr_id}_calendar"
 

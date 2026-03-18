@@ -3,7 +3,7 @@
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import DiveraCoordinator
-from .utils import get_device_info
+from .utils import get_user_device_info
 
 
 class BaseDiveraEntity(CoordinatorEntity):
@@ -15,5 +15,6 @@ class BaseDiveraEntity(CoordinatorEntity):
 
         self.ucr_id = coordinator.ucr_id
         self.cluster_name = coordinator.cluster_name
+        self.user_name = coordinator.user_name
 
-        self._attr_device_info = get_device_info(self.cluster_name)
+        self._attr_device_info = get_user_device_info(self.ucr_id, self.user_name)

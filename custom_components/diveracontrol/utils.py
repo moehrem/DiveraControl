@@ -7,11 +7,10 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
-    BASE_API_URL,
     D_ALARM,
     D_CLUSTER,
     D_CLUSTER_NAME,
@@ -21,25 +20,16 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_VEHICLE,
     DOMAIN,
-    MANUFACTURER,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_device_info(cluster_name: str) -> DeviceInfo:
-    """Return device information, used in sensor and tracker base classes."""
+def get_user_device_info(ucr_id: str, user_name: str) -> DeviceInfo:
+    """Return standalone device information for a user."""
     return {
-        "identifiers": {(DOMAIN, cluster_name)},
-        "name": cluster_name,
-        "manufacturer": MANUFACTURER,
-        "model": DOMAIN,
-        "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-        "entry_type": DeviceEntryType.SERVICE,
-        "configuration_url": f"{BASE_API_URL}session/login.html",
+        "identifiers": {(DOMAIN, ucr_id)},
+        "name": user_name,
     }
 
 

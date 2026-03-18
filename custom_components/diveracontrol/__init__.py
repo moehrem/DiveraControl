@@ -17,9 +17,11 @@ from .const import (
     BASE_API_URL,
     D_API_KEY,
     D_BASE_API_URL,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
+    D_RELATIONS_KEY,
     D_UCR_ID,
     D_USE_WEBHOOKS,
     D_WEBHOOK_ID,
@@ -64,62 +66,113 @@ async def async_setup_entry(
         bool: True if setup succesfully, otherwise False.
 
     """
-    ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
+    cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
-    api_key: str = config_entry.data.get(D_API_KEY) or ""
     base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
     use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
     webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
+    relations: dict[str, dict[str, str]] = config_entry.data.get(D_RELATIONS_KEY, {})
 
-    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
+    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
-    try:
-        api = DiveraAPI(
-            hass,
-            ucr_id,
-            api_key,
-            base_url,
-        )
-        coordinator = DiveraCoordinator(
-            hass,
-            api,
-            config_entry,
-        )
+    if not relations:
+        raise ConfigEntryNotReady("No user relations configured")
 
-        # create references in config_entry
-        # for easy access of coordinator
-        config_entry.runtime_data = coordinator
-        # hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
+    apis_by_ucr: dict[str, DiveraAPI] = {}
 
-        hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN].setdefault(ucr_id, {})[D_COORDINATOR] = coordinator
+    # Create API and coordinator instances per user relation.
+    for relation in relations.values():
+        ucr_id = relation.get(D_UCR_ID)
+        api_key = relation.get(D_API_KEY)
 
-        await coordinator.async_config_entry_first_refresh()
-
-        if use_webhooks and webhook_id:
-            async_register(
-                hass,
-                DOMAIN,
-                f"DiveraControl {cluster_name}",
-                webhook_id,
-                async_handle_webhook,
+        if not ucr_id or not api_key:
+            _LOGGER.warning(
+                "Skipping invalid user relation in cluster %s (missing ucr_id/api_key)",
+                cluster_id,
             )
-            config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
+            continue
 
-        config_entry.async_on_unload(api.close)
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+        try:
+            api = DiveraAPI(
+                hass,
+                ucr_id,
+                api_key,
+                base_url,
+            )
 
-        _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
+            coordinator = DiveraCoordinator(
+                hass,
+                api,
+                ucr_id,
+                config_entry,
+            )
 
-    except (TimeoutError, ConnectionError) as err:
-        _LOGGER.error("Connection failed: %s", err)
-        raise ConfigEntryNotReady("Failed to connect to Divera API") from err
-    except ConfigEntryAuthFailed:
-        raise
-    except Exception as err:
-        _LOGGER.exception("Unexpected error during setup")
-        raise ConfigEntryNotReady("Unexpected error during setup") from err
+            await coordinator.async_config_entry_first_refresh()
+            coordinators_by_ucr[ucr_id] = coordinator
+            apis_by_ucr[ucr_id] = api
+            config_entry.async_on_unload(api.close)
+
+        except (TimeoutError, ConnectionError) as err:
+            await api.close()
+            _LOGGER.error(
+                "Connection failed for user %s: %s (%s)",
+                ucr_id,
+                err,
+                cluster_name,
+            )
+            continue
+        except ConfigEntryAuthFailed as err:
+            await api.close()
+            _LOGGER.error(
+                "Authentication failed for user %s: %s (%s)",
+                ucr_id,
+                err,
+                cluster_name,
+            )
+            continue
+        except Exception:
+            await api.close()
+            _LOGGER.exception(
+                "Unexpected error during setup for user %s (%s)",
+                ucr_id,
+                cluster_name,
+            )
+            continue
+
+    if not coordinators_by_ucr:
+        raise ConfigEntryNotReady("Failed to set up any user for this cluster")
+
+    # Keep backward compatibility with existing platform code that expects
+    # a single coordinator in runtime_data.
+    primary_ucr_id = next(iter(coordinators_by_ucr))
+    config_entry.runtime_data = coordinators_by_ucr[primary_ucr_id]
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][cluster_id] = {
+        D_COORDINATOR: coordinators_by_ucr,
+        "apis": apis_by_ucr,
+        "primary_ucr_id": primary_ucr_id,
+    }
+
+    if use_webhooks and webhook_id:
+        async_register(
+            hass,
+            DOMAIN,
+            f"DiveraControl {cluster_name}",
+            webhook_id,
+            async_handle_webhook,
+        )
+        config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
+
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+
+    _LOGGER.debug(
+        "Setting up cluster %s (%s users) successfully",
+        cluster_name,
+        len(coordinators_by_ucr),
+    )
 
     return True
 
@@ -130,11 +183,11 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
-    ucr_id = config_entry.data.get(D_UCR_ID)
+    cluster_id = config_entry.data.get(D_CLUSTER_ID)
     use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
     webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
-    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
+    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, cluster_id)
 
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
@@ -143,12 +196,12 @@ async def async_unload_entry(
         async_unregister(hass, webhook_id)
 
     if DOMAIN in hass.data:
-        hass.data[DOMAIN].pop(ucr_id, None)
+        hass.data[DOMAIN].pop(cluster_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN, None)
             async_remove_diveracontrol_log_handler(hass)
 
-    _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
+    _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, cluster_id)
     return True
 
 

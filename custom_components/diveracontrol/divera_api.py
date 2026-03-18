@@ -17,6 +17,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     API_ACCESS_KEY,
     API_ALARM,
+    API_AUTH_LOGIN,
     API_MESSAGES,
     API_NEWS,
     API_PULL_ALL,
@@ -24,11 +25,27 @@ from .const import (
     API_USING_VEHICLE_PROP,
     API_USING_VEHICLE_SET_SINGLE,
     BASE_API_V2_URL,
+    D_API_KEY,
+    D_BASE_API_URL,
+    D_CLUSTER_ID,
+    D_CLUSTER_NAME,
+    D_DATA,
+    D_INTEGRATION_VERSION,
+    D_NAME,
+    D_RELATIONS_KEY,
     D_UCR,
+    D_UCR_ID,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
+    D_USE_WEBHOOKS,
+    D_USERGROUP_ID,
+    MINOR_VERSION,
+    PATCH_VERSION,
     PERM_ALARM,
     PERM_MESSAGES,
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
+    VERSION,
 )
 from .divera_permissions import DiveraPermissions
 
@@ -407,3 +424,173 @@ class DiveraAPI:
         method = "POST"
 
         await self.api_request(part_url, method, payload=payload)
+
+
+class DiveraConfigFlowAPI:
+    """API helper methods used by the config flow."""
+
+    @staticmethod
+    async def _request_pull_all(session: Any, url: str) -> dict[str, Any]:
+        """Async wrapper for get_ucr_data to be used in config flow."""
+        async with session.request(
+            method="GET",
+            url=url,
+            timeout=ClientTimeout(total=10),
+        ) as response:
+            data_pull_all = await response.json()
+
+        return data_pull_all
+
+    @staticmethod
+    async def _request_auth_login(
+        session: Any, url: str, payload: dict[str, str]
+    ) -> dict[str, Any]:
+        """Async wrapper for auth login to be used in config flow."""
+        async with session.post(
+            url,
+            json=payload,
+            timeout=ClientTimeout(total=10),
+        ) as response:
+            data_auth = await response.json()
+
+        return data_auth
+
+    @staticmethod
+    async def _format_data(
+        data_pull_all: dict[str, Any], api_key: str, base_api_url: str
+    ) -> dict[str, dict[str, str]]:
+        """Format cluster data from config flow validation for easier access."""
+        clusters: dict[str, dict[str, str]] = {}
+        data_ucr = data_pull_all.get(D_DATA, {}).get(D_UCR, {})
+
+        for ucr, data in data_ucr.items():
+            cluster_id = str(data.get(D_CLUSTER_ID, ""))
+            clusters[cluster_id] = {
+                D_CLUSTER_ID: cluster_id,
+                D_CLUSTER_NAME: data.get(D_NAME, ""),
+                D_BASE_API_URL: base_api_url,
+                D_UPDATE_INTERVAL_DATA: None,  # set later in config flow
+                D_UPDATE_INTERVAL_ALARM: None,  # set later in config flow
+                D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+                D_USE_WEBHOOKS: None,  # set later in config flow
+                D_RELATIONS_KEY: {
+                    ucr: {
+                        D_UCR_ID: ucr,
+                        D_API_KEY: api_key,
+                        D_USERGROUP_ID: data.get(D_USERGROUP_ID, ""),
+                    },
+                },
+            }
+
+        return clusters
+
+    @staticmethod
+    async def validate_login(
+        session: Any,
+        user_input: dict[str, str],
+        base_api_url: str,
+    ) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+        """Validate login and fetch all instance names."""
+        clusters: dict[str, dict[str, str]] = {}
+        url_auth = f"{base_api_url}{BASE_API_V2_URL}{API_AUTH_LOGIN}"
+        payload = {
+            "Login": {
+                "username": user_input.get("username", ""),
+                "password": user_input.get("password", ""),
+                "jwt": "false",
+            }
+        }
+
+        try:
+            data_auth = await DiveraConfigFlowAPI._request_auth_login(
+                session, url_auth, payload
+            )
+
+            if not data_auth.get("success"):
+                return DiveraConfigFlowAPI.format_auth_errors(
+                    data_auth.get("errors", {})
+                ), {}
+
+            data_user = data_auth.get("data", {}).get("user", {})
+            api_key = data_user.get("access_token", "")
+            # data_ucr = data_auth.get("data", {}).get("ucr", [])
+
+            url_pull_all = f"{base_api_url}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
+            data_pull_all = await DiveraConfigFlowAPI._request_pull_all(
+                session, url_pull_all
+            )
+
+            if not data_pull_all.get("success", False):
+                return {"base": data_pull_all.get("message", {})}, {}
+
+            clusters = await DiveraConfigFlowAPI._format_data(
+                data_pull_all, api_key, base_api_url
+            )
+
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error("Connection error during login validation: %s", err)
+            return {"base": "cannot_connect"}, {}
+        except (TypeError, AttributeError) as err:
+            _LOGGER.error("Data parsing error during login validation: %s", err)
+            return {"base": "no_data"}, {}
+        except Exception:
+            _LOGGER.exception("Unexpected error during login validation")
+            return {"base": "unknown"}, {}
+
+        return {}, clusters
+
+    @staticmethod
+    async def validate_api_key(
+        session: Any,
+        user_input: dict[str, str],
+        base_api_url: str,
+    ) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+        """Validate API access and fetch all instance names."""
+        clusters: dict[str, dict[str, str]] = {}
+        validation_errors: dict[str, str] = {}
+        api_key = user_input.get("api_key", "")
+        url = (
+            f"{base_api_url}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
+        )
+
+        try:
+            data_pull_all = await DiveraConfigFlowAPI._request_pull_all(session, url)
+
+            if data_pull_all.status not in [200, 201]:
+                validation_errors["base"] = data_pull_all.get("message", {})
+                return validation_errors, clusters
+
+            if not data_pull_all.get("success", False):
+                return {"base": data_pull_all.get("message", {})}, {}
+
+            clusters = await DiveraConfigFlowAPI._format_data(
+                data_pull_all, api_key, base_api_url
+            )
+
+        except (ClientError, TimeoutError) as err:
+            validation_errors["base"] = "cannot_connect"
+        except (TypeError, AttributeError) as err:
+            validation_errors["base"] = "no_data"
+        except Exception as err:
+            validation_errors["base"] = str(err)
+
+        return validation_errors, clusters
+
+    @staticmethod
+    def format_auth_errors(raw_errors: dict | list | str) -> dict[str, str]:
+        """Format authentication errors into a standard dictionary."""
+        if isinstance(raw_errors, list):
+            return {"base": "; ".join(str(err) for err in raw_errors)}
+
+        if isinstance(raw_errors, dict):
+            error_messages = []
+            for value in raw_errors.values():
+                if isinstance(value, str):
+                    error_messages.append(value)
+                elif isinstance(value, list):
+                    error_messages.extend(str(item) for item in value)
+                else:
+                    error_messages.append(str(value))
+            return {"base": "; ".join(error_messages)}
+
+        return {"base": str(raw_errors)}

@@ -256,7 +256,7 @@ class DiveraAvailabilitySensorManager:
             _LOGGER.debug("Added %d availability sensors", len(new_status_ids))
 
 
-# === Individual Sensor Classes (update existing classes) ===
+# === Individual Sensor Classes ===
 
 
 class DiveraAlarmSensor(BaseDiveraEntity):

@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceEntryType
 
 from custom_components.diveracontrol.const import (
     D_ACCESS,
@@ -21,20 +20,16 @@ from custom_components.diveracontrol.const import (
     D_USER,
     D_VEHICLE,
     DOMAIN,
-    MANUFACTURER,
     PERM_MANAGEMENT,
-    VERSION,
-    MINOR_VERSION,
-    PATCH_VERSION,
 )
 from custom_components.diveracontrol.divera_permissions import DiveraPermissions
 from custom_components.diveracontrol.utils import (
     get_coordinator_key_from_device,
-    get_device_info,
     get_translation,
     handle_entity,
     set_update_interval,
 )
+from custom_components.diveracontrol.utils import get_user_device_info
 
 
 class TestDiveraPermissions:
@@ -82,20 +77,15 @@ class TestDiveraPermissions:
 
 
 class TestGetDeviceInfo:
-    """Test the get_device_info function."""
+    """Test the get_user_device_info function."""
 
-    def test_get_device_info(self, hass: HomeAssistant) -> None:
-        """Test get_device_info function."""
-        result = get_device_info("test_cluster")
+    def test_get_user_device_info(self, hass: HomeAssistant) -> None:
+        """Test get_user_device_info function."""
+        result = get_user_device_info("test_ucr_id", "Max Müller")
 
-        assert result["identifiers"] == {("diveracontrol", "test_cluster")}
-        assert result["name"] == "test_cluster"
-        assert result["manufacturer"] == "Divera GmbH"
-        assert result["model"] == "diveracontrol"
-        expected_version = f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
-        assert result["sw_version"] == expected_version
-        assert result["entry_type"] == DeviceEntryType.SERVICE
-        assert "configuration_url" in result
+        assert result["identifiers"] == {("diveracontrol", "test_ucr_id")}
+        assert result["name"] == "Max Müller"
+        assert "via_device" not in result
 
 
 class TestGetCoordinatorKeyFromDevice:

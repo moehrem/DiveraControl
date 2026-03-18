@@ -140,6 +140,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
             D_API_KEY: "test_key",
         },
     )
+    config_entry.add_to_hass(hass)
 
     with (
         patch("custom_components.diveracontrol.DiveraAPI") as mock_api_class,
@@ -152,6 +153,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
     ):
         mock_api = mock_api_class.return_value
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.cluster_id = "cluster_1"
 
         # Setup successful coordinator refresh
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
