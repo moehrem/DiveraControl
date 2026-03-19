@@ -126,9 +126,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=self.errors,
             )
 
-        return await self._validate_and_proceed(
-            DiveraConfigFlowAPI.validate_login, user_input
-        )
+        return await self._validate_and_proceed(user_input)
 
     async def async_step_api_key(
         self,
@@ -152,9 +150,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=self.errors,
             )
 
-        return await self._validate_and_proceed(
-            DiveraConfigFlowAPI.validate_api_key, user_input
-        )
+        return await self._validate_and_proceed(user_input)
 
     async def async_step_webhook_info(
         self,
@@ -181,7 +177,8 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="reconfigure_failed")
             return self.async_update_reload_and_abort(
                 self.reconf_config_entry,
-                data_updates=self.final_entry,
+                data=self.final_entry,
+                reason="reconfigure_successful",
             )
 
         return self.async_create_entry(
@@ -213,7 +210,8 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="reconfigure_failed")
             return self.async_update_reload_and_abort(
                 self.reconf_config_entry,
-                data_updates=self.final_entry,
+                data=self.final_entry,
+                reason="reconfigure_successful",
             )
 
         return self.async_create_entry(
@@ -369,13 +367,11 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _validate_and_proceed(
         self,
-        validation_method: Callable[[dict[str, str], Any, dict[str, Any], str], Any],
         user_input: dict[str, Any],
     ) -> ConfigFlowResult:
         """Validate user input and decide next steps.
 
         Args:
-            validation_method (callable): The validation method to be used, might be `DiveraConfigFlowAPI.validate_login` or `DiveraConfigFlowAPI.validate_api_key`.
             user_input (dict[str, Any]): The user input data of step "reconfigure".
 
         Returns:
@@ -399,8 +395,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # validate api_key or user login
         # get possible entries
-        self.errors, self.possible_entries = await validation_method(
-            self.session, user_input, _base_api_url
+        if self.session is None:
+            self.session = async_get_clientsession(self.hass)
+
+        config_flow_api = DiveraConfigFlowAPI(self.session, _base_api_url)
+        self.errors, self.possible_entries = await config_flow_api.validate_access(
+            user_input
         )
 
         # error handling: show the current step again so the user can fix input
@@ -616,7 +616,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_update_reload_and_abort(
             existing_entry,
-            data_updates=merged_data,
+            # data_updates=merged_data,
+            data=merged_data,
+            title=merged_data.get(D_CLUSTER_NAME, existing_entry.title),
+            reason="merge_successful",
         )
 
     async def _create_cluster(self) -> ConfigFlowResult:
@@ -670,5 +673,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_update_reload_and_abort(
             self.reconf_config_entry,
-            data_updates=self.final_entry,
+            data=self.final_entry,
+            title=self.final_entry.get(D_CLUSTER_NAME, self.reconf_config_entry.title),
+            reason="reconfigure_successful",
         )

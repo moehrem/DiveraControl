@@ -259,7 +259,7 @@ def mock_divera_api(api_get_pull_all_response: dict) -> Generator[None]:
     with patch("custom_components.diveracontrol.DiveraAPI") as mock_api_class:
         api_instance = MagicMock()
 
-        api_instance.get_ucr_data = AsyncMock(
+        api_instance.get_pull_all = AsyncMock(
             return_value=api_get_pull_all_response.get("data", {})
         )
         api_instance.close = AsyncMock()

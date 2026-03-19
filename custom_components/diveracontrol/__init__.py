@@ -3,6 +3,7 @@
 import logging
 
 import aiohttp
+
 from homeassistant.components.webhook import async_register, async_unregister
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -13,6 +14,7 @@ from homeassistant.helpers import (
     entity_registry as er,
     issue_registry as ir,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     BASE_API_URL,
@@ -22,12 +24,11 @@ from .const import (
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
-    D_UPDATE_INTERVAL_ALARM,
-    D_UPDATE_INTERVAL_DATA,
     D_RELATIONS_KEY,
     D_UCR_ID,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
-    D_USERGROUP_ID,
     D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
@@ -35,7 +36,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import DiveraCoordinator
-from .divera_api import DiveraAPI, async_get_clientsession
+from .divera_api import DiveraAPI, DiveraConfigFlowAPI
 from .log_handler import (
     async_remove_diveracontrol_log_handler,
     async_setup_diveracontrol_log_handler,
@@ -368,13 +369,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         #         },
         #     },
         # }
-
-        # TODO
-        # call "validate_api_key" to mimic a regular config flow by api-key
-        # read new/missing data
-        # transform old single user relation structure into new multi user relation structure
-
-        from .divera_api import DiveraConfigFlowAPI
 
         session: aiohttp.ClientSession | None = None
         session = async_get_clientsession(hass)

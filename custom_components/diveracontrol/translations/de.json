@@ -74,7 +74,8 @@
       "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
       "hub_not_found": "Hub wurde nicht gefunden.",
       "reconfigure_successful": "Neukonfiguration erfolgreich.",
-      "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen.",
+      "merge_successful": "Neuauthentifizierung erfolgreich."
     }
   },
   "issues": {

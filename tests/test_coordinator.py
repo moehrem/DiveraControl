@@ -26,7 +26,7 @@ async def test_coordinator_update_failed(
     """
     # Create a mock API that returns a valid raw payload
     mock_api = AsyncMock(spec=DiveraAPI)
-    mock_api.get_ucr_data = AsyncMock(return_value={"success": True, "data": {}})
+    mock_api.get_pull_all = AsyncMock(return_value={"success": True, "data": {}})
 
     # Create coordinator with the failing API
     coordinator = DiveraCoordinator(

@@ -89,7 +89,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         try:
             # read data from Divera API
-            raw_ucr_data = await self.api.get_ucr_data()
+            raw_ucr_data = await self.api.get_pull_all()
             new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
 
             # set user name if not already set (first update)
