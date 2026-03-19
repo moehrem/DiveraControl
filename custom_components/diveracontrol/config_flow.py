@@ -84,9 +84,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         self.session = async_get_clientsession(self.hass)
 
-        # Show a small form at the entry instead of a menu. Using a form
-        # allows us to present errors on the same screen when validation
-        # fails and to keep a consistent UI.
         if user_input is None:
             return self.async_show_form(
                 step_id="user",

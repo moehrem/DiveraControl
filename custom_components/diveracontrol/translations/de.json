@@ -80,7 +80,15 @@
   "issues": {
     "breaking_changes_v1_2_0": {
       "title": "Aktion erforderlich: **{cluster_name}**",
-      "description": "Sie haben DiveraControl für **{cluster_name}** von Version 1.1 oder früher auf Version 1.2.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 1.2.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
+    "migration_failed_v2.0.0": {
+      "title": "Migration fehlgeschlagen: **{cluster_name}**",
+      "description": "Die Migration von **{cluster_name}** auf Version 2.0.0 ist fehlgeschlagen. **Die Integration ist damit nicht mehr nutzbar!** Bitte überprüfe die Protokolle für Details und konfiguriere die Integration bei Bedarf neu. Am einfachsten ist es, die Integration zu entfernen und neu zu installieren. \n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du daher anschließend tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
+    "breaking_changes_v2_0_0": {
+      "title": "Aktion erforderlich: **{cluster_name}**",
+      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 2.0.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
     }
   },
   "entity": {

@@ -509,7 +509,7 @@ class DiveraConfigFlowAPI:
             if not data_auth.get("success"):
                 return DiveraConfigFlowAPI.format_auth_errors(
                     data_auth.get("errors", {})
-                ), {}
+                ), clusters
 
             data_user = data_auth.get("data", {}).get("user", {})
             api_key = data_user.get("access_token", "")
@@ -556,12 +556,9 @@ class DiveraConfigFlowAPI:
         try:
             data_pull_all = await DiveraConfigFlowAPI._request_pull_all(session, url)
 
-            if data_pull_all.status not in [200, 201]:
+            if not data_pull_all.get("success"):
                 validation_errors["base"] = data_pull_all.get("message", {})
                 return validation_errors, clusters
-
-            if not data_pull_all.get("success", False):
-                return {"base": data_pull_all.get("message", {})}, {}
 
             clusters = await DiveraConfigFlowAPI._format_data(
                 data_pull_all, api_key, base_api_url
