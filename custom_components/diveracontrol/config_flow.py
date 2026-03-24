@@ -212,10 +212,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the reconfigure cluster step.
 
         Args:
-            user_input: The user input data of step "reconfigure_cluster".
+            user_input: The user input data of step "reconfigure".
 
         Returns:
-            ConfigFlowResult: The result of the config flow step "reconfigure_cluster".
+            ConfigFlowResult: The result of the config flow step "reconfigure".
 
         """
 
@@ -233,7 +233,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         current_ucrs = self.old_config_entry.data.get(D_RELATIONS_KEY, {})
 
         return self.async_show_form(
-            step_id="reconfigure_cluster",
+            step_id="reconfigure",
             data_schema=get_reconfigure_cluster_form_schema(
                 current_base_api_url,
                 current_update_interval_data,
@@ -247,10 +247,10 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the reconfigure user cluster relation step.
 
         Args:
-            user_input: The user input data of step "reconfigure_ucr".
+            user_input: The user input data of step "reconfigure".
 
         Returns:
-            ConfigFlowResult: The result of the config flow step "reconfigure_ucr".
+            ConfigFlowResult: The result of the config flow step "reconfigure".
 
         """
 
@@ -258,7 +258,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         selected_ucr = current_ucrs.get(selected_ucr_id, {})
 
         return self.async_show_form(
-            step_id="reconfigure_ucr",
+            step_id="reconfigure",
             data_schema=get_reconfigure_ucr_form_schema(selected_ucr),
             errors=self.errors,
         )

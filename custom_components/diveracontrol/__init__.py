@@ -4,13 +4,13 @@ import logging
 
 import aiohttp
 
-from homeassistant.components.webhook import async_register, async_unregister
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import (
     config_validation as cv,
+    device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
@@ -29,7 +29,6 @@ from .const import (
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
-    D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -42,7 +41,6 @@ from .log_handler import (
     async_setup_diveracontrol_log_handler,
 )
 from .service import async_register_services
-from .webhook import async_handle_webhook
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -74,8 +72,6 @@ async def async_setup_entry(
     cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
     base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
-    # use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    # webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
     relations: dict[str, dict[str, str]] = config_entry.data.get(D_RELATIONS_KEY, {})
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
@@ -139,27 +135,11 @@ async def async_setup_entry(
     if not coordinators_by_ucr:
         raise ConfigEntryNotReady("Failed to set up any user for this cluster")
 
-    # Keep backward compatibility with existing platform code that expects
-    # a single coordinator in runtime_data.
-    # primary_ucr_id = next(iter(coordinators_by_ucr))
-    # config_entry.runtime_data = coordinators_by_ucr[primary_ucr_id]
-
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][cluster_id] = {
         D_COORDINATOR: coordinators_by_ucr,
         "apis": apis_by_ucr,
-        # "primary_ucr_id": primary_ucr_id,
     }
-
-    # if use_webhooks and webhook_id:
-    #     async_register(
-    #         hass,
-    #         DOMAIN,
-    #         f"DiveraControl {cluster_name}",
-    #         webhook_id,
-    #         async_handle_webhook,
-    #     )
-    #     config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
@@ -179,16 +159,11 @@ async def async_unload_entry(
     """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
     cluster_id = config_entry.data.get(D_CLUSTER_ID)
-    # use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    # webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, cluster_id)
 
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
-
-    # if use_webhooks and webhook_id:
-    #     async_unregister(hass, webhook_id)
 
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(cluster_id, None)
@@ -197,6 +172,61 @@ async def async_unload_entry(
             async_remove_diveracontrol_log_handler(hass)
 
     _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, cluster_id)
+    return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Remove a user device from a cluster config entry.
+
+    Home Assistant calls this when the user clicks "Delete device" in the UI.
+    We remove the matching UCR relation from the config entry and reload the
+    entry so related entities are cleaned up and not recreated.
+    """
+
+    ucr_id: str | None = next(
+        (
+            identifier
+            for domain, identifier in device_entry.identifiers
+            if domain == DOMAIN
+        ),
+        None,
+    )
+    if ucr_id is None:
+        return False
+
+    relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(relations, dict) or ucr_id not in relations:
+        return False
+
+    # Keep at least one relation in the entry; removing the last one would
+    # leave an invalid cluster config entry.
+    if len(relations) <= 1:
+        _LOGGER.warning(
+            "Cannot remove last user relation %s from cluster %s",
+            ucr_id,
+            config_entry.data.get(D_CLUSTER_ID, "unknown"),
+        )
+        return False
+
+    updated_relations = dict(relations)
+    updated_relations.pop(ucr_id, None)
+    updated_data = {
+        **config_entry.data,
+        D_RELATIONS_KEY: updated_relations,
+    }
+
+    hass.config_entries.async_update_entry(config_entry, data=updated_data)
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+    _LOGGER.info(
+        "Removed user relation %s from cluster %s via device deletion",
+        ucr_id,
+        config_entry.data.get(D_CLUSTER_ID, "unknown"),
+    )
     return True
 
 
