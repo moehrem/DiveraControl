@@ -6,10 +6,9 @@ import voluptuous as vol
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
-    BooleanSelector,
-    BooleanSelectorConfig,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -19,9 +18,9 @@ from .const import (
     BASE_API_URL,
     D_API_KEY,
     D_BASE_API_URL,
+    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USE_WEBHOOKS,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
 )
@@ -85,10 +84,6 @@ def get_login_form_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
             ): str,
-            vol.Required(
-                D_USE_WEBHOOKS,
-                default=defaults.get(D_USE_WEBHOOKS, False),
-            ): BooleanSelector(BooleanSelectorConfig()),
         }
     )
 
@@ -120,39 +115,54 @@ def get_api_key_form_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
             ): str,
-            vol.Required(
-                D_USE_WEBHOOKS,
-                default=defaults.get(D_USE_WEBHOOKS, False),
-            ): BooleanSelector(BooleanSelectorConfig()),
         }
     )
 
 
-def get_reconfigure_form_schema(
+def get_reconfigure_ucr_form_schema(selected_ucr: dict[str, Any]) -> vol.Schema:
+    """Get the reconfigure form schema for user cluster relations.
+
+    Args:
+        selected_ucr: Dictionary of the selected user cluster relation.
+
+    Returns:
+        vol.Schema: The form schema for reconfiguration of user cluster relations.
+    """
+
+    return vol.Schema(
+        {
+            vol.Required(
+                D_API_KEY, default=selected_ucr.get(D_API_KEY, "")
+            ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+        }
+    )
+
+
+def get_reconfigure_cluster_form_schema(
+    base_api_url: str,
     interval_data: int,
     interval_alarm: int,
-    api_key: str,
-    base_api_url: str,
-    use_webhooks: bool,
+    current_ucrs: dict[str, dict[str, Any]],
 ) -> vol.Schema:
     """Get the reconfigure form schema.
 
     Args:
+        base_api_url: The base API URL to access Divera API.
         interval_data: Data update interval in case of no alarm.
         interval_alarm: Data update interval in case of alarm.
-        api_key: The API key to access Divera API.
-        base_api_url: The base API URL for Divera API.
-        use_webhooks: Whether to use webhooks for updates.
+        current_ucrs: Dictionary of current user cluster relations.
 
     Returns:
         vol.Schema: The form schema for reconfiguration.
 
     """
 
+    current_ucrs = [""] + list(current_ucrs.keys())
+
     return vol.Schema(
         {
-            vol.Required(D_API_KEY, default=api_key): TextSelector(
-                TextSelectorConfig(type=TextSelectorType.PASSWORD)
+            vol.Required(D_BASE_API_URL, default=base_api_url): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
             ),
             vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
                 vol.Coerce(int), vol.Range(min=5)
@@ -160,9 +170,13 @@ def get_reconfigure_form_schema(
             vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
                 vol.Coerce(int), vol.Range(min=5)
             ),
-            vol.Required(D_BASE_API_URL, default=base_api_url): str,
-            vol.Required(D_USE_WEBHOOKS, default=use_webhooks): BooleanSelector(
-                BooleanSelectorConfig()
+            vol.Optional(D_UCR_ID, default=current_ucrs[0]): SelectSelector(
+                SelectSelectorConfig(
+                    options=current_ucrs,
+                    translation_key="ucr_selection",
+                    multiple=False,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
             ),
         }
     )

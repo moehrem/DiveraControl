@@ -476,7 +476,6 @@ class DiveraConfigFlowAPI:
                 D_UPDATE_INTERVAL_DATA: None,  # set later in config flow
                 D_UPDATE_INTERVAL_ALARM: None,  # set later in config flow
                 D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-                D_USE_WEBHOOKS: None,  # set later in config flow
                 D_RELATIONS_KEY: {
                     ucr: {
                         D_UCR_ID: ucr,
@@ -506,7 +505,7 @@ class DiveraConfigFlowAPI:
 
         return {"base": str(raw_errors)}
 
-    async def validate_access(
+    async def request_access(
         self,
         user_input: dict[str, Any],
     ) -> tuple[dict[str, str], dict[str, dict[str, str]]]:

@@ -74,15 +74,12 @@ async def async_setup_entry(
     cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
     base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
-    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
+    # use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
+    # webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
     relations: dict[str, dict[str, str]] = config_entry.data.get(D_RELATIONS_KEY, {})
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
-
-    if not relations:
-        raise ConfigEntryNotReady("No user relations configured")
 
     coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
     apis_by_ucr: dict[str, DiveraAPI] = {}
@@ -91,13 +88,6 @@ async def async_setup_entry(
     for relation in relations.values():
         ucr_id = relation.get(D_UCR_ID)
         api_key = relation.get(D_API_KEY)
-
-        if not ucr_id or not api_key:
-            _LOGGER.warning(
-                "Skipping invalid user relation in cluster %s (missing ucr_id/api_key)",
-                cluster_id,
-            )
-            continue
 
         try:
             api = DiveraAPI(
@@ -151,25 +141,25 @@ async def async_setup_entry(
 
     # Keep backward compatibility with existing platform code that expects
     # a single coordinator in runtime_data.
-    primary_ucr_id = next(iter(coordinators_by_ucr))
-    config_entry.runtime_data = coordinators_by_ucr[primary_ucr_id]
+    # primary_ucr_id = next(iter(coordinators_by_ucr))
+    # config_entry.runtime_data = coordinators_by_ucr[primary_ucr_id]
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][cluster_id] = {
         D_COORDINATOR: coordinators_by_ucr,
         "apis": apis_by_ucr,
-        "primary_ucr_id": primary_ucr_id,
+        # "primary_ucr_id": primary_ucr_id,
     }
 
-    if use_webhooks and webhook_id:
-        async_register(
-            hass,
-            DOMAIN,
-            f"DiveraControl {cluster_name}",
-            webhook_id,
-            async_handle_webhook,
-        )
-        config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
+    # if use_webhooks and webhook_id:
+    #     async_register(
+    #         hass,
+    #         DOMAIN,
+    #         f"DiveraControl {cluster_name}",
+    #         webhook_id,
+    #         async_handle_webhook,
+    #     )
+    #     config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
@@ -189,16 +179,16 @@ async def async_unload_entry(
     """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
     cluster_id = config_entry.data.get(D_CLUSTER_ID)
-    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
+    # use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
+    # webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
 
     _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, cluster_id)
 
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
 
-    if use_webhooks and webhook_id:
-        async_unregister(hass, webhook_id)
+    # if use_webhooks and webhook_id:
+    #     async_unregister(hass, webhook_id)
 
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(cluster_id, None)
@@ -377,11 +367,8 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         }
         base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
-        validation_errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            session,
-            user_input,
-            base_api_url,
-        )
+        config_api = DiveraConfigFlowAPI(session, base_api_url)
+        validation_errors, clusters = await config_api.validate_access(user_input)
 
         if validation_errors:
             _LOGGER.error(

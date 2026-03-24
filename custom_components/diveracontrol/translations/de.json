@@ -3,13 +3,6 @@
   "config": {
     "step": {
       "user": {
-        "title": "Einrichtung von DiveraControl",
-        "description": "Bitte wähle eine Option zur Konfiguration aus.",
-        "data": {
-          "method": "Methode"
-        }
-      },
-      "login": {
         "title": "Benutzeranmeldung",
         "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
         "data": {
@@ -21,6 +14,7 @@
           "use_webhooks": "Webhook verwenden"
         }
       },
+      "login": {},
       "api_key": {
         "title": "Eingabe des API-Schlüssel",
         "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",

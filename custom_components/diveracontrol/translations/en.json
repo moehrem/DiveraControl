@@ -3,13 +3,6 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up DiveraControl",
-        "description": "Please select a configuration option.",
-        "data": {
-          "method": "Method"
-        }
-      },
-      "login": {
         "title": "User login",
         "description": "Please enter a username and password. The login credentials are only used for the initial data query and are not stored.\nAlso set the interval for data queries outside and during active alarms.",
         "data": {
