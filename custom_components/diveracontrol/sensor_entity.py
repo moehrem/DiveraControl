@@ -460,7 +460,7 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
             last_alarm_id = self.coordinator.data.get(D_ALARM, {}).get(
                 "sorting", [None]
             )[0]
-        except IndexError, KeyError:
+        except IndexError:
             last_alarm_id = None
 
         if last_alarm_id is None:
