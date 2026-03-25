@@ -2,7 +2,6 @@
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from voluptuous import Any
 
 from .const import DOMAIN, VERSION, MINOR_VERSION, PATCH_VERSION, CONF_URL, BASE_API_URL
 from .coordinator import DiveraCoordinator
