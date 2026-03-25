@@ -47,7 +47,10 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     def _current_status_id_from_user(self) -> str | None:
         """Get current status ID from user data using known field variants."""
         user_data = self.coordinator.data.get("status", {})
-        return str(user_data.get("status_id"))
+        status_id = user_data.get("status_id")
+        if status_id is None:
+            return None
+        return str(status_id)
 
     def _get_device_id(self) -> str | None:
         """Resolve the Home Assistant device_id for this entity."""
