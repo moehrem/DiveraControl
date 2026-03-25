@@ -89,28 +89,65 @@ def get_ucr_data_from_device(
     Raises:
         HomeAssistantError: If device or coordinator is not found.
     """
-    # get device
-    # device_id = data.get("device_id")
-    device = dr.async_get(hass).async_get(device_id)
+    # Get device from registry
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
 
-    # get config entry
+    if not device or not device.config_entries:
+        raise HomeAssistantError(
+            f"Device not found or has no config entries: {device_id}"
+        )
+
+    # Get config entry
     config_entry_id = next(iter(device.config_entries), None)
+    if not config_entry_id:
+        raise HomeAssistantError(
+            f"Config entry not found for device: {device_id}"
+        )
+
     entry = hass.config_entries.async_get_entry(config_entry_id)
+    if not entry or entry.domain != DOMAIN:
+        raise HomeAssistantError(
+            f"Invalid config entry for device: {device_id}"
+        )
 
-    # get cluster_id
+    # Get cluster_id
     cluster_id = entry.data.get(D_CLUSTER_ID)
+    if not cluster_id:
+        raise HomeAssistantError(
+            f"Cluster ID not found in config entry for device: {device_id}"
+        )
 
-    # get ucr_id
-    ucr_id = next((ident for dom, ident in device.identifiers if dom == DOMAIN), None)
-
-    # get coordinator
-    coordinator = (
-        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {}).get(ucr_id)
+    # Get ucr_id from device identifiers
+    ucr_id = next(
+        (ident for dom, ident in device.identifiers if dom == DOMAIN),
+        None,
     )
+    if not ucr_id:
+        raise HomeAssistantError(
+            f"UCR ID not found in device identifiers for device: {device_id}"
+        )
+
+    # Get coordinator
+    coordinator = (
+        hass.data.get(DOMAIN, {})
+        .get(cluster_id, {})
+        .get(D_COORDINATOR, {})
+        .get(ucr_id)
+    )
+
+    if coordinator is None:
+        raise HomeAssistantError(
+            f"Coordinator not found for device: {device_id}"
+        )
 
     if key is None:
         return coordinator
 
+    if not hasattr(coordinator, key):
+        raise HomeAssistantError(
+            f"Key '{key}' not found in coordinator for device: {device_id}"
+        )
     return getattr(coordinator, key)
 
 
