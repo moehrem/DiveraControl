@@ -288,13 +288,16 @@ class DiveraVehicleSensor(BaseDiveraEntity):
     @property
     def icon(self) -> str:  # type: ignore[override]
         """Return icon of the vehicle tracker."""
-        if vehicle_data := self._get_vehicle_data():
-            _veh_status = vehicle_data.get("fmsstatus_id", "unknown")
-
-        if _veh_status == "unknown":
+        vehicle_data = self._get_vehicle_data()
+        if not vehicle_data:
+            # Vehicle data missing → fall back to generic vehicle icon
             return I_VEHICLE
 
-        return f"mdi:numeric-{_veh_status}-box-outline"
+        veh_status = vehicle_data.get("fmsstatus_id", "unknown")
+        if veh_status == "unknown":
+            return I_VEHICLE
+
+        return f"mdi:numeric-{veh_status}-box-outline"
 
 
 class DiveraUnitSensor(BaseDiveraEntity):
