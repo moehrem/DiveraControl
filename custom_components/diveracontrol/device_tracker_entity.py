@@ -18,6 +18,7 @@ from .const import (
     I_CLOSED_ALARM,
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
+    I_VEHICLE,
 )
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
@@ -31,13 +32,12 @@ class DiveraAlarmTrackerManager:
     def __init__(
         self,
         coordinator: DiveraCoordinator,
-        ucr_id: str,
         async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize alarm tracker manager."""
         self.coordinator = coordinator
         self.hass = coordinator.hass
-        self._ucr_id = ucr_id
+        self._ucr_id = self.coordinator.ucr_id
         self._async_add_entities = async_add_entities
         self._known_alarm_ids: set[str] = set()
         self._unsub: Callable[[], None] | None = None
@@ -98,13 +98,12 @@ class DiveraVehicleTrackerManager:
     def __init__(
         self,
         coordinator: DiveraCoordinator,
-        ucr_id: str,
         async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize vehicle tracker manager."""
         self.coordinator = coordinator
         self.hass = coordinator.hass
-        self._ucr_id = ucr_id
+        self._ucr_id = self.coordinator.ucr_id
         self._async_add_entities = async_add_entities
         self._known_vehicle_ids: set[str] = set()
         self._unsub: Callable[[], None] | None = None
@@ -277,12 +276,11 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         """Return icon of the vehicle tracker."""
         if vehicle_data := self._get_vehicle_data():
             _veh_status = vehicle_data.get("fmsstatus_id", "unknown")
-            return (
-                "mdi:help-box"
-                if _veh_status == "unknown"
-                else f"mdi:numeric-{_veh_status}-box"
-            )
-        return "mdi:help-box"
+
+        if _veh_status == "unknown":
+            return I_VEHICLE
+
+        return f"mdi:numeric-{_veh_status}-box-outline"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]

@@ -44,7 +44,12 @@ from .service import async_register_services
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
+PLATFORMS = [
+    Platform.CALENDAR,
+    Platform.DEVICE_TRACKER,
+    Platform.SENSOR,
+    Platform.SELECT,
+]
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -138,7 +143,7 @@ async def async_setup_entry(
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][cluster_id] = {
         D_COORDINATOR: coordinators_by_ucr,
-        "apis": apis_by_ucr,
+        # "apis": apis_by_ucr,
     }
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)

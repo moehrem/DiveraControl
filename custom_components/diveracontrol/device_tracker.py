@@ -21,23 +21,13 @@ async def async_setup_entry(
     """Set up Divera device trackers."""
 
     cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
-    coordinator_data = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
-    if isinstance(coordinator_data, dict):
-        coordinators: list[DiveraCoordinator] = list(coordinator_data.values())
-    else:
-        coordinators = [config_entry.runtime_data]
-
-    for coordinator in coordinators:
-        ucr_id: str = coordinator.ucr_id
-
+    for ucr in ucrs:
         # Create manager helpers that handle dynamic trackers
-        alarm_tracker_manager = DiveraAlarmTrackerManager(
-            coordinator, ucr_id, async_add_entities
-        )
-        vehicle_tracker_manager = DiveraVehicleTrackerManager(
-            coordinator, ucr_id, async_add_entities
-        )
+        alarm_tracker_manager = DiveraAlarmTrackerManager(ucr, async_add_entities)
+        vehicle_tracker_manager = DiveraVehicleTrackerManager(ucr, async_add_entities)
 
         # Start managers (they register listeners and create dynamic trackers)
         alarm_tracker_manager.start()

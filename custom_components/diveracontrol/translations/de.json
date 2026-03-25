@@ -79,6 +79,19 @@
     "sensor": {
       "open_alarms": {
         "name": "Offene Alarme"
+      },
+      "last_alarm": {
+        "name": "Letzter Alarm"
+      }
+    },
+    "select": {
+      "user_status": {
+        "name": "Nutzerstatus"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Kalenderereignis"
       }
     }
   },
@@ -130,9 +143,11 @@
       "post_message": "Nachricht senden",
       "post_using_vehicle_property": "Fahrzeugeigenschaften ändern",
       "post_using_vehicle_crew": "Fahrzeugbesatzung ändern",
-      "post_news": "Mitteilung erstellen"
+      "post_news": "Mitteilung erstellen",
+      "post_user_status": "Nutzerstatus setzen"
     },
     "extra_fields": {
+      "id": "Nutzerstatus",
       "vehicle": "Fahrzeug",
       "status": "Status",
       "status_id": "FMS-Status-ID (1-10; 10 = Notruf)",
@@ -186,6 +201,12 @@
       "remarks": "Hinweise",
       "message_channel": "Nachrichtenkanal erstellen",
       "user_status": "Nutzerstatus",
+      "note": "Notiz",
+      "reset_date": "Zurücksetzen am",
+      "reset_to": "Zurücksetzen auf Status",
+      "status_skip_statusplan": "Statusplan bis 'Rücksetzzeitpunkt' ignorieren",
+      "status_skip_geofence": "Geofence bis 'Rücksetzzeitpunkt' ignorieren",
+      "alarm_skip": "Statusänderung bei offenem Alarm ignorieren",
       "destination": "Ziel",
       "destination_address": "Zieladresse",
       "destination_lat": "Ziel-Breitengrad",

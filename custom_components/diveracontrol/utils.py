@@ -13,6 +13,7 @@ from homeassistant.helpers.translation import async_get_translations
 from .const import (
     D_ALARM,
     D_CLUSTER,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_OPEN_ALARMS,
@@ -20,55 +21,62 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_VEHICLE,
     DOMAIN,
+    VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
+    MANUFACTURER,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_user_device_info(ucr_id: str, user_name: str) -> DeviceInfo:
-    """Return standalone device information for a user."""
-    return {
-        "identifiers": {(DOMAIN, ucr_id)},
-        "name": user_name,
-    }
+# def get_user_device_info(ucr_id: str, user_name: str) -> DeviceInfo:
+#     """Return standalone device information for a user."""
+#     return {
+#         "identifiers": {(DOMAIN, ucr_id)},
+#         "name": user_name,
+#         "model_id": ucr_id,
+#         "model":
+#         "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+#     }
 
 
-def _get_coordinator_from_device(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
-    """Get coordinator data dictionary for a device.
+# def _get_coordinator_from_device(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
+#     """Get coordinator data dictionary for a device.
 
-    Args:
-        hass: Home Assistant instance.
-        device_id: Device ID.
+#     Args:
+#         hass: Home Assistant instance.
+#         device_id: Device ID.
 
-    Returns:
-        Integration data dictionary containing 'api' and 'coordinator'.
+#     Returns:
+#         Integration data dictionary containing 'api' and 'coordinator'.
 
-    Raises:
-        HomeAssistantError: If device or integration data not found.
-    """
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
+#     Raises:
+#         HomeAssistantError: If device or integration data not found.
+#     """
+#     device_registry = dr.async_get(hass)
+#     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entries:
-        raise HomeAssistantError(f"Device not found: {device_id}")
+#     if not device or not device.config_entries:
+#         raise HomeAssistantError(f"Device not found: {device_id}")
 
-    config_entry_id = next(iter(device.config_entries), None)
-    if not config_entry_id:
-        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
+#     config_entry_id = next(iter(device.config_entries), None)
+#     if not config_entry_id:
+#         raise HomeAssistantError(f"Config entry not found for device: {device_id}")
 
-    entry = hass.config_entries.async_get_entry(config_entry_id)
-    if not entry or entry.domain != DOMAIN:
-        raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
+#     entry = hass.config_entries.async_get_entry(config_entry_id)
+#     if not entry or entry.domain != DOMAIN:
+#         raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
 
-    return entry.runtime_data
+#     return entry.data
 
 
-def get_coordinator_key_from_device(
+def get_ucr_data_from_device(
     hass: HomeAssistant,
     device_id: str,
     key: str | None = None,
 ) -> Any:
-    """Get the DiveraCoordinator instance for a device.
+    """Get ucr data of coordinator for a device.
 
     Args:
         hass: Home Assistant instance.
@@ -76,20 +84,32 @@ def get_coordinator_key_from_device(
         key: Key to retrieve from coordinator data.
 
     Returns:
-        The associated DiveraCoordinator instance.
+        The associated ucr data of the coordinator.
 
     Raises:
         HomeAssistantError: If device or coordinator is not found.
     """
-    coordinator = _get_coordinator_from_device(hass, device_id)
+    # get device
+    # device_id = data.get("device_id")
+    device = dr.async_get(hass).async_get(device_id)
+
+    # get config entry
+    config_entry_id = next(iter(device.config_entries), None)
+    entry = hass.config_entries.async_get_entry(config_entry_id)
+
+    # get cluster_id
+    cluster_id = entry.data.get(D_CLUSTER_ID)
+
+    # get ucr_id
+    ucr_id = next((ident for dom, ident in device.identifiers if dom == DOMAIN), None)
+
+    # get coordinator
+    coordinator = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {}).get(ucr_id)
+    )
 
     if key is None:
         return coordinator
-
-    if not hasattr(coordinator, key):
-        raise HomeAssistantError(
-            f"Key {key} not found in coordinator for device: {device_id}"
-        )
 
     return getattr(coordinator, key)
 
@@ -115,7 +135,7 @@ async def handle_entity(
 
     """
     entity_id_str = str(entity_id)
-    coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    coordinator = get_ucr_data_from_device(hass, data.get("device_id"))
 
     if not coordinator:
         msg = await get_translation(
@@ -219,7 +239,7 @@ async def handle_entity(
                     continue
                 try:
                     crew_id = int(raw_id)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     # skip malformed entries
                     continue
                 current_crew.add(crew_id)

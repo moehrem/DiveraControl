@@ -18,13 +18,7 @@ async def async_setup_entry(
     """Set up the Divera calendar entity."""
     cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
     coordinator_data = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    coordinators: list[DiveraCoordinator] = list(coordinator_data.values())
 
-    if isinstance(coordinator_data, dict):
-        coordinators: list[DiveraCoordinator] = list(coordinator_data.values())
-    else:
-        coordinators = [config_entry.runtime_data]
-
-    calendar_entities = [
-        DiveraCalendar(coordinator, coordinator.ucr_id) for coordinator in coordinators
-    ]
+    calendar_entities = [DiveraCalendar(coordinator) for coordinator in coordinators]
     async_add_entities(calendar_entities)

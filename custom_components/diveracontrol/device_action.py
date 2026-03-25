@@ -27,8 +27,9 @@ from .const import (
     PERM_MESSAGES,
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
+    PERM_STATUS_USER,
 )
-from .utils import get_coordinator_key_from_device, get_translation
+from .utils import get_ucr_data_from_device, get_translation
 
 ACTION_TYPES: tuple[str, ...] = (
     "post_vehicle_status",
@@ -39,6 +40,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "post_using_vehicle_property",
     "post_using_vehicle_crew",
     "post_news",
+    "post_user_status",
 )
 
 ACTION_SCHEMA = vol.Schema(
@@ -146,10 +148,10 @@ async def _get_selector_options(
         ]
 
     # For dynamic options, get coordinator data
-    coor_data: dict[str, Any] = get_coordinator_key_from_device(hass, device_id, "data")
+    coor_data: dict[str, Any] = get_ucr_data_from_device(hass, device_id, "data")
 
-    if not device_id:
-        return []
+    # if not device_id:
+    #     return []
 
     # Navigate data path
     for key in data_path.split("."):
@@ -187,7 +189,7 @@ async def async_get_actions(
         return []
 
     try:
-        api = get_coordinator_key_from_device(hass, device_id, "api")
+        api = get_ucr_data_from_device(hass, device_id, "api")
     except HomeAssistantError:
         return []
 
@@ -206,6 +208,7 @@ async def async_get_actions(
             "post_using_vehicle_property",
             "post_using_vehicle_crew",
             "post_news",
+            "post_user_status",
         ]
     except HomeAssistantError:
         try:
@@ -232,6 +235,11 @@ async def async_get_actions(
         try:
             permissions.check(PERM_NEWS)
             action_types.append("post_news")
+        except HomeAssistantError:
+            pass
+        try:
+            permissions.check(PERM_STATUS_USER)
+            action_types.extend(["post_user_status"])
         except HomeAssistantError:
             pass
 
@@ -708,6 +716,51 @@ async def async_get_action_capabilities(
                     vol.Optional("newssurvey_ts_response"): selector.DateTimeSelector(),
                     vol.Optional("newssurvey_answers"): selector.ObjectSelector(),
                     vol.Optional("newssurvey_sorting"): selector.ObjectSelector(),
+                }
+            )
+        }
+
+    if action_type == "post_user_status":
+        user_status_options = await _get_selector_options(
+            hass, device_id, "cluster.status", "{name}"
+        )
+        vehicle_options = await _get_selector_options(
+            hass, device_id, "cluster.vehicle", "{name} / {shortname}"
+        )
+
+        return {
+            "extra_fields": vol.Schema(
+                {
+                    vol.Required("id"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_status_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                    if user_status_options
+                    else vol.Coerce(int),
+                    vol.Optional("vehicle"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=vehicle_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            multiple=True,
+                        )
+                    )
+                    if vehicle_options
+                    else vol.Coerce(int),
+                    vol.Optional("note"): str,
+                    vol.Optional("reset_date"): selector.DateTimeSelector(),
+                    vol.Optional("reset_to"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_status_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                    if user_status_options
+                    else vol.Coerce(int),
+                    vol.Optional("alarm_skip"): bool,
+                    vol.Optional("status_skip_statusplan"): bool,
+                    vol.Optional("status_skip_geofence"): bool,
                 }
             )
         }

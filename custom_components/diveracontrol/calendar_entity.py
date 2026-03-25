@@ -7,31 +7,33 @@ from typing import Any
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+# from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import parse_datetime, utc_from_timestamp
 
 from .const import D_EVENTS
 from .coordinator import DiveraCoordinator
-from .utils import get_user_device_info
+from .entity import BaseDiveraEntity
+# from .utils import get_user_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class DiveraCalendar(CoordinatorEntity, CalendarEntity):
+class DiveraCalendar(BaseDiveraEntity, CalendarEntity):
     """A single calendar entity for all Divera events."""
 
     _attr_has_entity_name = True
-    _attr_name = None
+    _attr_translation_key = "calendar"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: DiveraCoordinator, ucr_id: str) -> None:
+    def __init__(self, coordinator: DiveraCoordinator) -> None:
         """Initialize the calendar entity."""
         super().__init__(coordinator)
 
-        self.ucr_id = ucr_id
-        self._attr_device_info = get_user_device_info(ucr_id, coordinator.user_name)
-        self._attr_unique_id = f"{ucr_id}_calendar"
-        self.entity_id = f"calendar.{ucr_id}_calendar"
+        # self.ucr_id = coordinator.ucr_id
+        # self._attr_device_info = get_user_device_info(coordinator)
+        self._attr_unique_id = f"{self.ucr_id}_calendar"
+        self.entity_id = f"calendar.{self.ucr_id}_calendar"
 
         self._event_list: list[dict[str, Any]] = []
 

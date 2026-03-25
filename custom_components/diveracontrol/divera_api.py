@@ -21,6 +21,7 @@ from .const import (
     API_MESSAGES,
     API_NEWS,
     API_PULL_ALL,
+    API_USER_STATUS,
     API_USING_VEHICLE_CREW,
     API_USING_VEHICLE_PROP,
     API_USING_VEHICLE_SET_SINGLE,
@@ -37,12 +38,12 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USE_WEBHOOKS,
     D_USERGROUP_ID,
     MINOR_VERSION,
     PATCH_VERSION,
     PERM_ALARM,
     PERM_MESSAGES,
+    PERM_STATUS_USER,
     PERM_NEWS,
     PERM_STATUS_VEHICLE,
     VERSION,
@@ -421,6 +422,22 @@ class DiveraAPI:
         self.permissions.check(PERM_NEWS)
 
         part_url = f"{BASE_API_V2_URL}{API_NEWS}"
+        method = "POST"
+
+        await self._api_request(part_url, method, payload=payload)
+
+    async def post_user_status(self, payload: dict[str, str]) -> None:
+        """POST user status update to Divera.
+
+        Args:
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        """
+        _LOGGER.debug("Posting user status update for cluster %s", self.ucr_id)
+
+        self.permissions.check(PERM_STATUS_USER)
+
+        part_url = f"{BASE_API_V2_URL}{API_USER_STATUS}"
         method = "POST"
 
         await self._api_request(part_url, method, payload=payload)

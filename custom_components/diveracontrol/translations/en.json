@@ -82,6 +82,19 @@
     "sensor": {
       "open_alarms": {
         "name": "Open alarms"
+      },
+      "last_alarm": {
+        "name": "Last alarm"
+      }
+    },
+    "select": {
+      "user_status": {
+        "name": "User status"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Calendar event"
       }
     }
   },
@@ -133,9 +146,11 @@
       "post_message": "Send message",
       "post_using_vehicle_property": "Change vehicle properties",
       "post_using_vehicle_crew": "Change vehicle crew",
-      "post_news": "Create announcement"
+      "post_news": "Create announcement",
+      "post_user_status": "Set user status"
     },
     "extra_fields": {
+      "id": "User status",
       "vehicle": "Vehicle",
       "status": "Status",
       "status_id": "FMS status ID (1-10; 10 = emergency)",
@@ -189,6 +204,12 @@
       "remarks": "Remarks",
       "message_channel": "Create message channel",
       "user_status": "User status",
+      "note": "Note",
+      "reset_date": "Reset date",
+      "reset_to": "Reset to status",
+      "status_skip_statusplan": "Ignore status plan until 'reset date'",
+      "status_skip_geofence": "Ignore geofence until 'reset date'",
+      "alarm_skip": "Ignore status change during open alarm",
       "destination": "Destination",
       "destination_address": "Destination address",
       "destination_lat": "Destination latitude",

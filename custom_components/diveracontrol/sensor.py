@@ -10,8 +10,10 @@ from .coordinator import DiveraCoordinator
 from .sensor_entity import (
     DiveraAlarmSensorManager,
     DiveraAvailabilitySensorManager,
+    DiveraLastAlarmSensor,
     DiveraOpenAlarmsSensor,
     DiveraUnitSensor,
+    DiveraUserSensor,
     DiveraVehicleSensorManager,
 )
 
@@ -24,28 +26,16 @@ async def async_setup_entry(
     """Set up the Divera sensors."""
 
     cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
-    coordinator_data = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
-
-    if isinstance(coordinator_data, dict):
-        coordinators: list[DiveraCoordinator] = list(coordinator_data.values())
-    else:
-        coordinators = [config_entry.runtime_data]
+    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
     static_sensors = []
 
-    for coordinator in coordinators:
-        ucr_id: str = coordinator.ucr_id
-
+    for ucr in ucrs:
         # Create manager helpers that handle dynamic sensors
-        alarm_manager = DiveraAlarmSensorManager(
-            coordinator, ucr_id, async_add_entities
-        )
-        vehicle_manager = DiveraVehicleSensorManager(
-            coordinator, ucr_id, async_add_entities
-        )
-        availability_manager = DiveraAvailabilitySensorManager(
-            coordinator, ucr_id, async_add_entities
-        )
+        alarm_manager = DiveraAlarmSensorManager(ucr, async_add_entities)
+        vehicle_manager = DiveraVehicleSensorManager(ucr, async_add_entities)
+        availability_manager = DiveraAvailabilitySensorManager(ucr, async_add_entities)
 
         # Start managers (they register listeners and create dynamic entities)
         alarm_manager.start()
@@ -59,8 +49,10 @@ async def async_setup_entry(
 
         static_sensors.extend(
             [
-                DiveraOpenAlarmsSensor(coordinator, ucr_id),
-                DiveraUnitSensor(coordinator, ucr_id),
+                DiveraOpenAlarmsSensor(ucr),
+                DiveraLastAlarmSensor(ucr),
+                DiveraUnitSensor(ucr),
+                DiveraUserSensor(ucr),
             ]
         )
 
