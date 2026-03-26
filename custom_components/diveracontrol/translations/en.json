@@ -3,13 +3,6 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up DiveraControl",
-        "description": "Please select a configuration option.",
-        "data": {
-          "method": "Method"
-        }
-      },
-      "login": {
         "title": "User login",
         "description": "Please enter a username and password. The login credentials are only used for the initial data query and are not stored.\nAlso set the interval for data queries outside and during active alarms.",
         "data": {
@@ -39,14 +32,6 @@
           "clusters": "Units"
         }
       },
-      "webhook_info": {
-        "title": "Webhook setup",
-        "description": "Webhook support is enabled. Open Divera, go to: 'Administration' -> 'Interfaces' -> 'Data Transfer'\nSelect 'Webhooks' and enter the following URL:\n\n{webhook_url}\n\nFormat: POST application/json\nContent: No content\n\nContinue after saving the URL in Divera."
-      },
-      "webhook_error": {
-        "title": "Webhook setup error",
-        "description": "Your Home Assistant is currently not accessible via an external URL, which is required for webhooks. For more information, see: {remote_docs_url}\n\nThe 'Webhooks' option will be disabled, and the setup will continue. Once your Home Assistant has a valid external URL, you can re-enable the option through reconfiguration."
-      },
       "reconfigure": {
         "title": "Change configuration for DiveraControl",
         "description": "By changing the API key, a different user can be assigned to the unit. Additionally, both intervals can be reconfigured.",
@@ -75,19 +60,41 @@
       "hub_not_found": "Hub was not found.",
       "reconfigure_failed": "Reconfiguration failed. Check logs for details.",
       "reconfigure_successful": "Reconfiguration successful.",
-      "unknown_step": "Unknown configuration step, setup aborted."
+      "unknown_step": "Unknown configuration step, setup aborted.",
+      "merge_successful": "Reauthentication successful."
     }
   },
   "issues": {
     "breaking_changes_v1_2_0": {
       "title": "Action required: **{cluster_name}**",
       "description": "You have upgraded DiveraControl for **{cluster_name}** from version 1.1 or earlier to version 1.2.0.\n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
+    },
+    "migration_failed_v2_0_0": {
+      "title": "Migration failed: **{cluster_name}**",
+      "description": "An attempt was made to migrate the configuration of **{cluster_name}** to version 2.0.0, but it failed. Please check the logs for details and reconfigure the integration if necessary. Easiest way would be to remove and reinstall the integration. \n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
+    },
+    "breaking_changes_v2_0_0": {
+      "title": "Action required: **{cluster_name}**",
+      "description": "You have upgraded DiveraControl for **{cluster_name}** from version 1.2.x or earlier to version 2.0.0.\n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
     }
   },
   "entity": {
     "sensor": {
       "open_alarms": {
         "name": "Open alarms"
+      },
+      "last_alarm": {
+        "name": "Last alarm"
+      }
+    },
+    "select": {
+      "user_status": {
+        "name": "User status"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Calendar event"
       }
     }
   },
@@ -139,9 +146,11 @@
       "post_message": "Send message",
       "post_using_vehicle_property": "Change vehicle properties",
       "post_using_vehicle_crew": "Change vehicle crew",
-      "post_news": "Create announcement"
+      "post_news": "Create announcement",
+      "post_user_status": "Set user status"
     },
     "extra_fields": {
+      "id": "User status",
       "vehicle": "Vehicle",
       "status": "Status",
       "status_id": "FMS status ID (1-10; 10 = emergency)",
@@ -195,6 +204,12 @@
       "remarks": "Remarks",
       "message_channel": "Create message channel",
       "user_status": "User status",
+      "note": "Note",
+      "reset_date": "Reset date",
+      "reset_to": "Reset to status",
+      "status_skip_statusplan": "Ignore status plan until 'reset date'",
+      "status_skip_geofence": "Ignore geofence until 'reset date'",
+      "alarm_skip": "Ignore status change during open alarm",
       "destination": "Destination",
       "destination_address": "Destination address",
       "destination_lat": "Destination latitude",

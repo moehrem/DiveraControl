@@ -47,7 +47,6 @@ post_vehicle_status:
           min: -180
           max: 180
 
-
 post_alarm:
   target:
     entity:
@@ -268,7 +267,6 @@ post_alarm:
       example: 1717759979
       selector:
         datetime:
-
 
 put_alarm:
   target:
@@ -497,8 +495,6 @@ put_alarm:
       selector:
         datetime:
 
-
-
 post_close_alarm:
   target:
     entity:
@@ -516,11 +512,10 @@ post_close_alarm:
         boolean:
     report:
       required: false
-      example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
+      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
       selector:
         text:
           multiline: true
-
 
 post_message:
   target:
@@ -539,11 +534,10 @@ post_message:
         number:
     text:
       required: false
-      example: 'Dies ist eine Testnachricht.'
+      example: "Dies ist eine Testnachricht."
       selector:
         text:
           multiline: true
-
 
 post_using_vehicle_property:
   target:
@@ -750,3 +744,58 @@ post_news:
       selector:
         text:
           multiline: false
+
+post_user_status:
+  target:
+    entity:
+      integration: diveracontrol
+  fields:
+    id:
+      required: true
+      example: 123
+      selector:
+        number:
+          min: 0
+          mode: box
+    vehicle:
+      required: false
+      example: 123456
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+    note:
+      required: false
+      example: "Komme mit dem Fahrrad"
+      selector:
+        text:
+          multiline: false
+    reset_date:
+      required: false
+      example: 1717755979
+      selector:
+        datetime:
+    reset_to:
+      required: false
+      example: 456789
+      selector:
+        number:
+          min: 0
+          mode: box
+
+    alarm_skip:
+      required: false
+      example: true
+      selector:
+        boolean:
+    status_skip_statusplan:
+      required: false
+      example: true
+      selector:
+        boolean:
+    status_skip_geofence:
+      required: false
+      example: true
+      selector:
+        boolean:

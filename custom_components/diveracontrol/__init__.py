@@ -2,44 +2,54 @@
 
 import logging
 
-from homeassistant.components.webhook import async_register, async_unregister
+import aiohttp
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import (
     config_validation as cv,
+    device_registry as dr,
     entity_registry as er,
     issue_registry as ir,
 )
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     BASE_API_URL,
     D_API_KEY,
     D_BASE_API_URL,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
+    D_RELATIONS_KEY,
     D_UCR_ID,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
-    D_WEBHOOK_ID,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
     VERSION,
 )
 from .coordinator import DiveraCoordinator
-from .divera_api import DiveraAPI
+from .divera_api import DiveraAPI, DiveraConfigFlowAPI
 from .log_handler import (
     async_remove_diveracontrol_log_handler,
     async_setup_diveracontrol_log_handler,
 )
 from .service import async_register_services
-from .webhook import async_handle_webhook
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-PLATFORMS = [Platform.CALENDAR, Platform.DEVICE_TRACKER, Platform.SENSOR]
+PLATFORMS = [
+    Platform.CALENDAR,
+    Platform.DEVICE_TRACKER,
+    Platform.SENSOR,
+    Platform.SELECT,
+]
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -64,62 +74,90 @@ async def async_setup_entry(
         bool: True if setup succesfully, otherwise False.
 
     """
-    ucr_id: str = config_entry.data.get(D_UCR_ID) or ""
+    cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
-    api_key: str = config_entry.data.get(D_API_KEY) or ""
     base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
-    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
+    relations: dict[str, dict[str, str]] = config_entry.data.get(D_RELATIONS_KEY, {})
 
-    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, ucr_id)
+    _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
-    try:
-        api = DiveraAPI(
-            hass,
-            ucr_id,
-            api_key,
-            base_url,
-        )
-        coordinator = DiveraCoordinator(
-            hass,
-            api,
-            config_entry,
-        )
+    coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
+    apis_by_ucr: dict[str, DiveraAPI] = {}
 
-        # create references in config_entry
-        # for easy access of coordinator
-        config_entry.runtime_data = coordinator
-        # hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
+    # Create API and coordinator instances per user relation.
+    for relation in relations.values():
+        ucr_id = relation.get(D_UCR_ID)
+        api_key = relation.get(D_API_KEY)
 
-        hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN].setdefault(ucr_id, {})[D_COORDINATOR] = coordinator
+        api: DiveraAPI | None = None
 
-        await coordinator.async_config_entry_first_refresh()
-
-        if use_webhooks and webhook_id:
-            async_register(
+        try:
+            api = DiveraAPI(
                 hass,
-                DOMAIN,
-                f"DiveraControl {cluster_name}",
-                webhook_id,
-                async_handle_webhook,
+                ucr_id,
+                api_key,
+                base_url,
             )
-            config_entry.async_on_unload(lambda: async_unregister(hass, webhook_id))
 
-        config_entry.async_on_unload(api.close)
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+            coordinator = DiveraCoordinator(
+                hass,
+                api,
+                ucr_id,
+                config_entry,
+            )
 
-        _LOGGER.debug("Setting up cluster %s (%s) succesfully", cluster_name, ucr_id)
+            await coordinator.async_config_entry_first_refresh()
+            coordinators_by_ucr[ucr_id] = coordinator
+            apis_by_ucr[ucr_id] = api
+            config_entry.async_on_unload(api.close)
 
-    except (TimeoutError, ConnectionError) as err:
-        _LOGGER.error("Connection failed: %s", err)
-        raise ConfigEntryNotReady("Failed to connect to Divera API") from err
-    except ConfigEntryAuthFailed:
-        raise
-    except Exception as err:
-        _LOGGER.exception("Unexpected error during setup")
-        raise ConfigEntryNotReady("Unexpected error during setup") from err
+        except (TimeoutError, ConnectionError) as err:
+            if api is not None:
+                await api.close()
+            _LOGGER.error(
+                "Connection failed for user %s: %s (%s)",
+                ucr_id,
+                err,
+                cluster_name,
+            )
+            continue
+        except ConfigEntryAuthFailed as err:
+            if api is not None:
+                await api.close()
+            _LOGGER.error(
+                "Authentication failed for user %s: %s (%s)",
+                ucr_id,
+                err,
+                cluster_name,
+            )
+            continue
+        except Exception:
+            if api is not None:
+                await api.close()
+            _LOGGER.exception(
+                "Unexpected error during setup for user %s (%s)",
+                ucr_id,
+                cluster_name,
+            )
+            continue
+
+    if not coordinators_by_ucr:
+        raise ConfigEntryNotReady("Failed to set up any user for this cluster")
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][cluster_id] = {
+        D_COORDINATOR: coordinators_by_ucr,
+        # "apis": apis_by_ucr,
+    }
+
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+
+    _LOGGER.debug(
+        "Setting up cluster %s (%s users) successfully",
+        cluster_name,
+        len(coordinators_by_ucr),
+    )
 
     return True
 
@@ -130,25 +168,75 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     cluster_name = config_entry.data.get(D_CLUSTER_NAME)
-    ucr_id = config_entry.data.get(D_UCR_ID)
-    use_webhooks: bool = config_entry.data.get(D_USE_WEBHOOKS, False)
-    webhook_id: str = config_entry.data.get(D_WEBHOOK_ID) or ""
+    cluster_id = config_entry.data.get(D_CLUSTER_ID)
 
-    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, ucr_id)
+    _LOGGER.debug("Start removing cluster: %s (%s)", cluster_name, cluster_id)
 
     if not await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS):
         return False
 
-    if use_webhooks and webhook_id:
-        async_unregister(hass, webhook_id)
-
     if DOMAIN in hass.data:
-        hass.data[DOMAIN].pop(ucr_id, None)
+        hass.data[DOMAIN].pop(cluster_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN, None)
             async_remove_diveracontrol_log_handler(hass)
 
-    _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, ucr_id)
+    _LOGGER.info("Successfully removed cluster %s (%s)", cluster_name, cluster_id)
+    return True
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Remove a user device from a cluster config entry.
+
+    Home Assistant calls this when the user clicks "Delete device" in the UI.
+    We remove the matching UCR relation from the config entry and reload the
+    entry so related entities are cleaned up and not recreated.
+    """
+
+    ucr_id: str | None = next(
+        (
+            identifier
+            for domain, identifier in device_entry.identifiers
+            if domain == DOMAIN
+        ),
+        None,
+    )
+    if ucr_id is None:
+        return False
+
+    relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(relations, dict) or ucr_id not in relations:
+        return False
+
+    # Keep at least one relation in the entry; removing the last one would
+    # leave an invalid cluster config entry.
+    if len(relations) <= 1:
+        _LOGGER.warning(
+            "Cannot remove last user relation %s from cluster %s",
+            ucr_id,
+            config_entry.data.get(D_CLUSTER_ID, "unknown"),
+        )
+        return False
+
+    updated_relations = dict(relations)
+    updated_relations.pop(ucr_id, None)
+    updated_data = {
+        **config_entry.data,
+        D_RELATIONS_KEY: updated_relations,
+    }
+
+    hass.config_entries.async_update_entry(config_entry, data=updated_data)
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+    _LOGGER.info(
+        "Removed user relation %s from cluster %s via device deletion",
+        ucr_id,
+        config_entry.data.get(D_CLUSTER_ID, "unknown"),
+    )
     return True
 
 
@@ -161,29 +249,42 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     """
 
-    _LOGGER.debug(
-        "Checking migration from config_entry version %s.%s",
-        config_entry.version,
-        config_entry.minor_version,
-    )
-
     updated_data = {**config_entry.data}
     migrated = False
 
+    current_version = config_entry.version
+    current_minor_version = config_entry.minor_version
+    current_patch_version = (
+        config_entry.data.get(D_INTEGRATION_VERSION, "0.0.0").split(".")[2]
+        or PATCH_VERSION
+        or 0
+    )
+
+    _LOGGER.info(
+        "Installed version: %s.%s.%s, new version: %s.%s.%s, starting migration",
+        current_version,
+        current_minor_version,
+        current_patch_version,
+        VERSION,
+        MINOR_VERSION,
+        PATCH_VERSION or 0,
+    )
+
     # changing to v1.2.0
     # add new integration_version parameter to config entry and create issue for breaking changes
-    if config_entry.version == 1 and config_entry.minor_version < 2:
+    if current_version == 1 and current_minor_version < 2:
         _LOGGER.info(
-            "Migrating config entry to integration version %s.%s.%s",
-            VERSION,
-            MINOR_VERSION,
-            PATCH_VERSION,
+            "Migrating config entry to integration version 1.2.0",
         )
         if D_INTEGRATION_VERSION not in updated_data:
             _LOGGER.info("Adding integration version to existing config entry")
             updated_data[D_INTEGRATION_VERSION] = (
                 f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
             )
+
+            # set versions to ensure future migrations are correctly applied
+            current_version = 1
+            current_minor_version = 2
             migrated = True
 
         ir.async_create_issue(
@@ -226,12 +327,9 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     # changing to v1.3.0
     # add new base_url parameter to config entry
 
-    if config_entry.version == 1 and config_entry.minor_version < 3:
+    if current_version == 1 and current_minor_version < 3:
         _LOGGER.info(
-            "Migrating config entry to integration version %s.%s.%s",
-            VERSION,
-            MINOR_VERSION,
-            PATCH_VERSION,
+            "Migrating config entry to integration version 1.3.0",
         )
 
         if D_BASE_API_URL not in updated_data:
@@ -240,16 +338,17 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             updated_data[D_INTEGRATION_VERSION] = (
                 f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
             )
+
+            # set versions to ensure future migrations are correctly applied
+            current_version = 1
+            current_minor_version = 3
             migrated = True
 
     # changing to v1.4.0
     # add new use_webhooks parameter to config entry
-    if config_entry.version == 1 and config_entry.minor_version < 4:
+    if current_version == 1 and current_minor_version < 4:
         _LOGGER.info(
-            "Migrating config entry to integration version %s.%s.%s",
-            VERSION,
-            MINOR_VERSION,
-            PATCH_VERSION,
+            "Migrating config entry to integration version 1.4.0",
         )
 
         if D_USE_WEBHOOKS not in updated_data:
@@ -258,24 +357,146 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             updated_data[D_INTEGRATION_VERSION] = (
                 f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
             )
+
+            # set versions to ensure future migrations are correctly applied
+            current_version = 1
+            current_minor_version = 4
             migrated = True
 
-    if (
-        migrated
-        or config_entry.version != VERSION
-        or config_entry.minor_version != MINOR_VERSION
-    ):
+    # changing to v2.0.0
+    # breaking change: new config entry schema with multiple user relations per cluster
+    # but no need to check for multiple users as this was not supported before and thus cannot exist in old config entries
+    if current_version == 1 and current_minor_version < 5:
+        _LOGGER.info(
+            "Migrating config entry to integration version 2.0.0",
+        )
+
+        ### OLD config_entry.data STRUCTURE ***
+        # str(ucr_id): {
+        #     D_UCR_ID: cluster_data[D_UCR_ID],
+        #     D_CLUSTER_NAME: cluster_data[D_CLUSTER_NAME],
+        #     D_API_KEY: cluster_data[D_API_KEY],
+        #     D_BASE_API_URL: _base_api_url,
+        #     D_UPDATE_INTERVAL_DATA: _update_interval_data,
+        #     D_UPDATE_INTERVAL_ALARM: _update_interval_alarm,
+        #     D_USE_WEBHOOKS: _use_webhooks,
+        #     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+
+        ### NEW config_entry.data STRUCTURE ***
+        # clusters[cluster_id] = {
+        #     D_CLUSTER_ID: cluster_id,
+        #     D_CLUSTER_NAME: data.get(D_NAME, ""),
+        #     D_BASE_API_URL: base_api_url,
+        #     D_UPDATE_INTERVAL_DATA: None,  # set later in config flow
+        #     D_UPDATE_INTERVAL_ALARM: None,  # set later in config flow
+        #     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+        #     D_USE_WEBHOOKS: None,  # set later in config flow
+        #     D_RELATIONS_KEY: {
+        #         ucr: {
+        #             D_UCR_ID: ucr,
+        #             D_API_KEY: api_key,
+        #             D_USERGROUP_ID: data.get(D_USERGROUP_ID, ""),
+        #         },
+        #     },
+        # }
+
+        session: aiohttp.ClientSession | None = None
+        session = async_get_clientsession(hass)
+        user_input = {
+            D_API_KEY: config_entry.data.get(D_API_KEY, ""),
+        }
+        base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
+
+        config_api = DiveraConfigFlowAPI(session, base_api_url)
+        validation_errors, clusters = await config_api.request_access(user_input)
+
+        if validation_errors:
+            _LOGGER.error(
+                "API key validation failed during migration: %s",
+                validation_errors,
+            )
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"migration_failed_v2_0_0_{config_entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="migration_failed_v2_0_0",
+                translation_placeholders={
+                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+                },
+            )
+            migrated = False
+            return False
+
+        # read correct cluster from clusters by matching ucr_id (there should be only one user relation in old config entries, so we can just take the first one)
+        ucr_id = config_entry.data.get(D_UCR_ID, "")
+        migrated_cluster = next(
+            (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
+            None,
+        )
+
+        if migrated_cluster is None:
+            _LOGGER.error(
+                "Migration failed: no cluster mapping found for ucr_id %s in entry %s",
+                ucr_id,
+                config_entry.entry_id,
+            )
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"migration_failed_v2_0_0_{config_entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="migration_failed_v2_0_0",
+                translation_placeholders={
+                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+                },
+            )
+            return False
+
+        # set missing parameters
+        migrated_cluster[D_UPDATE_INTERVAL_ALARM] = config_entry.data.get(
+            D_UPDATE_INTERVAL_ALARM, 30
+        )
+        migrated_cluster[D_UPDATE_INTERVAL_DATA] = config_entry.data.get(
+            D_UPDATE_INTERVAL_DATA, 60
+        )
+        migrated_cluster[D_USE_WEBHOOKS] = config_entry.data.get(D_USE_WEBHOOKS, False)
+
+        updated_data = migrated_cluster
+        # set versions to ensure future migrations are correctly applied
+        current_version = 2
+        current_minor_version = 0
+        migrated = True
+
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"breaking_changes_v2_0_0_{config_entry.entry_id}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="breaking_changes_v2_0_0",
+            translation_placeholders={
+                "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+            },
+        )
+
+    ##### ALWAYS THE ONE AND ONLY FINAL BLOCK #####
+    # finalize migration by updating config entry version if any migration step was performed
+    if migrated or current_version != VERSION or current_minor_version != MINOR_VERSION:
         hass.config_entries.async_update_entry(
             config_entry,
             data=updated_data,
-            version=VERSION,
-            minor_version=MINOR_VERSION,
+            version=current_version,
+            minor_version=current_minor_version,
         )
 
     _LOGGER.debug(
-        "Migration complete, config_entry is now at version %s.%s",
-        config_entry.version,
-        config_entry.minor_version,
+        "Migration complete, config_entry is now at version %s.%s.%s",
+        current_version,
+        current_minor_version,
+        PATCH_VERSION,
     )
 
     return True

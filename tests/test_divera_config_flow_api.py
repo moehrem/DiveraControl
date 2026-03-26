@@ -1,4 +1,4 @@
-"""Tests for DiveraControl divera_credentials.py."""
+"""Tests for DiveraConfigFlowAPI helper methods in divera_api.py."""
 
 from unittest.mock import AsyncMock, MagicMock
 
@@ -7,6 +7,7 @@ from aiohttp import ClientError, ClientSession
 
 from custom_components.diveracontrol.const import (
     D_API_KEY,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_DATA,
     D_NAME,
@@ -15,11 +16,11 @@ from custom_components.diveracontrol.const import (
     D_USERGROUP_ID,
     BASE_API_URL,
 )
-from custom_components.diveracontrol.divera_credentials import DiveraCredentials
+from custom_components.diveracontrol.divera_api import DiveraConfigFlowAPI
 
 
-class TestValidateLogin:
-    """Test the validate_login method."""
+class TestConfigFlowApiValidateLogin:
+    """Tests for DiveraConfigFlowAPI.validate_login."""
 
     @pytest.fixture
     def mock_session(self) -> MagicMock:
@@ -42,7 +43,7 @@ class TestValidateLogin:
         }
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -50,12 +51,14 @@ class TestValidateLogin:
         assert len(clusters) == 2
         assert clusters["123"] == {
             D_CLUSTER_NAME: "Test Cluster",
+            D_CLUSTER_ID: "group1",
             D_UCR_ID: "123",
             D_API_KEY: "test_api_key",
             D_USERGROUP_ID: "group1",
         }
         assert clusters["456"] == {
             D_CLUSTER_NAME: "Another Cluster",
+            D_CLUSTER_ID: "group2",
             D_UCR_ID: "456",
             D_API_KEY: "test_api_key",
             D_USERGROUP_ID: "group2",
@@ -70,7 +73,7 @@ class TestValidateLogin:
         }
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "wrong", "password": "wrong"}, BASE_API_URL
         )
 
@@ -83,7 +86,7 @@ class TestValidateLogin:
         """Test login validation with connection error."""
         mock_session.post.side_effect = ClientError("Connection failed")
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -94,7 +97,7 @@ class TestValidateLogin:
         """Test login validation with timeout error."""
         mock_session.post.side_effect = TimeoutError("Request timed out")
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -109,7 +112,7 @@ class TestValidateLogin:
         mock_response.json.side_effect = TypeError("Invalid JSON")
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -122,7 +125,7 @@ class TestValidateLogin:
         """Test login validation with unexpected error."""
         mock_session.post.side_effect = Exception("Unexpected error")
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -138,7 +141,7 @@ class TestValidateLogin:
         }
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -163,7 +166,7 @@ class TestValidateLogin:
         }
         mock_session.post.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_login(
+        errors, clusters = await DiveraConfigFlowAPI.validate_login(
             {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
         )
 
@@ -171,8 +174,8 @@ class TestValidateLogin:
         assert clusters == {}  # Should not include cluster without ID
 
 
-class TestValidateApiKey:
-    """Test the validate_api_key method."""
+class TestConfigFlowApiValidateApiKey:
+    """Tests for DiveraConfigFlowAPI.validate_api_key."""
 
     @pytest.fixture
     def mock_session(self) -> MagicMock:
@@ -193,7 +196,7 @@ class TestValidateApiKey:
         }
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
@@ -201,12 +204,14 @@ class TestValidateApiKey:
         assert len(clusters) == 2
         assert clusters["123"] == {
             D_CLUSTER_NAME: "Test Cluster",
+            D_CLUSTER_ID: "group1",
             D_UCR_ID: "123",
             D_API_KEY: "test_key",
             D_USERGROUP_ID: "group1",
         }
         assert clusters["456"] == {
             D_CLUSTER_NAME: "Another Cluster",
+            D_CLUSTER_ID: "group2",
             D_UCR_ID: "456",
             D_API_KEY: "test_key",
             D_USERGROUP_ID: "group2",
@@ -219,7 +224,7 @@ class TestValidateApiKey:
         mock_response.json.return_value = {"message": "Invalid API key"}
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "invalid_key"}, BASE_API_URL
         )
 
@@ -232,7 +237,7 @@ class TestValidateApiKey:
         """Test API key validation with connection error."""
         mock_session.request.side_effect = ClientError("Connection failed")
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
@@ -245,7 +250,7 @@ class TestValidateApiKey:
         """Test API key validation with timeout error."""
         mock_session.request.side_effect = TimeoutError("Request timed out")
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
@@ -261,7 +266,7 @@ class TestValidateApiKey:
         mock_response.json.side_effect = TypeError("Invalid JSON")
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
@@ -274,7 +279,7 @@ class TestValidateApiKey:
         """Test API key validation with unexpected error."""
         mock_session.request.side_effect = Exception("Unexpected error")
 
-        errors, clusters = await DiveraCredentials.validate_api_key(
+        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
             {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
         )
 
@@ -282,41 +287,41 @@ class TestValidateApiKey:
         assert clusters == {}
 
 
-class TestFormatAuthErrors:
-    """Test the _format_auth_errors method."""
+class TestConfigFlowApiFormatAuthErrors:
+    """Tests for DiveraConfigFlowAPI.format_auth_errors."""
 
     def test_format_auth_errors_list(self) -> None:
         """Test formatting list of errors."""
         raw_errors = ["Error 1", "Error 2", "Error 3"]
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "Error 1; Error 2; Error 3"}
 
     def test_format_auth_errors_dict_strings(self) -> None:
         """Test formatting dict with string values."""
         raw_errors = {"field1": "Error 1", "field2": "Error 2"}
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "Error 1; Error 2"}
 
     def test_format_auth_errors_dict_lists(self) -> None:
         """Test formatting dict with list values."""
         raw_errors = {"field1": ["Error 1", "Error 2"], "field2": "Error 3"}
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "Error 1; Error 2; Error 3"}
 
     def test_format_auth_errors_dict_mixed(self) -> None:
         """Test formatting dict with mixed value types."""
         raw_errors = {"field1": "Error 1", "field2": ["Error 2", 123], "field3": None}
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "Error 1; Error 2; 123; None"}
 
     def test_format_auth_errors_string(self) -> None:
         """Test formatting string error."""
         raw_errors = "Single error message"
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "Single error message"}
 
     def test_format_auth_errors_other_type(self) -> None:
         """Test formatting other types (converted to string)."""
         raw_errors = 123
-        result = DiveraCredentials._format_auth_errors(raw_errors)
+        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
         assert result == {"base": "123"}

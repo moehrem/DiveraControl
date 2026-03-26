@@ -71,7 +71,7 @@ class TestDiveraAPIInit:
 
 
 class TestAPIRequest:
-    """Tests for api_request method."""
+    """Tests for _api_request method."""
 
     async def test_successful_get_request(
         self, hass: HomeAssistant, api_client: DiveraAPI
@@ -87,7 +87,7 @@ class TestAPIRequest:
             mock_request.return_value.__aenter__ = AsyncMock(return_value=mock_response)
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
-            result = await api_client.api_request("/endpoint", "GET")
+            result = await api_client._api_request("/endpoint", "GET")
 
             assert result == {"success": True, "data": "test"}
             mock_request.assert_called_once()
@@ -111,7 +111,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             payload = {"title": "Test", "message": "Test message"}
-            await api_client.api_request("/endpoint", "POST", payload=payload)
+            await api_client._api_request("/endpoint", "POST", payload=payload)
 
             # Check positional and keyword arguments
             call_args = mock_request.call_args[0]
@@ -138,7 +138,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryAuthFailed) as exc_info:
-                await api_client.api_request("/endpoint", "GET")
+                await api_client._api_request("/endpoint", "GET")
 
             assert "Invalid API key" in str(exc_info.value)
             assert "123456" in str(exc_info.value)
@@ -159,7 +159,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryNotReady) as exc_info:
-                await api_client.api_request("/endpoint", "GET")
+                await api_client._api_request("/endpoint", "GET")
 
             assert "Divera API unavailable" in str(exc_info.value)
             assert "500" in str(exc_info.value)
@@ -175,7 +175,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(ConfigEntryNotReady) as exc_info:
-                await api_client.api_request("/endpoint", "GET")
+                await api_client._api_request("/endpoint", "GET")
 
             assert "Timeout connecting" in str(exc_info.value)
 
@@ -196,7 +196,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(HomeAssistantError) as exc_info:
-                await api_client.api_request("/endpoint", "GET")
+                await api_client._api_request("/endpoint", "GET")
 
             assert "Failed to connect to Divera API" in str(exc_info.value)
 
@@ -216,7 +216,7 @@ class TestAPIRequest:
             mock_request.return_value.__aexit__ = AsyncMock(return_value=None)
 
             with pytest.raises(HomeAssistantError) as exc_info:
-                await api_client.api_request("/endpoint", "GET")
+                await api_client._api_request("/endpoint", "GET")
 
             assert "Divera API error" in str(exc_info.value)
             assert "404" in str(exc_info.value)
@@ -228,13 +228,13 @@ class TestAPIEndpoints:
     async def test_get_ucr_data(
         self, hass: HomeAssistant, api_client: DiveraAPI
     ) -> None:
-        """Test get_ucr_data method."""
+        """Test get_pull_all method."""
         expected_data = {"cluster": {"name": "Test Cluster"}, "users": []}
 
         with patch.object(
-            api_client, "api_request", return_value=expected_data
+            api_client, "_api_request", return_value=expected_data
         ) as mock_request:
-            result = await api_client.get_ucr_data()
+            result = await api_client.get_pull_all()
 
             assert result == expected_data
             mock_request.assert_called_once()
@@ -252,7 +252,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_vehicle_status(vehicle_id, payload)
 
@@ -272,7 +272,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_alarms(payload)
 
@@ -290,7 +290,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.put_alarms(alarm_id, payload)
 
@@ -311,7 +311,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_close_alarm(payload, alarm_id)
 
@@ -332,7 +332,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_message(payload)
 
@@ -353,7 +353,7 @@ class TestAPIEndpoints:
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
             patch.object(
-                api_client, "api_request", return_value=expected_data
+                api_client, "_api_request", return_value=expected_data
             ) as mock_request,
         ):
             result = await api_client.get_vehicle_property(vehicle_id)
@@ -376,7 +376,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_property(vehicle_id, payload)
 
@@ -398,7 +398,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "add", payload)
 
@@ -420,7 +420,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "remove", payload)
 
@@ -439,7 +439,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_using_vehicle_crew(vehicle_id, "reset", payload)
 
@@ -471,7 +471,7 @@ class TestAPIEndpoints:
 
         with (
             patch.object(api_client.permissions, "check") as mock_perm,
-            patch.object(api_client, "api_request") as mock_request,
+            patch.object(api_client, "_api_request") as mock_request,
         ):
             await api_client.post_news(payload)
 

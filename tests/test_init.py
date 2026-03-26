@@ -15,10 +15,17 @@ from custom_components.diveracontrol import (
 )
 from custom_components.diveracontrol.const import (
     D_API_KEY,
+    D_BASE_API_URL,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
+    D_RELATIONS_KEY,
     D_UCR_ID,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
+    D_USE_WEBHOOKS,
+    D_USERGROUP_ID,
     DOMAIN,
 )
 
@@ -140,6 +147,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
             D_API_KEY: "test_key",
         },
     )
+    config_entry.add_to_hass(hass)
 
     with (
         patch("custom_components.diveracontrol.DiveraAPI") as mock_api_class,
@@ -152,6 +160,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
     ):
         mock_api = mock_api_class.return_value
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.cluster_id = "cluster_1"
 
         # Setup successful coordinator refresh
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
@@ -263,3 +272,140 @@ async def test_async_migrate_entry_v1_2_0(hass: HomeAssistant) -> None:
         assert old_entry.minor_version == 2
         assert D_INTEGRATION_VERSION in old_entry.data
         assert old_entry.data[D_INTEGRATION_VERSION] == "1.2.0"
+
+
+async def test_async_migrate_entry_v1_4_to_v2_success(
+    hass: HomeAssistant,
+) -> None:
+    """Test migration from v1.4.x to v2.0.0 using UCR-based cluster matching."""
+    old_ucr_id = "123456"
+    old_entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Legacy Cluster",
+        data={
+            D_UCR_ID: old_ucr_id,
+            D_CLUSTER_NAME: "Legacy Cluster",
+            D_API_KEY: "legacy_api_key",
+            D_BASE_API_URL: "https://app.divera247.com/",
+            D_UPDATE_INTERVAL_DATA: 90,
+            D_UPDATE_INTERVAL_ALARM: 45,
+            D_USE_WEBHOOKS: True,
+            D_INTEGRATION_VERSION: "1.4.0",
+        },
+        version=1,
+        minor_version=4,
+    )
+    old_entry.add_to_hass(hass)
+
+    clusters = {
+        "11111": {
+            D_CLUSTER_ID: "11111",
+            D_CLUSTER_NAME: "Legacy Cluster",
+            D_BASE_API_URL: "https://app.divera247.com/",
+            D_UPDATE_INTERVAL_DATA: None,
+            D_UPDATE_INTERVAL_ALARM: None,
+            D_INTEGRATION_VERSION: "2.0.0",
+            D_USE_WEBHOOKS: None,
+            D_RELATIONS_KEY: {
+                old_ucr_id: {
+                    D_UCR_ID: old_ucr_id,
+                    D_API_KEY: "legacy_api_key",
+                    D_USERGROUP_ID: "445566",
+                }
+            },
+        },
+        "22222": {
+            D_CLUSTER_ID: "22222",
+            D_CLUSTER_NAME: "Other Cluster",
+            D_BASE_API_URL: "https://app.divera247.com/",
+            D_UPDATE_INTERVAL_DATA: None,
+            D_UPDATE_INTERVAL_ALARM: None,
+            D_INTEGRATION_VERSION: "2.0.0",
+            D_USE_WEBHOOKS: None,
+            D_RELATIONS_KEY: {
+                "999999": {
+                    D_UCR_ID: "999999",
+                    D_API_KEY: "legacy_api_key",
+                    D_USERGROUP_ID: "778899",
+                }
+            },
+        },
+    }
+
+    with (
+        patch(
+            "custom_components.diveracontrol.async_get_clientsession",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.diveracontrol.divera_api.DiveraConfigFlowAPI.validate_api_key",
+            new=AsyncMock(return_value=({}, clusters)),
+        ),
+        patch("custom_components.diveracontrol.ir.async_create_issue") as mock_issue,
+    ):
+        result = await async_migrate_entry(hass, old_entry)
+
+    assert result is True
+    assert old_entry.version == 2
+    assert old_entry.minor_version == 0
+    assert old_entry.data[D_CLUSTER_ID] == "11111"
+    assert old_entry.data[D_RELATIONS_KEY][old_ucr_id][D_UCR_ID] == old_ucr_id
+    assert old_entry.data[D_UPDATE_INTERVAL_DATA] == 90
+    assert old_entry.data[D_UPDATE_INTERVAL_ALARM] == 45
+    assert old_entry.data[D_USE_WEBHOOKS] is True
+
+    # Ensure breaking-change hint for successful migration was created.
+    assert any(
+        call.args[2].startswith("breaking_changes_v2_0_0_")
+        for call in mock_issue.call_args_list
+    )
+
+
+async def test_async_migrate_entry_v1_4_to_v2_validation_failure(
+    hass: HomeAssistant,
+) -> None:
+    """Test migration aborts without version bump when API validation fails."""
+    old_entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Legacy Cluster",
+        data={
+            D_UCR_ID: "123456",
+            D_CLUSTER_NAME: "Legacy Cluster",
+            D_API_KEY: "legacy_api_key",
+            D_BASE_API_URL: "https://app.divera247.com/",
+            D_UPDATE_INTERVAL_DATA: 90,
+            D_UPDATE_INTERVAL_ALARM: 45,
+            D_USE_WEBHOOKS: False,
+            D_INTEGRATION_VERSION: "1.4.0",
+        },
+        version=1,
+        minor_version=4,
+    )
+    old_entry.add_to_hass(hass)
+
+    with (
+        patch(
+            "custom_components.diveracontrol.async_get_clientsession",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "custom_components.diveracontrol.divera_api.DiveraConfigFlowAPI.validate_api_key",
+            new=AsyncMock(return_value=({"base": "cannot_connect"}, {})),
+        ),
+        patch("custom_components.diveracontrol.ir.async_create_issue") as mock_issue,
+    ):
+        result = await async_migrate_entry(hass, old_entry)
+
+    assert result is False
+    assert old_entry.version == 1
+    assert old_entry.minor_version == 4
+    assert old_entry.data[D_UCR_ID] == "123456"
+
+    # Ensure migration-failed issue was created and success hint was not.
+    issue_ids = [call.args[2] for call in mock_issue.call_args_list]
+    assert any(
+        issue_id.startswith("migration_failed_v2_0_0_") for issue_id in issue_ids
+    )
+    assert not any(
+        issue_id.startswith("breaking_changes_v2_0_0_") for issue_id in issue_ids
+    )

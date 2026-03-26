@@ -18,6 +18,7 @@ from .const import (
     I_CLOSED_ALARM,
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
+    I_VEHICLE,
 )
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
@@ -31,13 +32,12 @@ class DiveraAlarmTrackerManager:
     def __init__(
         self,
         coordinator: DiveraCoordinator,
-        ucr_id: str,
         async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize alarm tracker manager."""
         self.coordinator = coordinator
         self.hass = coordinator.hass
-        self._ucr_id = ucr_id
+        self._ucr_id = self.coordinator.ucr_id
         self._async_add_entities = async_add_entities
         self._known_alarm_ids: set[str] = set()
         self._unsub: Callable[[], None] | None = None
@@ -98,13 +98,12 @@ class DiveraVehicleTrackerManager:
     def __init__(
         self,
         coordinator: DiveraCoordinator,
-        ucr_id: str,
         async_add_entities: AddEntitiesCallback,
     ) -> None:
         """Initialize vehicle tracker manager."""
         self.coordinator = coordinator
         self.hass = coordinator.hass
-        self._ucr_id = ucr_id
+        self._ucr_id = self.coordinator.ucr_id
         self._async_add_entities = async_add_entities
         self._known_vehicle_ids: set[str] = set()
         self._unsub: Callable[[], None] | None = None
@@ -185,27 +184,27 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
         except KeyError:
             return None
 
-    @property  # type: ignore[override]
-    def available(self) -> bool:  # type: ignore[override]
+    @property
+    def available(self) -> bool:
         """Return if entity is available."""
         return super().available and self._get_alarm_data() is not None
 
     @property
-    def latitude(self) -> float | None:  # type: ignore[override]
+    def latitude(self) -> float | None:
         """Return latitude of the alarm location."""
         if alarm_data := self._get_alarm_data():
             return alarm_data.get("lat", 0)
         return None
 
     @property
-    def longitude(self) -> float | None:  # type: ignore[override]
+    def longitude(self) -> float | None:
         """Return longitude of the alarm location."""
         if alarm_data := self._get_alarm_data():
             return alarm_data.get("lng", 0)
         return None
 
     @property
-    def icon(self) -> str:  # type: ignore[override]
+    def icon(self) -> str:
         """Return icon of the alarm."""
         if alarm_data := self._get_alarm_data():
             _closed = alarm_data.get("closed", False)
@@ -244,13 +243,13 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         except KeyError:
             return None
 
-    @property  # type: ignore[override]
-    def available(self) -> bool:  # type: ignore[override]
+    @property
+    def available(self) -> bool:
         """Return if entity is available."""
         return super().available and self._get_vehicle_data() is not None
 
     @property
-    def name(self) -> str:  # type: ignore[override]
+    def name(self) -> str:
         """Return name of the vehicle."""
         if vehicle_data := self._get_vehicle_data():
             _shortname = vehicle_data.get("shortname", "Unknown")
@@ -259,33 +258,34 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
         return "Unknown Vehicle"
 
     @property
-    def latitude(self) -> float | None:  # type: ignore[override]
+    def latitude(self) -> float | None:
         """Return the latitude of the vehicle position."""
         if vehicle_data := self._get_vehicle_data():
             return vehicle_data.get("lat", 0)
         return None
 
     @property
-    def longitude(self) -> float | None:  # type: ignore[override]
+    def longitude(self) -> float | None:
         """Return the longitude of the vehicle position."""
         if vehicle_data := self._get_vehicle_data():
             return vehicle_data.get("lng", 0)
         return None
 
     @property
-    def icon(self) -> str:  # type: ignore[override]
+    def icon(self) -> str:
         """Return icon of the vehicle tracker."""
-        if vehicle_data := self._get_vehicle_data():
-            _veh_status = vehicle_data.get("fmsstatus_id", "unknown")
-            return (
-                "mdi:help-box"
-                if _veh_status == "unknown"
-                else f"mdi:numeric-{_veh_status}-box"
-            )
-        return "mdi:help-box"
+        vehicle_data = self._get_vehicle_data()
+        if vehicle_data is None:
+            return I_VEHICLE
+
+        veh_status = vehicle_data.get("fmsstatus_id")
+        if veh_status is None:
+            return I_VEHICLE
+
+        return f"mdi:numeric-{veh_status}-box-outline"
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:  # type: ignore[override]
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes for vehicle tracker."""
         if vehicle_data := self._get_vehicle_data():
             _fms_items = (
