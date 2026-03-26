@@ -136,6 +136,7 @@
   },
   "device_automation": {
     "action_type": {
+      "request_refresh": "Datenaktualisierung anfordern",
       "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
       "post_alarm": "Alarm erstellen",
       "put_alarm": "Alarm ändern",
@@ -333,9 +334,16 @@
     },
     "invalid_number_of_vehicles": {
       "message": "Ungültige Anzahl von Fahrzeugen angegeben. Es muss genau ein Fahrzeug angegeben werden, es wurden {num_vehicles} angegeben."
+    },
+    "api_request_refresh_failed": {
+      "message": "Aktualisieren der Divera-Daten fehlgeschlagen: {err}"
     }
   },
   "services": {
+    "request_refresh": {
+      "name": "Datenaktualisierung anfordern",
+      "description": "Löst für das ausgewählte Gerät eine sofortige Aktualisierung aller Divera-Daten aus."
+    },
     "post_vehicle_status": {
       "name": "Fahrzeugstatus und -daten ändern",
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",

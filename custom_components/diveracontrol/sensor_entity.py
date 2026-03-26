@@ -456,11 +456,10 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
     def _get_alarm_data(self) -> dict[str, Any] | None:
         """Get alarm data safely, return None if alarm doesn't exist."""
 
-        try:
-            last_alarm_id = self.coordinator.data.get(D_ALARM, {}).get(
-                "sorting", [None]
-            )[0]
-        except IndexError:
+        sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
+        if isinstance(sorting, list) and sorting:
+            last_alarm_id = sorting[0]
+        else:
             last_alarm_id = None
 
         if last_alarm_id is None:

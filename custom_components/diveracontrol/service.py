@@ -763,6 +763,35 @@ async def handle_post_user_status(
         raise
 
 
+async def handle_request_refresh(
+    hass: HomeAssistant,
+    call: ServiceCall,
+) -> None:
+    """Trigger an immediate coordinator refresh for one device."""
+
+    data: dict[str, Any] = normalize_service_call_data(call.data)
+    device_id = data.get("device_id")
+    if not isinstance(device_id, str):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_device_id",
+        )
+
+    coordinator = get_ucr_data_from_device(hass, device_id)
+
+    try:
+        await coordinator.async_request_refresh()
+    except Exception as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_request_refresh_failed.message",
+            {"err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from err
+
+
 def async_register_services(hass: HomeAssistant, domain: str) -> None:
     """Register services for DiveraControl.
 
@@ -773,6 +802,7 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
     service_handlers: dict[
         str, Callable[[HomeAssistant, ServiceCall], Coroutine[Any, Any, None]]
     ] = {
+        "request_refresh": handle_request_refresh,
         "post_vehicle_status": handle_post_vehicle_status,
         "post_alarm": handle_post_alarm,
         "put_alarm": handle_put_alarm,

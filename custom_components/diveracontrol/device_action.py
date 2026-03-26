@@ -11,6 +11,7 @@ from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
 from homeassistant.core import Context, HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, selector
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -18,7 +19,6 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
     SelectOptionDict,
 )
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN,
@@ -26,12 +26,13 @@ from .const import (
     PERM_MANAGEMENT,
     PERM_MESSAGES,
     PERM_NEWS,
-    PERM_STATUS_VEHICLE,
     PERM_STATUS_USER,
+    PERM_STATUS_VEHICLE,
 )
-from .utils import get_ucr_data_from_device, get_translation
+from .utils import get_translation, get_ucr_data_from_device
 
 ACTION_TYPES: tuple[str, ...] = (
+    "request_refresh",
     "post_vehicle_status",
     "post_alarm",
     "put_alarm",
@@ -195,21 +196,23 @@ async def async_get_actions(
 
     permissions = api.permissions
 
-    action_types: list[str] = []
+    action_types: list[str] = ["request_refresh"]
 
     try:
         permissions.check(PERM_MANAGEMENT)
-        action_types = [
-            "post_vehicle_status",
-            "post_alarm",
-            "put_alarm",
-            "post_close_alarm",
-            "post_message",
-            "post_using_vehicle_property",
-            "post_using_vehicle_crew",
-            "post_news",
-            "post_user_status",
-        ]
+        action_types.extend(
+            [
+                "post_vehicle_status",
+                "post_alarm",
+                "put_alarm",
+                "post_close_alarm",
+                "post_message",
+                "post_using_vehicle_property",
+                "post_using_vehicle_crew",
+                "post_news",
+                "post_user_status",
+            ]
+        )
     except HomeAssistantError:
         try:
             permissions.check(PERM_STATUS_VEHICLE)

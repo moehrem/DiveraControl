@@ -587,9 +587,9 @@ class DiveraConfigFlowAPI:
 
             clusters = self._map_to_clusters(data_pull_all, api_key)
 
-        except (ClientError, TimeoutError):
+        except ClientError, TimeoutError:
             validation_errors["base"] = "cannot_connect"
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             validation_errors["base"] = "no_data"
         except Exception:
             validation_errors["base"] = "unknown"

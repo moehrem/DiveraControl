@@ -139,6 +139,7 @@
   },
   "device_automation": {
     "action_type": {
+      "request_refresh": "Request data refresh",
       "post_vehicle_status": "Change vehicle status and data",
       "post_alarm": "Create alarm",
       "put_alarm": "Change alarm",
@@ -336,9 +337,16 @@
     },
     "invalid_number_of_vehicles": {
       "message": "Invalid number of vehicles provided. Exactly one vehicle must be specified, {num_vehicles} were provided"
+    },
+    "api_request_refresh_failed": {
+      "message": "Refreshing Divera data failed: {err}"
     }
   },
   "services": {
+    "request_refresh": {
+      "name": "Request data refresh",
+      "description": "Triggers an immediate refresh of all Divera data for the selected device."
+    },
     "post_vehicle_status": {
       "name": "Change vehicle status and data",
       "description": "Updates vehicle status and data in Divera 24/7.",
