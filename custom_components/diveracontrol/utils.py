@@ -221,7 +221,7 @@ async def handle_entity(
                     continue
                 try:
                     crew_id = int(raw_id)
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     # skip malformed entries
                     continue
                 current_crew.add(crew_id)
