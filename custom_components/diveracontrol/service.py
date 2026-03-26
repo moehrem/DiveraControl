@@ -161,7 +161,7 @@ POST_NEWS_VALIDATION_RULES = {
 
 POST_USER_STATUS_VALIDATION_RULES = {
     "id": {
-        "condition": lambda data: not data.get("id"),
+        "condition": lambda data: data.get("id") is None,
         "error_key": "no_status_id",
     }
 }
