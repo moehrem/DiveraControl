@@ -3,7 +3,17 @@
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, VERSION, MINOR_VERSION, PATCH_VERSION, CONF_URL, BASE_API_URL
+from .const import (
+    D_CLUSTER,
+    DOMAIN,
+    VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
+    CONF_URL,
+    BASE_API_URL,
+    D_USER,
+    D_SHORTNAME,
+)
 from .coordinator import DiveraCoordinator
 # from .utils import get_user_device_info
 
@@ -20,6 +30,13 @@ class BaseDiveraEntity(CoordinatorEntity):
         self.ucr_id = coordinator.ucr_id
         self.user_name = coordinator.user_name
 
+        self.user_shortname = coordinator.data.get(D_USER, {}).get(
+            D_SHORTNAME, self.user_name
+        )
+        self.cluster_shortname = coordinator.data.get(D_CLUSTER, {}).get(
+            D_SHORTNAME, self.cluster_name
+        )
+
         self._attr_device_info = self._get_device_info()
 
     def _get_device_info(self) -> DeviceInfo:
@@ -28,9 +45,9 @@ class BaseDiveraEntity(CoordinatorEntity):
         return {
             "identifiers": {(DOMAIN, self.ucr_id)},
             "configuration_url": f"{BASE_API_URL}{CONF_URL}",
-            "name": self.user_name,
-            "model_id": self.ucr_id,
             "model": self.user_name,
+            "model_id": self.ucr_id,
+            "name": f"{self.user_name} ({self.cluster_shortname})",
             "manufacturer": f"{self.cluster_name} ({self.cluster_id})",
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
         }
