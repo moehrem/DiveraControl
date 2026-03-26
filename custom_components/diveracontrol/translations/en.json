@@ -69,7 +69,7 @@
       "title": "Action required: **{cluster_name}**",
       "description": "You have upgraded DiveraControl for **{cluster_name}** from version 1.1 or earlier to version 1.2.0.\n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
     },
-    "migration_failed_v2.0.0": {
+    "migration_failed_v2_0_0": {
       "title": "Migration failed: **{cluster_name}**",
       "description": "An attempt was made to migrate the configuration of **{cluster_name}** to version 2.0.0, but it failed. Please check the logs for details and reconfigure the integration if necessary. Easiest way would be to remove and reinstall the integration. \n\n**Important:** This version includes breaking changes in all service calls and device actions.\n\n**What you need to do:**\n1. Review all automations that use DiveraControl services\n2. Check all device actions in your automations\n3. Update the parameter names according to the new schema\n4. Test all automations and other service calls to ensure functionality\n\n**Note:** This notification will remain until you dismiss it after reviewing your automations."
     },

@@ -90,6 +90,8 @@ async def async_setup_entry(
         ucr_id = relation.get(D_UCR_ID)
         api_key = relation.get(D_API_KEY)
 
+        api: DiveraAPI | None = None
+
         try:
             api = DiveraAPI(
                 hass,
@@ -111,7 +113,8 @@ async def async_setup_entry(
             config_entry.async_on_unload(api.close)
 
         except (TimeoutError, ConnectionError) as err:
-            await api.close()
+            if api is not None:
+                await api.close()
             _LOGGER.error(
                 "Connection failed for user %s: %s (%s)",
                 ucr_id,
@@ -120,7 +123,8 @@ async def async_setup_entry(
             )
             continue
         except ConfigEntryAuthFailed as err:
-            await api.close()
+            if api is not None:
+                await api.close()
             _LOGGER.error(
                 "Authentication failed for user %s: %s (%s)",
                 ucr_id,
@@ -129,7 +133,8 @@ async def async_setup_entry(
             )
             continue
         except Exception:
-            await api.close()
+            if api is not None:
+                await api.close()
             _LOGGER.exception(
                 "Unexpected error during setup for user %s (%s)",
                 ucr_id,
@@ -403,7 +408,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
         config_api = DiveraConfigFlowAPI(session, base_api_url)
-        validation_errors, clusters = await config_api.validate_access(user_input)
+        validation_errors, clusters = await config_api.request_access(user_input)
 
         if validation_errors:
             _LOGGER.error(
@@ -430,6 +435,25 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
             None,
         )
+
+        if migrated_cluster is None:
+            _LOGGER.error(
+                "Migration failed: no cluster mapping found for ucr_id %s in entry %s",
+                ucr_id,
+                config_entry.entry_id,
+            )
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"migration_failed_v2_0_0_{config_entry.entry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="migration_failed_v2_0_0",
+                translation_placeholders={
+                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+                },
+            )
+            return False
 
         # set missing parameters
         migrated_cluster[D_UPDATE_INTERVAL_ALARM] = config_entry.data.get(

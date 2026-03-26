@@ -56,7 +56,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         """
 
         self.session: aiohttp.ClientSession | None = None
-        self.reconf_config_entry: ConfigEntry | None = None
+        self.old_config_entry: ConfigEntry | None = None
+        self.new_config_entry: dict[str, Any] | None = None
+        self._selected_ucr_id: str | None = None
         self.final_entry: dict[str, Any] | None = None
         self.possible_entries: dict[str, dict[str, Any]] = {}
         self.errors: dict[str, str] = {}
@@ -175,16 +177,39 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         """
 
-        entry_id: str | None = self.context.get("entry_id")
-        self.old_config_entry = self.hass.config_entries.async_get_entry(entry_id)
-        self.new_config_entry = {
-            **self.old_config_entry.data,
-        }
+        # Load existing entry only once; subsequent calls must not reset accumulated changes.
+        if self.old_config_entry is None:
+            entry_id: str | None = self.context.get("entry_id")
+            if not entry_id:
+                return self.async_abort(reason="unknown_entry")
+            self.old_config_entry = self.hass.config_entries.async_get_entry(entry_id)
+            if self.old_config_entry is None:
+                return self.async_abort(reason="unknown_entry")
+            self.new_config_entry = dict(self.old_config_entry.data)
 
         # 1. show form with general cluster configuration (base api url, update intervals)
         if user_input is None:
             return self._step_reconfigure_cluster()
 
+        # 3. returning from the UCR form – persist the updated API key
+        if self._selected_ucr_id is not None:
+            new_api_key = user_input.get(D_API_KEY)
+            relations: dict[str, Any] = dict(
+                self.new_config_entry.get(D_RELATIONS_KEY, {})
+            )
+            if self._selected_ucr_id in relations:
+                ucr: dict[str, Any] = dict(relations[self._selected_ucr_id])
+                ucr[D_API_KEY] = new_api_key
+                relations[self._selected_ucr_id] = ucr
+            self.new_config_entry[D_RELATIONS_KEY] = relations
+            return self.async_update_reload_and_abort(
+                self.old_config_entry,
+                data=self.new_config_entry,
+                title=self.new_config_entry.get(D_CLUSTER_NAME, DOMAIN),
+                reason="reconfigure_successful",
+            )
+
+        # 2. returning from the cluster form – apply general settings
         self.new_config_entry[D_BASE_API_URL] = user_input.get(D_BASE_API_URL)
         self.new_config_entry[D_UPDATE_INTERVAL_DATA] = user_input.get(
             D_UPDATE_INTERVAL_DATA
@@ -193,13 +218,11 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             D_UPDATE_INTERVAL_ALARM
         )
 
-        # 2. if user selected an ucr_id, show api key of respective ucr
+        # if user selected a ucr_id, show api key form for that UCR
         selected_ucr_id = user_input.get(D_UCR_ID)
         if selected_ucr_id:
+            self._selected_ucr_id = selected_ucr_id
             return self._step_reconfigure_ucr(selected_ucr_id)
-
-        new_api_key = user_input.get(D_API_KEY)
-        self.new_config_entry[D_RELATIONS_KEY][D_API_KEY] = new_api_key
 
         return self.async_update_reload_and_abort(
             self.old_config_entry,

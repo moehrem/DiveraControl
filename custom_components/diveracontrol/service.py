@@ -191,7 +191,11 @@ def _validate_data(data: dict[str, Any], rules: dict[str, dict]) -> None:
             )
 
 
-def _prepare_data(hass, call_data: dict[str, Any]) -> tuple[dict[str, Any], DiveraAPI]:
+def _prepare_data(
+    hass: HomeAssistant,
+    call_data: dict[str, Any],
+    validation_rules: dict[str, dict] | None = None,
+) -> tuple[dict[str, Any], DiveraAPI]:
     """Prepare data for API call.
 
     This includes validation, extracting necessary information and building the payload.
@@ -199,19 +203,26 @@ def _prepare_data(hass, call_data: dict[str, Any]) -> tuple[dict[str, Any], Dive
     Args:
         hass: HomeAssistant instance.
         call_data: Raw service call data.
+        validation_rules: Validation rules specific to the calling handler.
 
     Returns:
         Tuple of (prepared data dict, DiveraAPI instance)
 
     """
 
-    # check mandatory fields
     data: dict[str, Any] = normalize_service_call_data(call_data)
-    _validate_data(data, POST_USER_STATUS_VALIDATION_RULES)
 
-    # get api instance
+    if validation_rules:
+        _validate_data(data, validation_rules)
+
     device_id = data.get("device_id")
-    api = get_ucr_data_from_device(hass, device_id, "api")
+    if not isinstance(device_id, str):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_device_id",
+        )
+
+    api: DiveraAPI = get_ucr_data_from_device(hass, device_id, "api")
 
     return data, api
 
@@ -355,7 +366,7 @@ async def handle_post_vehicle_status(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_VEHICLE_VALIDATION_RULES)
 
     # create payload
     # payload: dict[str, Any] = {k: v for k, v in data.items() if v is not None}
@@ -400,7 +411,7 @@ async def handle_post_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_ALARM_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -437,7 +448,7 @@ async def handle_put_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, PUT_ALARM_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -474,7 +485,7 @@ async def handle_post_close_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_CLOSE_ALARM_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -511,7 +522,7 @@ async def handle_post_message(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_MESSAGE_VALIDATION_RULES)
 
     # Determine message_channel_id from alarm_id if not given
     message_channel_id: int = data.get("message_channel_id") or 0
@@ -579,7 +590,7 @@ async def handle_post_using_vehicle_property(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_VEHICLE_VALIDATION_RULES)
 
     # create payload
     vehicle_ids_raw = data.get("vehicle")
@@ -628,7 +639,7 @@ async def handle_post_using_vehicle_crew(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_USING_VEHICLE_CREW_VALIDATION_RULES)
 
     # create payload
     vehicle_ids_raw = data.get("vehicle")
@@ -684,7 +695,7 @@ async def handle_post_news(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_NEWS_VALIDATION_RULES)
 
     # create payload
     survey_flag = data.get("survey") or False
@@ -732,7 +743,7 @@ async def handle_post_user_status(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data)
+    data, api = _prepare_data(hass, call.data, POST_USER_STATUS_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Status": data})
