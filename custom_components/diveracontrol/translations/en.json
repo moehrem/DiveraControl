@@ -138,6 +138,10 @@
     }
   },
   "device_automation": {
+    "trigger_type": {
+      "new_alarm": "New alarm received",
+      "all_alarms_closed": "All alarms closed"
+    },
     "action_type": {
       "request_refresh": "Request data refresh",
       "post_vehicle_status": "Change vehicle status and data",
@@ -345,7 +349,7 @@
   "services": {
     "request_refresh": {
       "name": "Request data refresh",
-      "description": "Triggers an immediate refresh of all Divera data for the selected device."
+      "description": "Triggers an immediate refresh of all Divera data for the selected user device."
     },
     "post_vehicle_status": {
       "name": "Change vehicle status and data",

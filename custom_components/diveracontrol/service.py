@@ -785,16 +785,6 @@ async def handle_request_refresh(
 ) -> None:
     """Trigger an immediate coordinator refresh for one device."""
 
-    # data: dict[str, Any] = normalize_service_call_data(call.data)
-    # device_id = data.get("device_id")
-    # if not isinstance(device_id, str):
-    #     raise ServiceValidationError(
-    #         translation_domain=DOMAIN,
-    #         translation_key="no_device_id",
-    #     )
-
-    # coordinator = get_ucr_data_from_device(hass, device_id)
-
     # prepare data
     _, coordinator, _ = _prepare_data(hass, call.data)
 

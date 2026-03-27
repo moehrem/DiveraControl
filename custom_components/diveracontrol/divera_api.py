@@ -43,8 +43,8 @@ from .const import (
     PATCH_VERSION,
     PERM_ALARM,
     PERM_MESSAGES,
-    PERM_STATUS_USER,
     PERM_NEWS,
+    PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
     VERSION,
 )

@@ -135,6 +135,10 @@
     }
   },
   "device_automation": {
+    "trigger_type": {
+      "new_alarm": "Neuer Alarm eingegangen",
+      "all_alarms_closed": "Alle Alarme geschlossen"
+    },
     "action_type": {
       "request_refresh": "Datenaktualisierung anfordern",
       "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
@@ -342,7 +346,7 @@
   "services": {
     "request_refresh": {
       "name": "Datenaktualisierung anfordern",
-      "description": "Löst für das ausgewählte Gerät eine sofortige Aktualisierung aller Divera-Daten aus."
+      "description": "Löst für das ausgewählte Gerät (Nutzer) eine sofortige Aktualisierung aller Divera-Daten aus."
     },
     "post_vehicle_status": {
       "name": "Fahrzeugstatus und -daten ändern",
