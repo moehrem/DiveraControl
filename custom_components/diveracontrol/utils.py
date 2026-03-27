@@ -11,14 +11,12 @@ from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     D_ALARM,
-    D_CLUSTER,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_OPEN_ALARMS,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_VEHICLE,
     DOMAIN,
 )
 
@@ -94,171 +92,6 @@ def get_ucr_data_from_device(
             f"Key '{key}' not found in coordinator for device: {device_id}"
         )
     return getattr(coordinator, key)
-
-
-async def handle_entity(
-    hass: HomeAssistant,
-    data: dict[str, Any],
-    service: str,
-    ucr_id: str,
-    entity_id: int | str,
-) -> None:
-    """Update entity data in coordinator after service call.
-
-    Args:
-        hass: Home Assistant instance
-        data: Service call with data
-        service: Service name that was called
-        ucr_id: User cluster relation ID
-        entity_id: Entity ID to update
-
-    Raises:
-        HomeAssistantError: If service is unknown or coordinator not found
-
-    """
-    entity_id_str = str(entity_id)
-    coordinator = get_ucr_data_from_device(hass, data.get("device_id"))
-
-    if not coordinator:
-        msg = await get_translation(
-            hass,
-            "exceptions",
-            "coordinator_not_found.message",
-            {"ucr_id": ucr_id},
-        )
-        raise HomeAssistantError(msg)
-
-    # Get current coordinator data
-    coord_data = coordinator.data.copy()
-
-    match service:
-        case "put_alarm" | "post_close_alarm":
-            # Update alarm data
-            alarm_items = coord_data.get(D_ALARM, {}).get("items", {})
-            if entity_id_str not in alarm_items:
-                _LOGGER.warning(
-                    "Alarm %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            alarm_data = alarm_items[entity_id_str]
-
-            # Update only relevant fields from service call
-            for key, value in data.items():
-                if key in ("device_id", "alarm_id"):
-                    continue
-                if key in alarm_data:
-                    alarm_data[key] = value
-
-        case "post_vehicle_status":
-            # Update vehicle FMS status
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data = vehicle_items[entity_id_str]
-
-            # Update other vehicle fields
-            for key, value in data.items():
-                if key in ("device_id", "vehicle_id", "status", "status_id"):
-                    continue
-                if key in vehicle_data:
-                    vehicle_data[key] = value
-
-        case "post_using_vehicle_property":
-            # Update vehicle properties
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data = vehicle_items[entity_id_str]
-
-            # Update properties object
-            properties = data.get("properties", {})
-            if properties:
-                if "properties" not in vehicle_data:
-                    vehicle_data["properties"] = {}
-                vehicle_data["properties"].update(properties)
-
-        case "post_using_vehicle_crew":
-            # Update vehicle crew
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data_dict: dict[str, Any] = vehicle_items[entity_id_str]
-            mode: str | None = data.get("mode")
-            new_crew: list[int] = data.get("crew", [])
-
-            if "crew" not in vehicle_data_dict:
-                vehicle_data_dict["crew"] = []
-
-            # extract IDs for easier handling: iterate and cast each item
-            current_crew: set[int] = set()
-            for item in vehicle_data_dict.get("crew", []):
-                if isinstance(item, dict):
-                    raw_id = item.get("id")
-                else:
-                    raw_id = item
-                if raw_id is None:
-                    continue
-                try:
-                    crew_id = int(raw_id)
-                except (ValueError, TypeError):
-                    # skip malformed entries
-                    continue
-                current_crew.add(crew_id)
-
-            match mode:
-                case "add":
-                    current_crew.update(new_crew)
-                case "remove":
-                    current_crew.difference_update(new_crew)
-                case "reset":
-                    current_crew.clear()
-                case _:
-                    _LOGGER.warning("Unknown crew mode: %s", mode)
-
-            # convert to Divera format
-            vehicle_data_dict["crew"] = [
-                {"id": crew_id} for crew_id in sorted(current_crew)
-            ]
-
-        case _:
-            # Unknown service
-            msg = await get_translation(
-                hass,
-                "exceptions",
-                "unknown_service.message",
-                {"service": service},
-            )
-            _LOGGER.error(msg)
-            raise HomeAssistantError(msg)
-
-    # Update coordinator with modified data
-    coordinator.async_set_updated_data(coord_data)
-    _LOGGER.debug(
-        "Updated coordinator data for %s after %s service call",
-        entity_id_str,
-        service,
-    )
 
 
 def set_update_interval(
