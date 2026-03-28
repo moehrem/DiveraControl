@@ -20,5 +20,9 @@ async def async_setup_entry(
     coordinator_data = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
     coordinators: list[DiveraCoordinator] = list(coordinator_data.values())
 
-    calendar_entities = [DiveraCalendar(coordinator) for coordinator in coordinators]
-    async_add_entities(calendar_entities)
+    for coordinator in coordinators:
+        calendar_entities = [DiveraCalendar(coordinator)]
+        async_add_entities(
+            calendar_entities,
+            config_subentry_id=coordinator.subentry_id,
+        )

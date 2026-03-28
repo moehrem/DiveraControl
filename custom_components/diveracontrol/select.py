@@ -21,5 +21,10 @@ async def async_setup_entry(
     coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
-    user_status_entities = [DiveraUserStatusSelect(ucr) for ucr in ucrs]
-    async_add_entities(user_status_entities, update_before_add=False)
+    for ucr in ucrs:
+        user_status_entities = [DiveraUserStatusSelect(ucr)]
+        async_add_entities(
+            user_status_entities,
+            update_before_add=False,
+            config_subentry_id=ucr.subentry_id,
+        )

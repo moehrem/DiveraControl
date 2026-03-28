@@ -80,6 +80,7 @@ D_USE_WEBHOOKS = "use_webhooks"
 D_WEBHOOK_ID = "webhook_id"
 D_RELATIONS_KEY = "user_cluster_relations"
 D_SHORTNAME = "shortname"
+D_USERNAME = "username"
 
 # permissions
 PERM_MESSAGES = "messages"

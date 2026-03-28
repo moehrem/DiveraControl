@@ -32,10 +32,18 @@ async def async_setup_entry(
     static_sensors = []
 
     for ucr in ucrs:
+
+        def _add_for_subentry(entities: list, update_before_add: bool = False) -> None:
+            async_add_entities(
+                entities,
+                update_before_add=update_before_add,
+                config_subentry_id=ucr.subentry_id,
+            )
+
         # Create manager helpers that handle dynamic sensors
-        alarm_manager = DiveraAlarmSensorManager(ucr, async_add_entities)
-        vehicle_manager = DiveraVehicleSensorManager(ucr, async_add_entities)
-        availability_manager = DiveraAvailabilitySensorManager(ucr, async_add_entities)
+        alarm_manager = DiveraAlarmSensorManager(ucr, _add_for_subentry)
+        vehicle_manager = DiveraVehicleSensorManager(ucr, _add_for_subentry)
+        availability_manager = DiveraAvailabilitySensorManager(ucr, _add_for_subentry)
 
         # Start managers (they register listeners and create dynamic entities)
         alarm_manager.start()
@@ -47,13 +55,13 @@ async def async_setup_entry(
         config_entry.async_on_unload(vehicle_manager.stop)
         config_entry.async_on_unload(availability_manager.stop)
 
-        static_sensors.extend(
-            [
-                DiveraOpenAlarmsSensor(ucr),
-                DiveraLastAlarmSensor(ucr),
-                DiveraUnitSensor(ucr),
-                DiveraUserSensor(ucr),
-            ]
+        static_sensors = [
+            DiveraOpenAlarmsSensor(ucr),
+            DiveraLastAlarmSensor(ucr),
+            DiveraUnitSensor(ucr),
+            DiveraUserSensor(ucr),
+        ]
+        async_add_entities(
+            static_sensors,
+            config_subentry_id=ucr.subentry_id,
         )
-
-    async_add_entities(static_sensors)
