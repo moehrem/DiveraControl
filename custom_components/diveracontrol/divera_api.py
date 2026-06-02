@@ -4,7 +4,7 @@ import logging
 from typing import Any
 from urllib.parse import urlencode
 
-from aiohttp import ClientError, ClientResponseError, ClientSession, ClientTimeout
+from aiohttp import ClientError, ClientResponseError, ClientTimeout
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
@@ -25,6 +25,7 @@ from .const import (
     API_USING_VEHICLE_CREW,
     API_USING_VEHICLE_PROP,
     API_USING_VEHICLE_SET_SINGLE,
+    BASE_API_URL,
     BASE_API_V2_URL,
     D_API_KEY,
     D_BASE_API_URL,
@@ -38,14 +39,18 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USER,
+    D_USERNAME,
     D_USERGROUP_ID,
     MINOR_VERSION,
     PATCH_VERSION,
     PERM_ALARM,
     PERM_MESSAGES,
-    PERM_STATUS_USER,
     PERM_NEWS,
+    PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
+    UPDATE_INTERVAL_ALARM,
+    UPDATE_INTERVAL_DATA,
     VERSION,
 )
 from .divera_permissions import DiveraPermissions
@@ -185,9 +190,6 @@ class DiveraAPI:
             raise HomeAssistantError(
                 f"Failed to connect to Divera API at URL: {url}"
             ) from err
-
-    async def close(self) -> None:
-        """Cleanup if needed in the future - right now just implemented as a dummy to satisfy linting."""
 
     async def get_pull_all(
         self,
@@ -446,15 +448,15 @@ class DiveraAPI:
 class DiveraConfigFlowAPI:
     """API helper methods used by the config flow."""
 
-    def __init__(self, session: ClientSession, base_url: str) -> None:
+    def __init__(self, hass: HomeAssistant, base_url: str) -> None:
         """Initialize config flow API helper.
 
         Args:
-            session: aiohttp client session.
+            hass: Home Assistant instance.
             base_url: Base URL for the Divera API.
 
         """
-        self._session = session
+        self._session = async_get_clientsession(hass)
         self._base_url = base_url
 
     async def _request_pull_all(self, url: str) -> dict[str, Any]:
@@ -478,26 +480,34 @@ class DiveraConfigFlowAPI:
             return await response.json()
 
     def _map_to_clusters(
-        self, data_pull_all: dict[str, Any], api_key: str
+        self, data_pull_all: dict[str, Any], api_key: str, user_input: dict[str, Any]
     ) -> dict[str, dict[str, str]]:
         """Format cluster data from config flow validation for easier access."""
         clusters: dict[str, dict[str, str]] = {}
+
         data_ucr = data_pull_all.get(D_DATA, {}).get(D_UCR, {})
+        data_user = data_pull_all.get(D_DATA, {}).get(D_USER, {})
+        user_name = (
+            f"{data_user.get('firstname', '')} {data_user.get('lastname', '')}".strip()
+        )
 
         for ucr, data in data_ucr.items():
             cluster_id = str(data.get(D_CLUSTER_ID, ""))
             clusters[cluster_id] = {
                 D_CLUSTER_ID: cluster_id,
                 D_CLUSTER_NAME: data.get(D_NAME, ""),
-                D_BASE_API_URL: self._base_url,
-                D_UPDATE_INTERVAL_DATA: None,  # set later in config flow
-                D_UPDATE_INTERVAL_ALARM: None,  # set later in config flow
                 D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 D_RELATIONS_KEY: {
                     ucr: {
                         D_UCR_ID: ucr,
+                        D_USERNAME: user_name,
                         D_API_KEY: api_key,
                         D_USERGROUP_ID: data.get(D_USERGROUP_ID, ""),
+                        D_BASE_API_URL: user_input.get(D_BASE_API_URL),
+                        D_UPDATE_INTERVAL_DATA: user_input.get(D_UPDATE_INTERVAL_DATA),
+                        D_UPDATE_INTERVAL_ALARM: user_input.get(
+                            D_UPDATE_INTERVAL_ALARM
+                        ),
                     },
                 },
             }
@@ -585,11 +595,11 @@ class DiveraConfigFlowAPI:
                 validation_errors["base"] = str(data_pull_all.get("message", {}))
                 return validation_errors, clusters
 
-            clusters = self._map_to_clusters(data_pull_all, api_key)
+            clusters = self._map_to_clusters(data_pull_all, api_key, user_input)
 
-        except (ClientError, TimeoutError):
+        except ClientError, TimeoutError:
             validation_errors["base"] = "cannot_connect"
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             validation_errors["base"] = "no_data"
         except Exception:
             validation_errors["base"] = "unknown"

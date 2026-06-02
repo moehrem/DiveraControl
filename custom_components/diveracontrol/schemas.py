@@ -21,6 +21,7 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USERNAME,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
 )
@@ -132,24 +133,37 @@ def get_reconfigure_ucr_form_schema(selected_ucr: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(
+                D_USERNAME, default=selected_ucr.get(D_USERNAME, "")
+            ): TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
+            vol.Required(
                 D_API_KEY, default=selected_ucr.get(D_API_KEY, "")
             ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+            vol.Required(
+                D_BASE_API_URL,
+                default=selected_ucr.get(D_BASE_API_URL, BASE_API_URL),
+            ): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
+            ),
+            vol.Required(
+                D_UPDATE_INTERVAL_DATA,
+                default=selected_ucr.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_UPDATE_INTERVAL_ALARM,
+                default=selected_ucr.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                ),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
         }
     )
 
 
 def get_reconfigure_cluster_form_schema(
-    base_api_url: str,
-    interval_data: int,
-    interval_alarm: int,
     current_ucrs: dict[str, dict[str, Any]],
 ) -> vol.Schema:
     """Get the reconfigure form schema.
 
     Args:
-        base_api_url: The base API URL to access Divera API.
-        interval_data: Data update interval in case of no alarm.
-        interval_alarm: Data update interval in case of alarm.
         current_ucrs: Dictionary of current user cluster relations.
 
     Returns:
@@ -157,22 +171,15 @@ def get_reconfigure_cluster_form_schema(
 
     """
 
-    current_ucrs = [""] + list(current_ucrs.keys())
+    ucr_ids = list(current_ucrs.keys())
+    if not ucr_ids:
+        ucr_ids = [""]
 
     return vol.Schema(
         {
-            vol.Required(D_BASE_API_URL, default=base_api_url): TextSelector(
-                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
-            ),
-            vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
-                vol.Coerce(int), vol.Range(min=5)
-            ),
-            vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
-                vol.Coerce(int), vol.Range(min=5)
-            ),
-            vol.Optional(D_UCR_ID, default=current_ucrs[0]): SelectSelector(
+            vol.Required(D_UCR_ID, default=ucr_ids[0]): SelectSelector(
                 SelectSelectorConfig(
-                    options=current_ucrs,
+                    options=ucr_ids,
                     translation_key="ucr_selection",
                     multiple=False,
                     mode=SelectSelectorMode.DROPDOWN,

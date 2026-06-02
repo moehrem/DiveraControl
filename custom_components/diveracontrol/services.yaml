@@ -1,3 +1,9 @@
+request_refresh:
+  target:
+    device:
+      integration: diveracontrol
+  fields: {}
+
 post_vehicle_status:
   target:
     entity:

@@ -25,9 +25,17 @@ async def async_setup_entry(
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
     for ucr in ucrs:
+
+        def _add_for_subentry(entities: list, update_before_add: bool = False) -> None:
+            async_add_entities(
+                entities,
+                update_before_add=update_before_add,
+                config_subentry_id=ucr.subentry_id,
+            )
+
         # Create manager helpers that handle dynamic trackers
-        alarm_tracker_manager = DiveraAlarmTrackerManager(ucr, async_add_entities)
-        vehicle_tracker_manager = DiveraVehicleTrackerManager(ucr, async_add_entities)
+        alarm_tracker_manager = DiveraAlarmTrackerManager(ucr, _add_for_subentry)
+        vehicle_tracker_manager = DiveraVehicleTrackerManager(ucr, _add_for_subentry)
 
         # Start managers (they register listeners and create dynamic trackers)
         alarm_tracker_manager.start()

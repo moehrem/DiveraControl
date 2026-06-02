@@ -2,7 +2,8 @@
   "title": "DiveraControl",
   "config": {
     "step": {
-      "user": {
+      "user": {},
+      "login": {
         "title": "Benutzeranmeldung",
         "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
         "data": {
@@ -13,7 +14,6 @@
           "base_api_url": "Basis-API-URL"
         }
       },
-      "login": {},
       "api_key": {
         "title": "Eingabe des API-Schlüssel",
         "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
@@ -135,7 +135,12 @@
     }
   },
   "device_automation": {
+    "trigger_type": {
+      "new_alarm": "Neuer Alarm eingegangen",
+      "all_alarms_closed": "Alle Alarme geschlossen"
+    },
     "action_type": {
+      "request_refresh": "Datenaktualisierung anfordern",
       "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
       "post_alarm": "Alarm erstellen",
       "put_alarm": "Alarm ändern",
@@ -333,9 +338,16 @@
     },
     "invalid_number_of_vehicles": {
       "message": "Ungültige Anzahl von Fahrzeugen angegeben. Es muss genau ein Fahrzeug angegeben werden, es wurden {num_vehicles} angegeben."
+    },
+    "api_request_refresh_failed": {
+      "message": "Aktualisieren der Divera-Daten fehlgeschlagen: {err}"
     }
   },
   "services": {
+    "request_refresh": {
+      "name": "Datenaktualisierung anfordern",
+      "description": "Löst für das ausgewählte Gerät (Nutzer) eine sofortige Aktualisierung aller Divera-Daten aus."
+    },
     "post_vehicle_status": {
       "name": "Fahrzeugstatus und -daten ändern",
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
@@ -853,6 +865,36 @@
         "newssurvey_sorting": {
           "name": "Sortierung",
           "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "user_relation": {
+      "entry_type": "Nutzerverwaltung",
+      "initiate_flow": {
+        "user": "Nutzer hinzufügen"
+      },
+      "abort": {
+        "add_user_via_cluster": "Das direkte Hinzufügen von Nutzern wird nicht unterstützt. Bitte stattdessen einen 'Hub hinzufügen', gewählte Benutzer werden dann automatisch zur bestehenden Einheit hinzugefügt.",
+        "already_configured": "Dieser Nutzer ist für die Einheit bereits konfiguriert.",
+        "merge_successful": "Nutzer wurde erfolgreich zur Einheit hinzugefügt.",
+        "no_new_hubs_found": "Für die angegebenen Zugangsdaten wurden keine neuen Einheiten gefunden.",
+        "no_client_session": "Es konnte keine Client-Sitzung aufgebaut werden.",
+        "reconfigure_successful": "Neukonfiguration erfolgreich.",
+        "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      },
+      "step": {
+        "reconfigure": {
+          "title": "Nutzer neu konfigurieren",
+          "description": "Ändere den API-Schlüssel, um die Zugangsdaten zu aktualisieren. Die Abfrageintervalle können ebenfalls angepasst werden.",
+          "data": {
+            "username": "Benutzername",
+            "api_key": "API-Schlüssel",
+            "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+            "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+            "base_api_url": "Basis-API-URL"
+          }
         }
       }
     }

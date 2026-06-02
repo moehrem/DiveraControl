@@ -2,7 +2,8 @@
   "title": "DiveraControl",
   "config": {
     "step": {
-      "user": {
+      "user": {},
+      "login": {
         "title": "User login",
         "description": "Please enter a username and password. The login credentials are only used for the initial data query and are not stored.\nAlso set the interval for data queries outside and during active alarms.",
         "data": {
@@ -138,7 +139,12 @@
     }
   },
   "device_automation": {
+    "trigger_type": {
+      "new_alarm": "New alarm received",
+      "all_alarms_closed": "All alarms closed"
+    },
     "action_type": {
+      "request_refresh": "Request data refresh",
       "post_vehicle_status": "Change vehicle status and data",
       "post_alarm": "Create alarm",
       "put_alarm": "Change alarm",
@@ -336,9 +342,16 @@
     },
     "invalid_number_of_vehicles": {
       "message": "Invalid number of vehicles provided. Exactly one vehicle must be specified, {num_vehicles} were provided"
+    },
+    "api_request_refresh_failed": {
+      "message": "Refreshing Divera data failed: {err}"
     }
   },
   "services": {
+    "request_refresh": {
+      "name": "Request data refresh",
+      "description": "Triggers an immediate refresh of all Divera data for the selected user device."
+    },
     "post_vehicle_status": {
       "name": "Change vehicle status and data",
       "description": "Updates vehicle status and data in Divera 24/7.",
@@ -856,6 +869,36 @@
         "newssurvey_sorting": {
           "name": "Sorting",
           "description": "(Optional) List with comma-separated sorting definition"
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "user_relation": {
+      "entry_type": "User administration",
+      "initiate_flow": {
+        "user": "Add user"
+      },
+      "abort": {
+        "add_user_via_cluster": "Adding users directly is not supported. Please add a 'Hub' instead, selected users will then be automatically added to the existing unit.",
+        "already_configured": "This user is already configured for the unit.",
+        "merge_successful": "User successfully added to the unit.",
+        "no_new_hubs_found": "No new units were found for the given credentials.",
+        "no_client_session": "Could not establish a client session.",
+        "reconfigure_successful": "Reconfiguration successful.",
+        "unknown_step": "Unknown configuration step, setup aborted."
+      },
+      "step": {
+        "reconfigure": {
+          "title": "Reconfigure user",
+          "description": "Change the API key to update credentials. You can also adjust the query intervals.",
+          "data": {
+            "username": "Username",
+            "api_key": "API key",
+            "update_interval_data": "Query interval outside of alarms (seconds)",
+            "update_interval_alarm": "Query interval during open alarms (seconds)",
+            "base_api_url": "Base API URL"
+          }
         }
       }
     }

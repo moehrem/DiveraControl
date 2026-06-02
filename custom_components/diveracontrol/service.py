@@ -21,9 +21,10 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .const import D_ALARM, DOMAIN
+from .coordinator import DiveraCoordinator
 from .data_normalizer import normalize_service_call_data
 from .divera_api import DiveraAPI
-from .utils import get_ucr_data_from_device, get_translation, handle_entity
+from .utils import get_translation, get_ucr_data_from_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -195,7 +196,7 @@ def _prepare_data(
     hass: HomeAssistant,
     call_data: dict[str, Any],
     validation_rules: dict[str, dict] | None = None,
-) -> tuple[dict[str, Any], DiveraAPI]:
+) -> tuple[dict[str, Any], DiveraCoordinator, DiveraAPI]:
     """Prepare data for API call.
 
     This includes validation, extracting necessary information and building the payload.
@@ -206,7 +207,7 @@ def _prepare_data(
         validation_rules: Validation rules specific to the calling handler.
 
     Returns:
-        Tuple of (prepared data dict, DiveraAPI instance)
+        Tuple of (prepared data dict, DiveraCoordinator instance, DiveraAPI instance)
 
     """
 
@@ -222,9 +223,10 @@ def _prepare_data(
             translation_key="no_device_id",
         )
 
+    coordinator: DiveraCoordinator = get_ucr_data_from_device(hass, device_id)
     api: DiveraAPI = get_ucr_data_from_device(hass, device_id, "api")
 
-    return data, api
+    return data, coordinator, api
 
 
 def _extract_news(data: dict[str, Any]) -> dict[str, Any]:
@@ -366,7 +368,9 @@ async def handle_post_vehicle_status(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_VEHICLE_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_VEHICLE_VALIDATION_RULES
+    )
 
     # create payload
     # payload: dict[str, Any] = {k: v for k, v in data.items() if v is not None}
@@ -377,19 +381,20 @@ async def handle_post_vehicle_status(
     if not isinstance(vehicle_ids_raw, list):
         raise ServiceValidationError("Invalid vehicle type")
     vehicle_ids: list[int] = vehicle_ids_raw
-    for vehicle in vehicle_ids:
-        try:
+    try:
+        for vehicle in vehicle_ids:
             await api.post_vehicle_status(vehicle, payload)
-            await handle_entity(hass, data, call.service, api.ucr_id, vehicle)
-        except HomeAssistantError as err:
-            error_msg = await get_translation(
-                hass,
-                "exceptions",
-                "api_post_vehicle_status_failed.message",
-                {"vehicle": vehicle, "err": str(err)},
-            )
-            _LOGGER.error(error_msg)
-            raise
+        await coordinator.async_request_refresh()
+
+    except HomeAssistantError as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_post_vehicle_status_failed.message",
+            {"vehicle": vehicle_ids[0] if vehicle_ids else "unknown", "err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise
 
 
 async def handle_post_alarm(
@@ -411,7 +416,7 @@ async def handle_post_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_ALARM_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(hass, call.data, POST_ALARM_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -419,7 +424,7 @@ async def handle_post_alarm(
     # call api function and handle entity
     try:
         await api.post_alarms(payload)
-        # no handle_entity(), as data needs to be updated from Divera first
+        await coordinator.async_request_refresh()
 
     except HomeAssistantError as err:
         error_msg = await get_translation(
@@ -448,7 +453,7 @@ async def handle_put_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, PUT_ALARM_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(hass, call.data, PUT_ALARM_VALIDATION_RULES)
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -457,7 +462,8 @@ async def handle_put_alarm(
     alarm_id: Any = data.get("alarm_id")
     try:
         await api.put_alarms(alarm_id, payload)
-        await handle_entity(hass, data, call.service, api.ucr_id, alarm_id)
+        await coordinator.async_request_refresh()
+
     except HomeAssistantError as err:
         error_msg = await get_translation(
             hass,
@@ -485,7 +491,9 @@ async def handle_post_close_alarm(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_CLOSE_ALARM_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_CLOSE_ALARM_VALIDATION_RULES
+    )
 
     # create payload
     payload = _build_payload(data, keys={"Alarm": {}})
@@ -494,7 +502,8 @@ async def handle_post_close_alarm(
     alarm_id: Any = data.get("alarm_id")
     try:
         await api.post_close_alarm(payload, alarm_id)
-        await handle_entity(hass, data, call.service, api.ucr_id, alarm_id)
+        await coordinator.async_request_refresh()
+
     except HomeAssistantError as err:
         error_msg = await get_translation(
             hass,
@@ -522,7 +531,9 @@ async def handle_post_message(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_MESSAGE_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_MESSAGE_VALIDATION_RULES
+    )
 
     # Determine message_channel_id from alarm_id if not given
     message_channel_id: int = data.get("message_channel_id") or 0
@@ -560,7 +571,8 @@ async def handle_post_message(
     # call api function and handle entity
     try:
         await api.post_message(payload)
-        # no handle entity as new data needs to be fetched from Divera first
+        await coordinator.async_request_refresh()
+
     except HomeAssistantError as err:
         error_msg = await get_translation(
             hass,
@@ -590,7 +602,9 @@ async def handle_post_using_vehicle_property(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_VEHICLE_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_VEHICLE_VALIDATION_RULES
+    )
 
     # create payload
     vehicle_ids_raw = data.get("vehicle")
@@ -600,25 +614,20 @@ async def handle_post_using_vehicle_property(
 
     payload = _build_payload(data, keys=None, exclude_keys={"vehicle"})
 
-    for vehicle in vehicle_ids:
-        try:
+    try:
+        for vehicle in vehicle_ids:
             await api.post_using_vehicle_property(vehicle, payload)
-            await handle_entity(
-                hass,
-                data,
-                call.service,
-                api.ucr_id,
-                vehicle,
-            )
-        except HomeAssistantError as err:
-            error_msg = await get_translation(
-                hass,
-                "exceptions",
-                "api_post_using_vehicle_property_failed.message",
-                {"vehicle": vehicle, "err": str(err)},
-            )
-            _LOGGER.error(error_msg)
-            raise
+        await coordinator.async_request_refresh()
+
+    except HomeAssistantError as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_post_using_vehicle_property_failed.message",
+            {"vehicle": vehicle_ids[0] if vehicle_ids else "unknown", "err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise
 
 
 async def handle_post_using_vehicle_crew(
@@ -639,7 +648,9 @@ async def handle_post_using_vehicle_crew(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_USING_VEHICLE_CREW_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_USING_VEHICLE_CREW_VALIDATION_RULES
+    )
 
     # create payload
     vehicle_ids_raw = data.get("vehicle")
@@ -664,19 +675,20 @@ async def handle_post_using_vehicle_crew(
                 translation_placeholders={"mode": data.get("mode", "")},
             )
 
-    for vehicle in vehicle_ids:
-        try:
+    try:
+        for vehicle in vehicle_ids:
             await api.post_using_vehicle_crew(vehicle, data["mode"], payload)
-            await handle_entity(hass, data, call.service, api.ucr_id, vehicle)
-        except HomeAssistantError as err:
-            error_msg = await get_translation(
-                hass,
-                "exceptions",
-                "api_post_using_vehicle_crew_failed.message",
-                {"vehicle": vehicle, "err": str(err)},
-            )
-            _LOGGER.error(error_msg)
-            raise
+        await coordinator.async_request_refresh()
+
+    except HomeAssistantError as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_post_using_vehicle_crew_failed.message",
+            {"vehicle": vehicle_ids[0] if vehicle_ids else "unknown", "err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise
 
 
 async def handle_post_news(
@@ -695,7 +707,7 @@ async def handle_post_news(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_NEWS_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(hass, call.data, POST_NEWS_VALIDATION_RULES)
 
     # create payload
     survey_flag = data.get("survey") or False
@@ -715,7 +727,8 @@ async def handle_post_news(
     title: str = data.get("title", "")
     try:
         await api.post_news(payload)
-        # no handle entity as new data needs to be fetched from Divera first
+        await coordinator.async_request_refresh()
+
     except HomeAssistantError as err:
         error_msg = await get_translation(
             hass,
@@ -743,7 +756,9 @@ async def handle_post_user_status(
     """
 
     # prepare data
-    data, api = _prepare_data(hass, call.data, POST_USER_STATUS_VALIDATION_RULES)
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_USER_STATUS_VALIDATION_RULES
+    )
 
     # create payload
     payload = _build_payload(data, keys={"Status": data})
@@ -751,7 +766,8 @@ async def handle_post_user_status(
     # call api function and handle entity
     try:
         await api.post_user_status(payload)
-        # await handle_entity(hass, data, call.service, api.ucr_id)
+        await coordinator.async_request_refresh()
+
     except HomeAssistantError as err:
         error_msg = await get_translation(
             hass,
@@ -761,6 +777,28 @@ async def handle_post_user_status(
         )
         _LOGGER.error(error_msg)
         raise
+
+
+async def handle_request_refresh(
+    hass: HomeAssistant,
+    call: ServiceCall,
+) -> None:
+    """Trigger an immediate coordinator refresh for one device."""
+
+    # prepare data
+    _, coordinator, _ = _prepare_data(hass, call.data)
+
+    try:
+        await coordinator.async_request_refresh()
+    except Exception as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_request_refresh_failed.message",
+            {"err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise HomeAssistantError(error_msg) from err
 
 
 def async_register_services(hass: HomeAssistant, domain: str) -> None:
@@ -773,6 +811,7 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
     service_handlers: dict[
         str, Callable[[HomeAssistant, ServiceCall], Coroutine[Any, Any, None]]
     ] = {
+        "request_refresh": handle_request_refresh,
         "post_vehicle_status": handle_post_vehicle_status,
         "post_alarm": handle_post_alarm,
         "put_alarm": handle_put_alarm,

@@ -2,8 +2,6 @@
 
 import logging
 
-import aiohttp
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -14,7 +12,6 @@ from homeassistant.helpers import (
     entity_registry as er,
     issue_registry as ir,
 )
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     BASE_API_URL,
@@ -35,7 +32,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import DiveraCoordinator
-from .divera_api import DiveraAPI, DiveraConfigFlowAPI
+from .divera_api import DiveraConfigFlowAPI
 from .log_handler import (
     async_remove_diveracontrol_log_handler,
     async_setup_diveracontrol_log_handler,
@@ -47,8 +44,8 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = [
     Platform.CALENDAR,
     Platform.DEVICE_TRACKER,
-    Platform.SENSOR,
     Platform.SELECT,
+    Platform.SENSOR,
 ]
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,45 +73,31 @@ async def async_setup_entry(
     """
     cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
-    base_url: str = config_entry.data.get(D_BASE_API_URL) or ""
-    relations: dict[str, dict[str, str]] = config_entry.data.get(D_RELATIONS_KEY, {})
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
     coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
-    apis_by_ucr: dict[str, DiveraAPI] = {}
 
-    # Create API and coordinator instances per user relation.
-    for relation in relations.values():
-        ucr_id = relation.get(D_UCR_ID)
-        api_key = relation.get(D_API_KEY)
-
-        api: DiveraAPI | None = None
+    # Create coordinator instances per user relation subentry.
+    for subentry in config_entry.subentries.values():
+        subentry_id = subentry.subentry_id
+        ucr_id = str(subentry.unique_id or subentry.data.get("ucr_id", ""))
+        if not ucr_id:
+            continue
 
         try:
-            api = DiveraAPI(
-                hass,
-                ucr_id,
-                api_key,
-                base_url,
-            )
-
             coordinator = DiveraCoordinator(
                 hass,
-                api,
-                ucr_id,
                 config_entry,
+                ucr_id,
+                subentry_id,
             )
 
             await coordinator.async_config_entry_first_refresh()
             coordinators_by_ucr[ucr_id] = coordinator
-            apis_by_ucr[ucr_id] = api
-            config_entry.async_on_unload(api.close)
 
         except (TimeoutError, ConnectionError) as err:
-            if api is not None:
-                await api.close()
             _LOGGER.error(
                 "Connection failed for user %s: %s (%s)",
                 ucr_id,
@@ -123,8 +106,6 @@ async def async_setup_entry(
             )
             continue
         except ConfigEntryAuthFailed as err:
-            if api is not None:
-                await api.close()
             _LOGGER.error(
                 "Authentication failed for user %s: %s (%s)",
                 ucr_id,
@@ -133,8 +114,6 @@ async def async_setup_entry(
             )
             continue
         except Exception:
-            if api is not None:
-                await api.close()
             _LOGGER.exception(
                 "Unexpected error during setup for user %s (%s)",
                 ucr_id,
@@ -148,7 +127,6 @@ async def async_setup_entry(
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][cluster_id] = {
         D_COORDINATOR: coordinators_by_ucr,
-        # "apis": apis_by_ucr,
     }
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
@@ -208,13 +186,20 @@ async def async_remove_config_entry_device(
     if ucr_id is None:
         return False
 
-    relations = config_entry.data.get(D_RELATIONS_KEY, {})
-    if not isinstance(relations, dict) or ucr_id not in relations:
+    subentry = next(
+        (
+            current
+            for current in config_entry.subentries.values()
+            if str(current.unique_id or current.data.get("ucr_id", "")) == ucr_id
+        ),
+        None,
+    )
+    if subentry is None:
         return False
 
     # Keep at least one relation in the entry; removing the last one would
     # leave an invalid cluster config entry.
-    if len(relations) <= 1:
+    if len(config_entry.subentries) <= 1:
         _LOGGER.warning(
             "Cannot remove last user relation %s from cluster %s",
             ucr_id,
@@ -222,14 +207,7 @@ async def async_remove_config_entry_device(
         )
         return False
 
-    updated_relations = dict(relations)
-    updated_relations.pop(ucr_id, None)
-    updated_data = {
-        **config_entry.data,
-        D_RELATIONS_KEY: updated_relations,
-    }
-
-    hass.config_entries.async_update_entry(config_entry, data=updated_data)
+    hass.config_entries.async_remove_subentry(config_entry, subentry.subentry_id)
     await hass.config_entries.async_reload(config_entry.entry_id)
 
     _LOGGER.info(
@@ -400,14 +378,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         #     },
         # }
 
-        session: aiohttp.ClientSession | None = None
-        session = async_get_clientsession(hass)
         user_input = {
             D_API_KEY: config_entry.data.get(D_API_KEY, ""),
         }
         base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
-        config_api = DiveraConfigFlowAPI(session, base_api_url)
+        config_api = DiveraConfigFlowAPI(hass, base_api_url)
         validation_errors, clusters = await config_api.request_access(user_input)
 
         if validation_errors:
