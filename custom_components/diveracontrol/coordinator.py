@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    BASE_API_URL,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -37,7 +38,9 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """Return relation data for a given ucr_id from config subentries."""
 
         for subentry in config_entry.subentries.values():
-            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, "")) == str(ucr_id):
+            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, "")) == str(
+                ucr_id
+            ):
                 return dict(subentry.data)
         return {}
 
@@ -45,7 +48,6 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-        ucr_id: str,
         subentry_id: str,
     ) -> None:
         """Initialize DiveraControl coordinator.
@@ -62,23 +64,25 @@ class DiveraCoordinator(DataUpdateCoordinator):
         """
 
         self.api = None
-        relation_data = self._get_relation_from_subentries(config_entry, ucr_id)
 
         self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
-        self.ucr_id: str = ucr_id
+
+        user_cluster_relation_data = config_entry.subentries.get(subentry_id).data
+        self.ucr_id: str = user_cluster_relation_data.get(D_UCR_ID, "")
         self.subentry_id: str = subentry_id
-        self.user_name: str = str(relation_data.get(D_USERNAME, "")) or "Unknown User"
+        self.user_name: str = user_cluster_relation_data.get(D_USERNAME, "")
+
         self._initial_raw_ucr_data: dict[str, Any] | None = None
 
         self.interval_data = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
-                seconds=relation_data.get(
+                seconds=config_entry.data.get(
                     D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
                 )
             ),
             D_UPDATE_INTERVAL_DATA: timedelta(
-                seconds=relation_data.get(
+                seconds=config_entry.data.get(
                     D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
                 )
             ),
@@ -106,9 +110,11 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         """
 
-        relation_data = self._get_relation_from_subentries(self.config_entry, self.ucr_id)
-        _api_key = relation_data.get(D_API_KEY)
-        _base_url = relation_data.get(D_BASE_API_URL)
+        user_cluster_relation_data = self._get_relation_from_subentries(
+            self.config_entry, self.ucr_id
+        )
+        _api_key = user_cluster_relation_data.get(D_API_KEY)
+        _base_url = self.config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
         if not _api_key or not _base_url:
             raise UpdateFailed(

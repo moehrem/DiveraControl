@@ -84,7 +84,7 @@ async def async_setup_entry(
     # Create coordinator instances per user relation subentry.
     for subentry in config_entry.subentries.values():
         subentry_id = subentry.subentry_id
-        ucr_id = str(subentry.unique_id or subentry.data.get("ucr_id", ""))
+        ucr_id = subentry.data.get(D_UCR_ID, "")
         if not ucr_id:
             continue
 
@@ -92,7 +92,6 @@ async def async_setup_entry(
             coordinator = DiveraCoordinator(
                 hass,
                 config_entry,
-                ucr_id,
                 subentry_id,
             )
 
@@ -192,7 +191,7 @@ async def async_remove_config_entry_device(
         (
             current
             for current in config_entry.subentries.values()
-            if str(current.unique_id or current.data.get("ucr_id", "")) == ucr_id
+            if current.data.get(D_UCR_ID, "") == ucr_id
         ),
         None,
     )
@@ -346,40 +345,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     # changing to v2.0.0
     # breaking change: new config entry schema with multiple user relations per cluster
+    # user_cluster_relations are moved to subentries and cluster data is stored in main entry without user relation data
     # but no need to check for multiple users as this was not supported before and thus cannot exist in old config entries
     if current_version == 1 and current_minor_version < 5:
         _LOGGER.info(
             "Migrating config entry to integration version 2.0.0",
         )
-
-        ### OLD config_entry.data STRUCTURE ***
-        # str(ucr_id): {
-        #     D_UCR_ID: cluster_data[D_UCR_ID],
-        #     D_CLUSTER_NAME: cluster_data[D_CLUSTER_NAME],
-        #     D_API_KEY: cluster_data[D_API_KEY],
-        #     D_BASE_API_URL: _base_api_url,
-        #     D_UPDATE_INTERVAL_DATA: _update_interval_data,
-        #     D_UPDATE_INTERVAL_ALARM: _update_interval_alarm,
-        #     D_USE_WEBHOOKS: _use_webhooks,
-        #     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-
-        ### NEW config_entry.data STRUCTURE ***
-        # clusters[cluster_id] = {
-        #     D_CLUSTER_ID: cluster_id,
-        #     D_CLUSTER_NAME: data.get(D_NAME, ""),
-        #     D_BASE_API_URL: base_api_url,
-        #     D_UPDATE_INTERVAL_DATA: None,  # set later in config flow
-        #     D_UPDATE_INTERVAL_ALARM: None,  # set later in config flow
-        #     D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-        #     D_USE_WEBHOOKS: None,  # set later in config flow
-        #     D_RELATIONS_KEY: {
-        #         ucr: {
-        #             D_UCR_ID: ucr,
-        #             D_API_KEY: api_key,
-        #             D_USERGROUP_ID: data.get(D_USERGROUP_ID, ""),
-        #         },
-        #     },
-        # }
 
         user_input = {
             D_API_KEY: config_entry.data.get(D_API_KEY, ""),
@@ -409,9 +380,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             return False
 
         # read correct cluster from clusters by matching ucr_id (there is only one user relation in old config entries, so we can just take the first one)
-
-        # TODO: old config entries contain update_interval parameters, which will be added with NONE to each UCR. Thats not necessary, as these parameters are handled on top level per cluster.
-
         ucr_id = config_entry.data.get(D_UCR_ID, "")
         migrated_cluster = next(
             (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
@@ -437,34 +405,31 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             )
             return False
 
-        # set missing parameters
-        migrated_cluster[D_UPDATE_INTERVAL_ALARM] = config_entry.data.get(
-            D_UPDATE_INTERVAL_ALARM, 30
-        )
-        migrated_cluster[D_UPDATE_INTERVAL_DATA] = config_entry.data.get(
-            D_UPDATE_INTERVAL_DATA, 60
-        )
-        migrated_cluster[D_USE_WEBHOOKS] = config_entry.data.get(D_USE_WEBHOOKS, False)
-
-        updated_data = migrated_cluster
-
-        # Build subentries for each user relation so async_setup_entry can
-        # find them after migration. We persist them after async_update_entry
-        # in the final migration block.
-        relations = migrated_cluster.get(D_RELATIONS_KEY, {})
+        # extract relations, then build subentries and cluster data independently
+        relations = migrated_cluster.pop(D_RELATIONS_KEY, {})
         for raw_ucr_id, relation_data in relations.items():
             ucr_id = str(raw_ucr_id)
-            relation_dict = dict(relation_data)
-            relation_dict[D_UCR_ID] = relation_dict.get(D_UCR_ID, ucr_id)
-            title = str(relation_dict.get(D_USERNAME) or ucr_id)
+            relation_data.pop(D_BASE_API_URL, None)
+            relation_data.pop(D_UPDATE_INTERVAL_DATA, None)
+            relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
+            relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
+            title = str(relation_data.get(D_USERNAME) or ucr_id)
             subentries_to_add.append(
                 ConfigSubentry(
-                    data=MappingProxyType(relation_dict),
+                    data=MappingProxyType(relation_data),
                     subentry_type="user_relation",
                     title=title,
                     unique_id=ucr_id,
                 )
             )
+
+        updated_data = {
+            **migrated_cluster,
+            D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
+            D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
+            D_USE_WEBHOOKS: config_entry.data.get(D_USE_WEBHOOKS, False),
+            D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
+        }
 
         # set versions to ensure future migrations are correctly applied
         current_version = 2
