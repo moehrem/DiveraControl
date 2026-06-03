@@ -230,6 +230,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     updated_data = {**config_entry.data}
     subentries_to_add: list[ConfigSubentry] = []
+    clear_registry_entries = False
     migrated = False
 
     current_version = config_entry.version
@@ -433,6 +434,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         # set versions to ensure future migrations are correctly applied
         current_version = 2
         current_minor_version = 0
+        clear_registry_entries = True
         migrated = True
 
         ir.async_create_issue(
@@ -450,6 +452,14 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     ##### ALWAYS THE ONE AND ONLY FINAL BLOCK #####
     # finalize migration by updating config entry version if any migration step was performed
     if migrated or current_version != VERSION or current_minor_version != MINOR_VERSION:
+        if clear_registry_entries:
+            _LOGGER.info(
+                "Migration: clearing old registry entries for config entry %s",
+                config_entry.entry_id,
+            )
+            dr.async_get(hass).async_clear_config_entry(config_entry.entry_id)
+            er.async_get(hass).async_clear_config_entry(config_entry.entry_id)
+
         hass.config_entries.async_update_entry(
             config_entry,
             data=updated_data,
