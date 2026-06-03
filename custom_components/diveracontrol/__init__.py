@@ -427,7 +427,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             **migrated_cluster,
             D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
             D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
-            D_USE_WEBHOOKS: config_entry.data.get(D_USE_WEBHOOKS, False),
             D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
         }
 
