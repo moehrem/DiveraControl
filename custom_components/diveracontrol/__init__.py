@@ -2,7 +2,9 @@
 
 import logging
 
-from homeassistant.config_entries import ConfigEntry
+from types import MappingProxyType
+
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -23,6 +25,7 @@ from .const import (
     D_INTEGRATION_VERSION,
     D_RELATIONS_KEY,
     D_UCR_ID,
+    D_USERNAME,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
@@ -441,6 +444,31 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         migrated_cluster[D_USE_WEBHOOKS] = config_entry.data.get(D_USE_WEBHOOKS, False)
 
         updated_data = migrated_cluster
+
+        # Create subentries for each user relation so async_setup_entry can
+        # find them. Without this, the integration would fail to start after
+        # migration because the new setup iterates config_entry.subentries.
+        relations = migrated_cluster.get(D_RELATIONS_KEY, {})
+        for raw_ucr_id, relation_data in relations.items():
+            ucr_id = str(raw_ucr_id)
+            relation_dict = dict(relation_data)
+            relation_dict[D_UCR_ID] = relation_dict.get(D_UCR_ID, ucr_id)
+            title = str(relation_dict.get(D_USERNAME) or ucr_id)
+            hass.config_entries.async_add_subentry(
+                config_entry,
+                ConfigSubentry(
+                    data=MappingProxyType(relation_dict),
+                    subentry_type="user_relation",
+                    title=title,
+                    unique_id=ucr_id,
+                ),
+            )
+            _LOGGER.info(
+                "Migration: created subentry for user relation %s (%s)",
+                ucr_id,
+                title,
+            )
+
         # set versions to ensure future migrations are correctly applied
         current_version = 2
         current_minor_version = 0
