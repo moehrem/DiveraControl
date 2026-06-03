@@ -4,17 +4,18 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    BASE_API_URL,
+    CONF_URL,
     D_CLUSTER,
+    D_SHORTNAME,
+    D_USER,
     DOMAIN,
-    VERSION,
     MINOR_VERSION,
     PATCH_VERSION,
-    CONF_URL,
-    BASE_API_URL,
-    D_USER,
-    D_SHORTNAME,
+    VERSION,
 )
 from .coordinator import DiveraCoordinator
+
 # from .utils import get_user_device_info
 
 
@@ -40,14 +41,14 @@ class BaseDiveraEntity(CoordinatorEntity):
         self._attr_device_info = self._get_device_info()
 
     def _get_device_info(self) -> DeviceInfo:
-        """Return device info for the user."""
+        """Return device info for the cluster hub."""
 
         return {
-            "identifiers": {(DOMAIN, self.ucr_id)},
+            "identifiers": {(DOMAIN, self.cluster_id)},
             "configuration_url": f"{BASE_API_URL}{CONF_URL}",
-            "model": self.user_name,
-            "model_id": self.ucr_id,
-            "name": f"{self.user_name} ({self.cluster_shortname})",
-            "manufacturer": f"{self.cluster_name} ({self.cluster_id})",
+            "model": "Divera Cluster",
+            "model_id": self.cluster_id,
+            "name": self.cluster_name,
+            "manufacturer": "Divera 24/7",
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
         }
