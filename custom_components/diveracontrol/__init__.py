@@ -1,7 +1,6 @@
 """Initializing DiveraControl integration."""
 
 import logging
-
 from types import MappingProxyType
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
@@ -25,9 +24,9 @@ from .const import (
     D_INTEGRATION_VERSION,
     D_RELATIONS_KEY,
     D_UCR_ID,
-    D_USERNAME,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USERNAME,
     D_USE_WEBHOOKS,
     DOMAIN,
     MINOR_VERSION,
@@ -231,6 +230,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """
 
     updated_data = {**config_entry.data}
+    subentries_to_add: list[ConfigSubentry] = []
     migrated = False
 
     current_version = config_entry.version
@@ -408,7 +408,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             migrated = False
             return False
 
-        # read correct cluster from clusters by matching ucr_id (there should be only one user relation in old config entries, so we can just take the first one)
+        # read correct cluster from clusters by matching ucr_id (there is only one user relation in old config entries, so we can just take the first one)
+
+        # TODO: old config entries contain update_interval parameters, which will be added with NONE to each UCR. Thats not necessary, as these parameters are handled on top level per cluster.
+
         ucr_id = config_entry.data.get(D_UCR_ID, "")
         migrated_cluster = next(
             (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
@@ -445,28 +448,22 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
         updated_data = migrated_cluster
 
-        # Create subentries for each user relation so async_setup_entry can
-        # find them. Without this, the integration would fail to start after
-        # migration because the new setup iterates config_entry.subentries.
+        # Build subentries for each user relation so async_setup_entry can
+        # find them after migration. We persist them after async_update_entry
+        # in the final migration block.
         relations = migrated_cluster.get(D_RELATIONS_KEY, {})
         for raw_ucr_id, relation_data in relations.items():
             ucr_id = str(raw_ucr_id)
             relation_dict = dict(relation_data)
             relation_dict[D_UCR_ID] = relation_dict.get(D_UCR_ID, ucr_id)
             title = str(relation_dict.get(D_USERNAME) or ucr_id)
-            hass.config_entries.async_add_subentry(
-                config_entry,
+            subentries_to_add.append(
                 ConfigSubentry(
                     data=MappingProxyType(relation_dict),
                     subentry_type="user_relation",
                     title=title,
                     unique_id=ucr_id,
-                ),
-            )
-            _LOGGER.info(
-                "Migration: created subentry for user relation %s (%s)",
-                ucr_id,
-                title,
+                )
             )
 
         # set versions to ensure future migrations are correctly applied
@@ -495,6 +492,23 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             version=current_version,
             minor_version=current_minor_version,
         )
+
+        existing_ucr_ids = {
+            str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+            for subentry in config_entry.subentries.values()
+            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+        }
+        for subentry in subentries_to_add:
+            subentry_ucr_id = str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+            if subentry_ucr_id in existing_ucr_ids:
+                continue
+
+            hass.config_entries.async_add_subentry(config_entry, subentry)
+            _LOGGER.info(
+                "Migration: created subentry for user relation %s (%s)",
+                subentry_ucr_id,
+                subentry.title,
+            )
 
     _LOGGER.debug(
         "Migration complete, config_entry is now at version %s.%s.%s",
