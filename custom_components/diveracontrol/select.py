@@ -26,5 +26,4 @@ async def async_setup_entry(
         async_add_entities(
             user_status_entities,
             update_before_add=False,
-            config_subentry_id=ucr.subentry_id,
         )

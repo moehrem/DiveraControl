@@ -1,9 +1,8 @@
 """Initializing DiveraControl integration."""
 
 import logging
-from types import MappingProxyType
 
-from homeassistant.config_entries import ConfigEntry, ConfigSubentry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -26,7 +25,6 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERNAME,
     D_USE_WEBHOOKS,
     DOMAIN,
     MINOR_VERSION,
@@ -79,12 +77,43 @@ async def async_setup_entry(
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
+    relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(relations, dict):
+        relations = {}
+
+    # Flatten legacy subentries into D_RELATIONS_KEY and remove subentries to
+    # avoid an extra "user" layer in the integration UI.
+    if config_entry.subentries:
+        merged_relations = {
+            str(ucr): dict(data)
+            for ucr, data in relations.items()
+            if isinstance(data, dict)
+        }
+        for subentry in config_entry.subentries.values():
+            ucr_id = str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+            if not ucr_id:
+                continue
+            relation_data = dict(subentry.data)
+            relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
+            merged_relations[ucr_id] = relation_data
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data={
+                **config_entry.data,
+                D_RELATIONS_KEY: merged_relations,
+            },
+        )
+        for subentry_id in list(config_entry.subentries):
+            hass.config_entries.async_remove_subentry(config_entry, subentry_id)
+
+        relations = merged_relations
+
     coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
 
-    # Create coordinator instances per user relation subentry.
-    for subentry in config_entry.subentries.values():
-        subentry_id = subentry.subentry_id
-        ucr_id = subentry.data.get(D_UCR_ID, "")
+    # Create coordinator instances per user relation.
+    for raw_ucr_id in relations:
+        ucr_id = str(raw_ucr_id)
         if not ucr_id:
             continue
 
@@ -92,7 +121,7 @@ async def async_setup_entry(
             coordinator = DiveraCoordinator(
                 hass,
                 config_entry,
-                subentry_id,
+                ucr_id,
             )
 
             await coordinator.async_config_entry_first_refresh()
@@ -172,7 +201,7 @@ async def async_remove_config_entry_device(
     """Remove a user device from a cluster config entry.
 
     Home Assistant calls this when the user clicks "Delete device" in the UI.
-    We remove the matching UCR relation from the config entry and reload the
+    We remove the matching UCR relation from D_RELATIONS_KEY and reload the
     entry so related entities are cleaned up and not recreated.
     """
 
@@ -187,20 +216,19 @@ async def async_remove_config_entry_device(
     if ucr_id is None:
         return False
 
-    subentry = next(
-        (
-            current
-            for current in config_entry.subentries.values()
-            if current.data.get(D_UCR_ID, "") == ucr_id
-        ),
-        None,
-    )
-    if subentry is None:
+    if ucr_id == str(config_entry.data.get(D_CLUSTER_ID, "")):
+        return False
+
+    relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(relations, dict):
+        return False
+
+    if ucr_id not in relations:
         return False
 
     # Keep at least one relation in the entry; removing the last one would
     # leave an invalid cluster config entry.
-    if len(config_entry.subentries) <= 1:
+    if len(relations) <= 1:
         _LOGGER.warning(
             "Cannot remove last user relation %s from cluster %s",
             ucr_id,
@@ -208,7 +236,15 @@ async def async_remove_config_entry_device(
         )
         return False
 
-    hass.config_entries.async_remove_subentry(config_entry, subentry.subentry_id)
+    updated_relations = dict(relations)
+    updated_relations.pop(ucr_id, None)
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={
+            **config_entry.data,
+            D_RELATIONS_KEY: updated_relations,
+        },
+    )
     await hass.config_entries.async_reload(config_entry.entry_id)
 
     _LOGGER.info(
@@ -229,7 +265,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """
 
     updated_data = {**config_entry.data}
-    subentries_to_add: list[ConfigSubentry] = []
     clear_registry_entries = False
     migrated = False
 
@@ -346,7 +381,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     # changing to v2.0.0
     # breaking change: new config entry schema with multiple user relations per cluster
-    # user_cluster_relations are moved to subentries and cluster data is stored in main entry without user relation data
+    # user_cluster_relations are stored in D_RELATIONS_KEY inside config entry data
     # but no need to check for multiple users as this was not supported before and thus cannot exist in old config entries
     if current_version == 1 and current_minor_version < 5:
         _LOGGER.info(
@@ -406,29 +441,27 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             )
             return False
 
-        # extract relations, then build subentries and cluster data independently
-        relations = migrated_cluster.pop(D_RELATIONS_KEY, {})
-        for raw_ucr_id, relation_data in relations.items():
+        # Normalize relation data and keep it in config entry data.
+        raw_relations = migrated_cluster.pop(D_RELATIONS_KEY, {})
+        relations: dict[str, dict] = {}
+        for raw_ucr_id, raw_relation_data in raw_relations.items():
+            if not isinstance(raw_relation_data, dict):
+                continue
+
             ucr_id = str(raw_ucr_id)
+            relation_data = dict(raw_relation_data)
             relation_data.pop(D_BASE_API_URL, None)
             relation_data.pop(D_UPDATE_INTERVAL_DATA, None)
             relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
             relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
-            title = str(relation_data.get(D_USERNAME) or ucr_id)
-            subentries_to_add.append(
-                ConfigSubentry(
-                    data=MappingProxyType(relation_data),
-                    subentry_type="user_relation",
-                    title=title,
-                    unique_id=ucr_id,
-                )
-            )
+            relations[ucr_id] = relation_data
 
         updated_data = {
             **migrated_cluster,
             D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
             D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
             D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
+            D_RELATIONS_KEY: relations,
         }
 
         # set versions to ensure future migrations are correctly applied
@@ -466,23 +499,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             version=current_version,
             minor_version=current_minor_version,
         )
-
-        existing_ucr_ids = {
-            str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-            for subentry in config_entry.subentries.values()
-            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-        }
-        for subentry in subentries_to_add:
-            subentry_ucr_id = str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-            if subentry_ucr_id in existing_ucr_ids:
-                continue
-
-            hass.config_entries.async_add_subentry(config_entry, subentry)
-            _LOGGER.info(
-                "Migration: created subentry for user relation %s (%s)",
-                subentry_ucr_id,
-                subentry.title,
-            )
 
     _LOGGER.debug(
         "Migration complete, config_entry is now at version %s.%s.%s",

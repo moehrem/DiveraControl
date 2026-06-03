@@ -92,7 +92,7 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         await self.hass.services.async_call(
             DOMAIN,
             "post_user_status",
-            {"device_id": device_id, "ucr_id": self.ucr_id, "id": int(status_id)},
+            {"device_id": device_id, "id": int(status_id)},
             blocking=True,
         )
 

@@ -10,16 +10,17 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     BASE_API_URL,
+    D_API_KEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
+    D_RELATIONS_KEY,
+    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USERNAME,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
-    D_API_KEY,
-    D_UCR_ID,
-    D_USERNAME,
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
@@ -32,23 +33,25 @@ class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
     @staticmethod
-    def _get_relation_from_subentries(
+    def _get_relation_from_data(
         config_entry: ConfigEntry, ucr_id: str
     ) -> dict[str, Any]:
-        """Return relation data for a given ucr_id from config subentries."""
+        """Return relation data for a given ucr_id from config entry data."""
 
-        for subentry in config_entry.subentries.values():
-            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, "")) == str(
-                ucr_id
-            ):
-                return dict(subentry.data)
+        relations = config_entry.data.get(D_RELATIONS_KEY, {})
+        if not isinstance(relations, dict):
+            return {}
+
+        relation = relations.get(str(ucr_id), {})
+        if isinstance(relation, dict):
+            return dict(relation)
         return {}
 
     def __init__(
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-        subentry_id: str,
+        ucr_id: str,
     ) -> None:
         """Initialize DiveraControl coordinator.
 
@@ -56,7 +59,6 @@ class DiveraCoordinator(DataUpdateCoordinator):
             hass (HomeAssistant): Home Assistant instance.
             config_entry (ConfigEntry): Configuration entry for the integration.
             ucr_id (str): User relation ID.
-            subentry_id (str): Config subentry ID for this user relation.
 
         Returns:
             None
@@ -68,9 +70,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
 
-        user_cluster_relation_data = config_entry.subentries.get(subentry_id).data
-        self.ucr_id: str = user_cluster_relation_data.get(D_UCR_ID, "")
-        self.subentry_id: str = subentry_id
+        user_cluster_relation_data = self._get_relation_from_data(config_entry, ucr_id)
+        self.ucr_id: str = user_cluster_relation_data.get(D_UCR_ID, ucr_id)
         self.user_name: str = user_cluster_relation_data.get(D_USERNAME, "")
 
         self._initial_raw_ucr_data: dict[str, Any] | None = None
@@ -110,7 +111,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         """
 
-        user_cluster_relation_data = self._get_relation_from_subentries(
+        user_cluster_relation_data = self._get_relation_from_data(
             self.config_entry, self.ucr_id
         )
         _api_key = user_cluster_relation_data.get(D_API_KEY)
@@ -118,7 +119,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         if not _api_key or not _base_url:
             raise UpdateFailed(
-                f"Missing relation data for ucr_id {self.ucr_id} in config subentries"
+                f"Missing relation data for ucr_id {self.ucr_id} in config entry data"
             )
 
         try:

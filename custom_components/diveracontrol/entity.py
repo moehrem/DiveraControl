@@ -16,8 +16,6 @@ from .const import (
 )
 from .coordinator import DiveraCoordinator
 
-# from .utils import get_user_device_info
-
 
 class BaseDiveraEntity(CoordinatorEntity):
     """Base class for DiveraControl entities."""
@@ -41,14 +39,15 @@ class BaseDiveraEntity(CoordinatorEntity):
         self._attr_device_info = self._get_device_info()
 
     def _get_device_info(self) -> DeviceInfo:
-        """Return device info for the cluster hub."""
+        """Return device info for the user device under the cluster hub."""
 
         return {
-            "identifiers": {(DOMAIN, self.cluster_id)},
+            "identifiers": {(DOMAIN, self.ucr_id)},
+            "via_device": (DOMAIN, self.cluster_id),
             "configuration_url": f"{BASE_API_URL}{CONF_URL}",
-            "model": "Divera Cluster",
-            "model_id": self.cluster_id,
-            "name": self.cluster_name,
-            "manufacturer": "Divera 24/7",
+            "model": self.user_name,
+            "model_id": self.ucr_id,
+            "name": f"{self.user_name} ({self.cluster_shortname})",
+            "manufacturer": f"{self.cluster_name} ({self.cluster_id})",
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
         }

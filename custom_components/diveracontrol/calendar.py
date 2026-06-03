@@ -22,7 +22,4 @@ async def async_setup_entry(
 
     for coordinator in coordinators:
         calendar_entities = [DiveraCalendar(coordinator)]
-        async_add_entities(
-            calendar_entities,
-            config_subentry_id=coordinator.subentry_id,
-        )
+        async_add_entities(calendar_entities)

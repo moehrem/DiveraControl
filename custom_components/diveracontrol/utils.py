@@ -27,7 +27,6 @@ def get_ucr_data_from_device(
     hass: HomeAssistant,
     device_id: str,
     key: str | None = None,
-    ucr_id: str | None = None,
 ) -> Any:
     """Get ucr data of coordinator for a device.
 
@@ -35,7 +34,6 @@ def get_ucr_data_from_device(
         hass: Home Assistant instance.
         device_id: Device ID to look up.
         key: Key to retrieve from coordinator data.
-        ucr_id: Optional explicit user-cluster-relation id.
 
     Returns:
         The associated ucr data of the coordinator.
@@ -68,28 +66,20 @@ def get_ucr_data_from_device(
             f"Cluster ID not found in config entry for device: {device_id}"
         )
 
-    # Get ucr_id from explicit argument or from device identifiers.
-    resolved_ucr_id = ucr_id or next(
+    # Get ucr_id from device identifiers
+    ucr_id = next(
         (ident for dom, ident in device.identifiers if dom == DOMAIN),
         None,
     )
-
-    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
-
-    if not resolved_ucr_id or resolved_ucr_id == cluster_id:
-        # Cluster-based devices do not encode a specific user relation.
-        # Pick a deterministic fallback so device actions/services can still run.
-        if not coordinators:
-            raise HomeAssistantError(f"No coordinators found for device: {device_id}")
-        resolved_ucr_id = sorted(coordinators)[0]
-        _LOGGER.debug(
-            "No explicit ucr_id for device %s; using fallback ucr_id %s",
-            device_id,
-            resolved_ucr_id,
+    if not ucr_id:
+        raise HomeAssistantError(
+            f"UCR ID not found in device identifiers for device: {device_id}"
         )
 
     # Get coordinator
-    coordinator = coordinators.get(resolved_ucr_id)
+    coordinator = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {}).get(ucr_id)
+    )
 
     if coordinator is None:
         raise HomeAssistantError(f"Coordinator not found for device: {device_id}")

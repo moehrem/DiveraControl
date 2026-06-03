@@ -223,14 +223,8 @@ def _prepare_data(
             translation_key="no_device_id",
         )
 
-    ucr_id = data.get("ucr_id")
-    if ucr_id is not None:
-        ucr_id = str(ucr_id)
-
-    coordinator: DiveraCoordinator = get_ucr_data_from_device(
-        hass, device_id, ucr_id=ucr_id
-    )
-    api: DiveraAPI = get_ucr_data_from_device(hass, device_id, "api", ucr_id=ucr_id)
+    coordinator: DiveraCoordinator = get_ucr_data_from_device(hass, device_id)
+    api: DiveraAPI = get_ucr_data_from_device(hass, device_id, "api")
 
     return data, coordinator, api
 

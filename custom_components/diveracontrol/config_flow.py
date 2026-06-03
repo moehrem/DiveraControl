@@ -1,19 +1,10 @@
 """Config flow for myDivera integration."""
 
 import logging
-from types import MappingProxyType
 from typing import Any
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    ConfigSubentry,
-    ConfigSubentryFlow,
-    SubentryFlowResult,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_USERNAME
-from homeassistant.core import callback
 
 from .const import (
     BASE_API_URL,
@@ -25,7 +16,6 @@ from .const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERNAME,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
@@ -38,11 +28,9 @@ from .schemas import (
     get_api_key_form_schema,
     get_login_form_schema,
     get_multi_cluster_form_schema,
-    get_reconfigure_ucr_form_schema,
 )
 
 LOGGER = logging.getLogger(__name__)
-SUBENTRY_TYPE_USER_RELATION = "user_relation"
 STEP_USER = "user"
 STEP_LOGIN = "login"
 STEP_MULTI_CLUSTER = "multi_cluster"
@@ -54,17 +42,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = VERSION
     MINOR_VERSION = MINOR_VERSION
     PATCH_VERSION = PATCH_VERSION
-
-    @classmethod
-    @callback
-    def async_get_supported_subentry_types(
-        cls, config_entry: ConfigEntry
-    ) -> dict[str, type[ConfigSubentryFlow]]:
-        """Return supported subentry types for this integration."""
-
-        return {
-            SUBENTRY_TYPE_USER_RELATION: DiveraUserRelationSubentryFlow,
-        }
 
     def __init__(self) -> None:
         """Initialize the config flow.
@@ -78,35 +55,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         self.errors: dict[str, str] = {}
         self._saved_login: dict[str, Any] = {}
         self._saved_api_key: dict[str, Any] = {}
-
-    @staticmethod
-    def _subentry_title(relation_data: dict[str, Any], ucr_id: str) -> str:
-        """Build a stable title for user relation subentries."""
-
-        return str(relation_data.get("username") or ucr_id)
-
-    @classmethod
-    def _relation_subentries(
-        cls, relations: dict[str, dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """Convert relation mapping into config subentry payloads."""
-
-        subentries: list[dict[str, Any]] = []
-        for raw_ucr_id, relation_data in relations.items():
-            ucr_id = str(raw_ucr_id)
-            relation_dict = dict(relation_data)
-            relation_dict[D_UCR_ID] = relation_dict.get(D_UCR_ID, ucr_id)
-
-            subentries.append(
-                {
-                    "data": relation_dict,
-                    "subentry_type": SUBENTRY_TYPE_USER_RELATION,
-                    "title": cls._subentry_title(relation_dict, ucr_id),
-                    "unique_id": ucr_id,
-                }
-            )
-
-        return subentries
 
     @staticmethod
     def _normalized_relation_data(
@@ -378,10 +326,18 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             if existing_entry is None:
                 continue
 
+            existing_relations = existing_entry.data.get(D_RELATIONS_KEY, {})
+            if not isinstance(existing_relations, dict):
+                existing_relations = {}
+
             existing_ucr_ids = {
-                str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-                for subentry in existing_entry.subentries.values()
-                if str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+                str(ucr_id)
+                for ucr_id, relation_data in existing_relations.items()
+                if str(ucr_id)
+                or (
+                    isinstance(relation_data, dict)
+                    and str(relation_data.get(D_UCR_ID, ""))
+                )
             }
 
             if not existing_ucr_ids:
@@ -427,7 +383,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _upsert_cluster(self) -> ConfigFlowResult:
-        """Create a new cluster entry or add missing user subentries."""
+        """Create a new cluster entry or merge missing user relations."""
 
         if self.final_entry is None:
             return self.async_abort(reason="no_new_hubs_found")
@@ -444,37 +400,38 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if not isinstance(new_relations, dict) or not new_relations:
             return self.async_abort(reason="already_configured")
 
-        existing_ucr_ids = {
-            str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-            for subentry in existing_entry.subentries.values()
-            if str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
+        existing_relations = existing_entry.data.get(D_RELATIONS_KEY, {})
+        if not isinstance(existing_relations, dict):
+            existing_relations = {}
+
+        merged_relations = {
+            str(ucr_id): self._normalized_relation_data(str(ucr_id), relation_data)
+            for ucr_id, relation_data in existing_relations.items()
         }
 
-        added_subentries = 0
+        added_relations = 0
         for raw_ucr_id, relation_data in new_relations.items():
             ucr_id = str(raw_ucr_id)
-            if ucr_id in existing_ucr_ids:
+            if ucr_id in merged_relations:
                 continue
 
-            relation_dict = self._normalized_relation_data(ucr_id, relation_data)
+            merged_relations[ucr_id] = self._normalized_relation_data(ucr_id, relation_data)
+            added_relations += 1
 
-            self.hass.config_entries.async_add_subentry(
-                existing_entry,
-                ConfigSubentry(
-                    data=MappingProxyType(relation_dict),
-                    subentry_type=SUBENTRY_TYPE_USER_RELATION,
-                    title=self._subentry_title(relation_dict, ucr_id),
-                    unique_id=ucr_id,
-                ),
-            )
-            added_subentries += 1
-
-        if added_subentries == 0:
+        if added_relations == 0:
             return self.async_abort(reason="already_configured")
+
+        self.hass.config_entries.async_update_entry(
+            existing_entry,
+            data={
+                **existing_entry.data,
+                D_RELATIONS_KEY: merged_relations,
+            },
+        )
 
         LOGGER.debug(
             "Adding %s user relation(s) to existing cluster '%s'",
-            added_subentries,
+            added_relations,
             selected_cluster_id,
         )
 
@@ -510,58 +467,11 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(
             title=self.final_entry[D_CLUSTER_NAME],
-            data=entry_data,
-            subentries=self._relation_subentries(relations),
-        )
-
-
-class DiveraUserRelationSubentryFlow(ConfigSubentryFlow):
-    """Handle user relation subentry reconfiguration."""
-
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> SubentryFlowResult:
-        """Handle the initial step for user relation reconfiguration.
-
-        This is a placeholder, as HA implements the buttons to add subentries once the integration integrates "ConfigSubentryFlow".
-        This step just gives the message that adding new subentries is not supported directly, instead the user should add a new hub.
-
-        Within the main config_flow all steps for new hubs/units and/or users/ucrs are implemented.
-
-        """
-
-        return self.async_abort(reason="add_user_via_cluster")
-
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> SubentryFlowResult:
-        """Reconfigure an existing user relation subentry."""
-
-        entry = self._get_entry()
-        subentry = self._get_reconfigure_subentry()
-
-        if user_input is not None:
-            title = str(
-                user_input.get(D_USERNAME)
-                or subentry.data.get(D_USERNAME)
-                or subentry.unique_id
-                or subentry.subentry_id
-            )
-
-            return self.async_update_reload_and_abort(
-                entry=entry,
-                subentry=subentry,
-                title=title,
-                data_updates={
-                    D_USERNAME: user_input.get(D_USERNAME),
-                    D_API_KEY: user_input.get(D_API_KEY),
-                    D_BASE_API_URL: user_input.get(D_BASE_API_URL),
-                    D_UPDATE_INTERVAL_DATA: user_input.get(D_UPDATE_INTERVAL_DATA),
-                    D_UPDATE_INTERVAL_ALARM: user_input.get(D_UPDATE_INTERVAL_ALARM),
+            data={
+                **entry_data,
+                D_RELATIONS_KEY: {
+                    str(ucr_id): self._normalized_relation_data(str(ucr_id), relation_data)
+                    for ucr_id, relation_data in relations.items()
                 },
-            )
-
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=get_reconfigure_ucr_form_schema(dict(subentry.data)),
+            },
         )
