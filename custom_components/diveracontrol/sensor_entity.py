@@ -456,7 +456,6 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
     def _get_alarm_data(self) -> dict[str, Any] | None:
         """Get alarm data safely, return None if alarm doesn't exist."""
 
-        
         sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
         if isinstance(sorting, list) and sorting:
             last_alarm_id = sorting[0]
