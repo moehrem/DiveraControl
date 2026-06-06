@@ -495,19 +495,21 @@ class DiveraConfigFlowAPI:
             cluster_id = str(data.get(D_CLUSTER_ID, ""))
             clusters[cluster_id] = {
                 D_CLUSTER_ID: cluster_id,
-                D_CLUSTER_NAME: data.get(D_NAME, ""),
+                D_CLUSTER_NAME: data.get(D_NAME),
                 D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+                D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
+                D_UPDATE_INTERVAL_DATA: user_input.get(
+                    D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+                ),
+                D_UPDATE_INTERVAL_ALARM: user_input.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                ),
                 D_RELATIONS_KEY: {
                     ucr: {
                         D_UCR_ID: ucr,
                         D_USERNAME: user_name,
                         D_API_KEY: api_key,
-                        D_USERGROUP_ID: data.get(D_USERGROUP_ID, ""),
-                        D_BASE_API_URL: user_input.get(D_BASE_API_URL),
-                        D_UPDATE_INTERVAL_DATA: user_input.get(D_UPDATE_INTERVAL_DATA),
-                        D_UPDATE_INTERVAL_ALARM: user_input.get(
-                            D_UPDATE_INTERVAL_ALARM
-                        ),
+                        D_USERGROUP_ID: int(data.get(D_USERGROUP_ID, 0)),
                     },
                 },
             }

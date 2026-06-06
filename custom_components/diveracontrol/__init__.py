@@ -26,13 +26,15 @@ from .const import (
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
+    D_USERGROUP_ID,
+    D_USERNAME,
     DOMAIN,
     MINOR_VERSION,
     PATCH_VERSION,
     VERSION,
 )
 from .coordinator import DiveraCoordinator
-from .divera_api import DiveraConfigFlowAPI
+from .divera_api import D_USER, DiveraConfigFlowAPI
 from .log_handler import (
     async_remove_diveracontrol_log_handler,
     async_setup_diveracontrol_log_handler,
@@ -77,79 +79,85 @@ async def async_setup_entry(
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
-    relations = config_entry.data.get(D_RELATIONS_KEY, {})
-    if not isinstance(relations, dict):
-        relations = {}
+    user_cluster_relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(user_cluster_relations, dict):
+        user_cluster_relations = {}
 
-    # Flatten legacy subentries into D_RELATIONS_KEY and remove subentries to
-    # avoid an extra "user" layer in the integration UI.
-    if config_entry.subentries:
-        merged_relations = {
-            str(ucr): dict(data)
-            for ucr, data in relations.items()
-            if isinstance(data, dict)
-        }
-        for subentry in config_entry.subentries.values():
-            ucr_id = str(subentry.unique_id or subentry.data.get(D_UCR_ID, ""))
-            if not ucr_id:
-                continue
-            relation_data = dict(subentry.data)
-            relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
-            merged_relations[ucr_id] = relation_data
-
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data={
-                **config_entry.data,
-                D_RELATIONS_KEY: merged_relations,
-            },
+    if not user_cluster_relations:
+        _LOGGER.error(
+            "No user cluster relations found for cluster %s, cannot set up coordinator",
+            cluster_name,
         )
-        for subentry_id in list(config_entry.subentries):
-            hass.config_entries.async_remove_subentry(config_entry, subentry_id)
-
-        relations = merged_relations
-
-    coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
+        raise ConfigEntryNotReady("No user cluster relations found in config entry")
 
     # Create coordinator instances per user relation.
-    for raw_ucr_id in relations:
-        ucr_id = str(raw_ucr_id)
-        if not ucr_id:
+    # every ucr has its own api key
+    # update intervals and base-urls are shared on cluster level, so they are stored in the main config entry and not in the relation data
+    coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
+
+    for (
+        ucr_id,
+        user_relation_data,
+    ) in user_cluster_relations.items():
+        # validate user_relation_data type
+        if not isinstance(user_relation_data, dict):
+            _LOGGER.error(
+                "Invalid user relation data for ID %s: expected dict, got %s",
+                ucr_id,
+                type(user_relation_data).__name__,
+            )
             continue
 
-        try:
-            coordinator = DiveraCoordinator(
-                hass,
-                config_entry,
+        # extract user_name with default
+        # if user_name is missing, abort
+        user_name = user_relation_data.get(D_USERNAME, "unknown user")
+        if user_name == "unknown user":
+            _LOGGER.warning(
+                "No username provided for ucr_id %s in cluster %s, using default",
                 ucr_id,
+                cluster_name,
             )
 
+        # create coordinator
+        try:
+            coordinator = DiveraCoordinator(hass, config_entry, ucr_id)
             await coordinator.async_config_entry_first_refresh()
             coordinators_by_ucr[ucr_id] = coordinator
-
-        except (TimeoutError, ConnectionError) as err:
-            _LOGGER.error(
-                "Connection failed for user %s: %s (%s)",
+            _LOGGER.debug(
+                "Successfully set up coordinator for user %s (ID: %s)",
+                user_name,
                 ucr_id,
-                err,
-                cluster_name,
             )
-            continue
+
+        except ConfigEntryNotReady as err:
+            _LOGGER.error(
+                "Config entry not ready for cluster %s, user %s: %s",
+                cluster_name,
+                user_name,
+                err,
+            )
         except ConfigEntryAuthFailed as err:
             _LOGGER.error(
-                "Authentication failed for user %s: %s (%s)",
+                "Authentication failed for cluster %s, user %s: %s",
+                cluster_name,
+                user_name,
+                err,
+            )
+        except (TimeoutError, ConnectionError) as err:
+            _LOGGER.error(
+                "Connection failed for cluster %s, user %s: %s",
+                cluster_name,
+                user_name,
+                err,
+            )
+        except Exception as err:
+            _LOGGER.exception(
+                "Unexpected error creating coordinator for cluster %s, user %s (ID: %s): %s",
+                cluster_name,
+                user_name,
                 ucr_id,
                 err,
-                cluster_name,
             )
-            continue
-        except Exception:
-            _LOGGER.exception(
-                "Unexpected error during setup for user %s (%s)",
-                ucr_id,
-                cluster_name,
-            )
-            continue
 
     if not coordinators_by_ucr:
         raise ConfigEntryNotReady("Failed to set up any user for this cluster")
@@ -219,16 +227,16 @@ async def async_remove_config_entry_device(
     if ucr_id == str(config_entry.data.get(D_CLUSTER_ID, "")):
         return False
 
-    relations = config_entry.data.get(D_RELATIONS_KEY, {})
-    if not isinstance(relations, dict):
+    user_cluster_relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    if not isinstance(user_cluster_relations, dict):
         return False
 
-    if ucr_id not in relations:
+    if ucr_id not in user_cluster_relations:
         return False
 
     # Keep at least one relation in the entry; removing the last one would
     # leave an invalid cluster config entry.
-    if len(relations) <= 1:
+    if len(user_cluster_relations) <= 1:
         _LOGGER.warning(
             "Cannot remove last user relation %s from cluster %s",
             ucr_id,
@@ -236,7 +244,7 @@ async def async_remove_config_entry_device(
         )
         return False
 
-    updated_relations = dict(relations)
+    updated_relations = dict(user_cluster_relations)
     updated_relations.pop(ucr_id, None)
     hass.config_entries.async_update_entry(
         config_entry,
@@ -380,7 +388,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             migrated = True
 
     # changing to v2.0.0
-    # breaking change: new config entry schema with multiple user relations per cluster
+    # breaking change: new config entry schema with multiple user user_cluster_relations per cluster
     # user_cluster_relations are stored in D_RELATIONS_KEY inside config entry data
     # but no need to check for multiple users as this was not supported before and thus cannot exist in old config entries
     if current_version == 1 and current_minor_version < 5:
@@ -422,28 +430,9 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             None,
         )
 
-        if migrated_cluster is None:
-            _LOGGER.error(
-                "Migration failed: no cluster mapping found for ucr_id %s in entry %s",
-                ucr_id,
-                config_entry.entry_id,
-            )
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                f"migration_failed_v2_0_0_{config_entry.entry_id}",
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="migration_failed_v2_0_0",
-                translation_placeholders={
-                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-                },
-            )
-            return False
-
         # Normalize relation data and keep it in config entry data.
         raw_relations = migrated_cluster.pop(D_RELATIONS_KEY, {})
-        relations: dict[str, dict] = {}
+        user_cluster_relations: dict[str, dict] = {}
         for raw_ucr_id, raw_relation_data in raw_relations.items():
             if not isinstance(raw_relation_data, dict):
                 continue
@@ -454,14 +443,14 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             relation_data.pop(D_UPDATE_INTERVAL_DATA, None)
             relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
             relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
-            relations[ucr_id] = relation_data
+            user_cluster_relations[ucr_id] = relation_data
 
         updated_data = {
             **migrated_cluster,
             D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
             D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
             D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
-            D_RELATIONS_KEY: relations,
+            D_RELATIONS_KEY: user_cluster_relations,
         }
 
         # set versions to ensure future migrations are correctly applied

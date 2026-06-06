@@ -61,6 +61,44 @@
       "merge_successful": "Neuauthentifizierung erfolgreich."
     }
   },
+  "options": {
+    "abort": {
+      "no_ucr": "Für diese Einheit sind keine Nutzer verfügbar."
+    },
+    "step": {
+      "init": {
+        "title": "Einheit neu konfigurieren",
+        "description": "Wähle aus, welche Einstellungen für {cluster_name} neu konfiguriert werden sollen.",
+        "menu_options": {
+          "cluster_settings": "Einheitseinstellungen",
+          "user_select": "Benutzereinstellungen"
+        }
+      },
+      "cluster_settings": {
+        "title": "Einheitseinstellungen für {cluster_name}",
+        "description": "Die unten stehenden Einstellungen können angepasst werden. Die Änderungen werden nach dem Speichern sofort übernommen, die Integration wird neu geladen.",
+        "data": {
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL"
+        }
+      },
+      "user_select": {
+        "title": "Benutzereinstellungen für {cluster_name} auswählen",
+        "description": "Wähle den Benutzer aus, dessen Einstellungen aktualisiert werden sollen.",
+        "data": {
+          "ucr_id": "Benutzer"
+        }
+      },
+      "user_api_key": {
+        "title": "API-Schlüssel für {username} aktualisieren",
+        "description": "Setze einen neuen API-Schlüssel für den Benutzer {username} in {cluster_name}.",
+        "data": {
+          "api_key": "API-Schlüssel"
+        }
+      }
+    }
+  },
   "issues": {
     "breaking_changes_v1_2_0": {
       "title": "Aktion erforderlich: **{cluster_name}**",

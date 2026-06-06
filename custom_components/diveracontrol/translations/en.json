@@ -65,6 +65,44 @@
       "merge_successful": "Reauthentication successful."
     }
   },
+  "options": {
+    "abort": {
+      "no_ucr": "No users are available for this unit."
+    },
+    "step": {
+      "init": {
+        "title": "Reconfigure unit",
+        "description": "Select what to reconfigure for {cluster_name}.",
+        "menu_options": {
+          "cluster_settings": "Unit settings",
+          "user_select": "User settings"
+        }
+      },
+      "cluster_settings": {
+        "title": "Unit settings for {cluster_name}",
+        "description": "The settings below can be adjusted. Changes are applied immediately after saving, and the integration will be reloaded.",
+        "data": {
+          "update_interval_data": "Query interval outside of alarms (seconds)",
+          "update_interval_alarm": "Query interval during open alarms (seconds)",
+          "base_api_url": "Base API URL"
+        }
+      },
+      "user_select": {
+        "title": "User settings for {cluster_name}",
+        "description": "Select the user whose settings should be updated.",
+        "data": {
+          "ucr_id": "User"
+        }
+      },
+      "user_api_key": {
+        "title": "Update API key for {username}",
+        "description": "Set a new API key for user {username} in {cluster_name}.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    }
+  },
   "issues": {
     "breaking_changes_v1_2_0": {
       "title": "Action required: **{cluster_name}**",

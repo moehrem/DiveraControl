@@ -39,11 +39,10 @@ class BaseDiveraEntity(CoordinatorEntity):
         self._attr_device_info = self._get_device_info()
 
     def _get_device_info(self) -> DeviceInfo:
-        """Return device info for the user device under the cluster hub."""
+        """Return device info for the user device."""
 
         return {
             "identifiers": {(DOMAIN, self.ucr_id)},
-            "via_device": (DOMAIN, self.cluster_id),
             "configuration_url": f"{BASE_API_URL}{CONF_URL}",
             "model": self.user_name,
             "model_id": self.ucr_id,

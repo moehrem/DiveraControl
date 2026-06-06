@@ -120,6 +120,28 @@ def get_api_key_form_schema(defaults: dict[str, Any]) -> vol.Schema:
     )
 
 
+def get_options_form_schema(defaults: dict[str, Any]) -> vol.Schema:
+    """Get the options form schema for editable cluster settings."""
+
+    return vol.Schema(
+        {
+            vol.Required(
+                D_UPDATE_INTERVAL_DATA,
+                default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_UPDATE_INTERVAL_ALARM,
+                default=defaults.get(D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
+            ): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
+            ),
+        }
+    )
+
+
 def get_reconfigure_ucr_form_schema(selected_ucr: dict[str, Any]) -> vol.Schema:
     """Get the reconfigure form schema for user cluster relations.
 
@@ -171,16 +193,19 @@ def get_reconfigure_cluster_form_schema(
 
     """
 
-    ucr_ids = list(current_ucrs.keys())
-    if not ucr_ids:
-        ucr_ids = [""]
+    options: list[dict[str, str]] = []
+    for ucr_id, ucr in current_ucrs.items():
+        username = str(ucr.get(D_USERNAME, "")).strip() or str(ucr_id)
+        options.append({"value": str(ucr_id), "label": username})
+
+    if not options:
+        options = [{"value": "", "label": ""}]
 
     return vol.Schema(
         {
-            vol.Required(D_UCR_ID, default=ucr_ids[0]): SelectSelector(
+            vol.Required(D_UCR_ID, default=options[0]["value"]): SelectSelector(
                 SelectSelectorConfig(
-                    options=ucr_ids,
-                    translation_key="ucr_selection",
+                    options=options,
                     multiple=False,
                     mode=SelectSelectorMode.DROPDOWN,
                 )
