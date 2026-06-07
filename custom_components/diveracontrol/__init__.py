@@ -1,6 +1,7 @@
 """Initializing DiveraControl integration."""
 
 import asyncio
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -276,11 +277,17 @@ def _remove_old_entity_entries(
         ]
 
         for entry in entries:
-            _LOGGER.info(f"Migration: removing old entity registry entry {entry.entity_id} (unique_id={entry.unique_id})")
+            _LOGGER.info(
+                "Migration: removing old entity registry entry %s (unique_id=%s)",
+                entry.entity_id,
+                entry.unique_id,
+            )
             ent_reg.async_remove(entry.entity_id)
 
     except Exception:
-        _LOGGER.exception("Failed to remove old entity registry entries during migration")
+        _LOGGER.exception(
+            "Failed to remove old entity registry entries during migration"
+        )
 
 
 def _migrate_to_v1_2_0(
@@ -296,7 +303,9 @@ def _migrate_to_v1_2_0(
 
     if D_INTEGRATION_VERSION not in updated_data:
         _LOGGER.info("Adding integration version to existing config entry")
-        updated_data[D_INTEGRATION_VERSION] = f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        updated_data[D_INTEGRATION_VERSION] = (
+            f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        )
         migrated = True
 
     ir.async_create_issue(
@@ -327,7 +336,9 @@ def _migrate_to_v1_3_0(
     if D_BASE_API_URL not in updated_data:
         _LOGGER.info("Adding base_url to existing config entry")
         updated_data[D_BASE_API_URL] = BASE_API_URL
-        updated_data[D_INTEGRATION_VERSION] = f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        updated_data[D_INTEGRATION_VERSION] = (
+            f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        )
         migrated = True
 
     return updated_data, current_version, current_minor_version, migrated
@@ -345,7 +356,9 @@ def _migrate_to_v1_4_0(
     if D_USE_WEBHOOKS not in updated_data:
         _LOGGER.info("Adding use_webhooks to existing config entry")
         updated_data[D_USE_WEBHOOKS] = False
-        updated_data[D_INTEGRATION_VERSION] = f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        updated_data[D_INTEGRATION_VERSION] = (
+            f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+        )
         migrated = True
 
     return updated_data, current_version, current_minor_version, migrated
@@ -357,7 +370,7 @@ async def _migrate_to_v2_0_0(
     updated_data: dict,
 ) -> tuple[dict, int, int, bool] | None:
     """Migrate to v2.0.0: Restructure config to support multiple users per cluster.
-    
+
     Returns None if migration fails, otherwise returns (updated_data, current_version, current_minor_version, migrated).
     """
     _LOGGER.info("Migrating config entry to integration version 2.0.0")
@@ -371,7 +384,9 @@ async def _migrate_to_v2_0_0(
     validation_errors, clusters = await config_api.request_access(user_input)
 
     if validation_errors:
-        _LOGGER.error(f"API key validation failed during migration: {validation_errors}")
+        _LOGGER.error(
+            "API key validation failed during migration: %s", validation_errors
+        )
         ir.async_create_issue(
             hass,
             DOMAIN,
@@ -392,7 +407,9 @@ async def _migrate_to_v2_0_0(
     )
 
     if migrated_cluster is None:
-        _LOGGER.error(f"No matching cluster found for UCR_ID {ucr_id} during migration to v2.0.0")
+        _LOGGER.error(
+            "No matching cluster found for UCR_ID %s during migration to v2.0.0", ucr_id
+        )
         ir.async_create_issue(
             hass,
             DOMAIN,
@@ -457,15 +474,15 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """
 
     updated_data: dict = {**config_entry.data}
-    clear_registry_entries = False
-    migrated = False
+    clear_registry_entries: bool = False
+    migrated: bool = False
 
-    current_version = config_entry.version
-    current_minor_version = config_entry.minor_version
-    current_patch_version = (
+    current_version: int = config_entry.version
+    current_minor_version: int = config_entry.minor_version
+    current_patch_version: str = (
         config_entry.data.get(D_INTEGRATION_VERSION, "0.0.0").split(".")[2]
         or PATCH_VERSION
-        or 0
+        or "0"
     )
 
     _LOGGER.info(
@@ -478,207 +495,40 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         PATCH_VERSION or 0,
     )
 
-    # changing to v1.2.0
-    # add new integration_version parameter to config entry and create issue for breaking changes
+    # Apply migrations in order using helper functions
+    # v1.2.0: Add integration_version parameter and create breaking changes issue
     if current_version == 1 and current_minor_version < 2:
-        _LOGGER.info(
-            "Migrating config entry to integration version 1.2.0",
-        )
-        if D_INTEGRATION_VERSION not in updated_data:
-            _LOGGER.info("Adding integration version to existing config entry")
-            updated_data[D_INTEGRATION_VERSION] = (
-                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
-            )
-
-            # set versions to ensure future migrations are correctly applied
-            current_version = 1
-            current_minor_version = 2
-            migrated = True
-
-        ir.async_create_issue(
-            hass,
-            DOMAIN,
-            f"breaking_changes_v1_2_0_{config_entry.entry_id}",
-            is_fixable=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key="breaking_changes_v1_2_0",
-            translation_placeholders={
-                "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-            },
+        updated_data, current_version, current_minor_version, migrated = (
+            _migrate_to_v1_2_0(updated_data, config_entry, hass)
         )
 
-        # Remove all existing entity registry entries that belong to this
-        # config entry. This prevents old/unavailable entities from lingering
-        # after the upgrade. We do this before the integration creates new
-        # entities so the new registration is clean.
-        try:
-            ent_reg = er.async_get(hass)
-            entries = [
-                e
-                for e in ent_reg.entities.values()
-                if e.config_entry_id == config_entry.entry_id
-            ]
-
-            for entry in entries:
-                _LOGGER.info(
-                    "Migration: removing old entity registry entry %s (unique_id=%s)",
-                    entry.entity_id,
-                    entry.unique_id,
-                )
-                ent_reg.async_remove(entry.entity_id)
-
-        except Exception:
-            _LOGGER.exception(
-                "Failed to remove old entity registry entries during migration"
-            )
-
-    # changing to v1.3.0
-    # add new base_url parameter to config entry
-
+    # v1.3.0: Add base_url parameter
     if current_version == 1 and current_minor_version < 3:
-        _LOGGER.info(
-            "Migrating config entry to integration version 1.3.0",
+        updated_data, current_version, current_minor_version, migrated = (
+            _migrate_to_v1_3_0(updated_data)
         )
 
-        if D_BASE_API_URL not in updated_data:
-            _LOGGER.info("Adding base_url to existing config entry")
-            updated_data[D_BASE_API_URL] = BASE_API_URL
-            updated_data[D_INTEGRATION_VERSION] = (
-                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
-            )
-
-            # set versions to ensure future migrations are correctly applied
-            current_version = 1
-            current_minor_version = 3
-            migrated = True
-
-    # changing to v1.4.0
-    # add new use_webhooks parameter to config entry
+    # v1.4.0: Add use_webhooks parameter
     if current_version == 1 and current_minor_version < 4:
-        _LOGGER.info(
-            "Migrating config entry to integration version 1.4.0",
+        updated_data, current_version, current_minor_version, migrated = (
+            _migrate_to_v1_4_0(updated_data)
         )
 
-        if D_USE_WEBHOOKS not in updated_data:
-            _LOGGER.info("Adding use_webhooks to existing config entry")
-            updated_data[D_USE_WEBHOOKS] = False
-            updated_data[D_INTEGRATION_VERSION] = (
-                f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
-            )
-
-            # set versions to ensure future migrations are correctly applied
-            current_version = 1
-            current_minor_version = 4
-            migrated = True
-
-    # changing to v2.0.0
-    # breaking change: new config entry schema with multiple user user_cluster_relations per cluster
-    # user_cluster_relations are stored in D_RELATIONS_KEY inside config entry data
-    # but no need to check for multiple users as this was not supported before and thus cannot exist in old config entries
+    # v2.0.0: Breaking change - restructure config to support multiple users per cluster
     if current_version == 1 and current_minor_version < 5:
-        _LOGGER.info(
-            "Migrating config entry to integration version 2.0.0",
-        )
-
-        user_input = {
-            D_API_KEY: config_entry.data.get(D_API_KEY, ""),
-        }
-        base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
-
-        config_api = DiveraConfigFlowAPI(hass, base_api_url)
-        validation_errors, clusters = await config_api.request_access(user_input)
-
-        if validation_errors:
-            _LOGGER.error(
-                "API key validation failed during migration: %s",
-                validation_errors,
-            )
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                f"migration_failed_v2_0_0_{config_entry.entry_id}",
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="migration_failed_v2_0_0",
-                translation_placeholders={
-                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-                },
-            )
-            migrated = False
+        migration_result = await _migrate_to_v2_0_0(hass, config_entry, updated_data)
+        if migration_result is None:
             return False
-
-        # read correct cluster from clusters by matching ucr_id (there is only one user relation in old config entries, so we can just take the first one)
-        ucr_id = config_entry.data.get(D_UCR_ID, "")
-        migrated_cluster = next(
-            (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
-            None,
+        updated_data, current_version, current_minor_version, migrated = (
+            migration_result
         )
+        clear_registry_entries = True  # to ensure all old entities are removed, as the config structure changed significantly and old entities would not be cleaned up properly due to missing UCR_ID in their unique_ids
 
-        if migrated_cluster is None:
-            _LOGGER.error(
-                "No matching cluster found for UCR_ID %s during migration to v2.0.0",
-                ucr_id,
-            )
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                f"migration_failed_v2_0_0_{config_entry.entry_id}",
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="migration_failed_v2_0_0",
-                translation_placeholders={
-                    "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-                },
-            )
-            return False
-
-        # Normalize relation data and keep it in config entry data.
-        raw_relations = migrated_cluster.pop(D_RELATIONS_KEY, {})
-        user_cluster_relations: dict[str, dict] = {}
-        for raw_ucr_id, raw_relation_data in raw_relations.items():
-            if not isinstance(raw_relation_data, dict):
-                continue
-
-            ucr_id = str(raw_ucr_id)
-            relation_data = dict(raw_relation_data)
-            relation_data.pop(D_BASE_API_URL, None)
-            relation_data.pop(D_UPDATE_INTERVAL_DATA, None)
-            relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
-            relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
-            user_cluster_relations[ucr_id] = relation_data
-
-        updated_data = {
-            **migrated_cluster,
-            D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
-            D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
-            D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
-            D_RELATIONS_KEY: user_cluster_relations,
-        }
-
-        # set versions to ensure future migrations are correctly applied
-        current_version = 2
-        current_minor_version = 0
-        clear_registry_entries = True
-        migrated = True
-
-        ir.async_create_issue(
-            hass,
-            DOMAIN,
-            f"breaking_changes_v2_0_0_{config_entry.entry_id}",
-            is_fixable=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key="breaking_changes_v2_0_0",
-            translation_placeholders={
-                "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-            },
-        )
-
-    ##### ALWAYS THE ONE AND ONLY FINAL BLOCK #####
-    # finalize migration by updating config entry version if any migration step was performed
+    # Finalize migration by updating config entry version if any migration step was performed
     if migrated or current_version != VERSION or current_minor_version != MINOR_VERSION:
         if clear_registry_entries:
             _LOGGER.info(
-                "Migration: clearing old registry entries for config entry %s",
+                "Migration: clearing old registry entries for config entry %s due to breaking changes",
                 config_entry.entry_id,
             )
             dr.async_get(hass).async_clear_config_entry(config_entry.entry_id)
