@@ -757,12 +757,12 @@ post_user_status:
       integration: diveracontrol
   fields:
     id:
-      required: true
-      example: 123
+      required: false
+      example: 67890
       selector:
         number:
-          min: 0
-          mode: box
+          min: 1
+          max: 10
     vehicle:
       required: false
       example: 123456

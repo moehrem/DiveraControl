@@ -395,8 +395,8 @@
       "description": "Updates vehicle status and data in Divera 24/7.",
       "fields": {
         "vehicle": {
-          "name": "Vehicle ID",
-          "description": "(Required) ID of the target vehicle"
+          "name": "Vehicle",
+          "description": "(Required) Sensors of the target vehicle(s)."
         },
         "status": {
           "name": "Status",
@@ -907,6 +907,44 @@
         "newssurvey_sorting": {
           "name": "Sorting",
           "description": "(Optional) List with comma-separated sorting definition"
+        }
+      }
+    },
+    "post_user_status": {
+      "name": "Set user status",
+      "description": "Sets the user status for a specific user.",
+      "fields": {
+        "id": {
+          "name": "User ID",
+          "description": "(Required) ID of the user whose status is being changed"
+        },
+        "vehicle": {
+          "name": "Vehicle",
+          "description": "(Optional) Vehicle to assign the user to - assignment expires on the next status change."
+        },
+        "note": {
+          "name": "Note",
+          "description": "(Optional) Free text for the status message - expires on the next status change."
+        },
+        "reset_date": {
+          "name": "Reset date",
+          "description": "(Optional) Date and time when the status should be reset."
+        },
+        "reset_to": {
+          "name": "Reset to status",
+          "description": "(Optional) Status to reset to."
+        },
+        "alarm_skip": {
+          "name": "Ignore status change during open alarm",
+          "description": "(Optional) Ignores all status changes when an alarm is active."
+        },
+        "status_skip_statusplan": {
+          "name": "Ignore status plan",
+          "description": "(Optional) Ignores all planned status changes for the user until the specified reset time."
+        },
+        "status_skip_geofence": {
+          "name": "Ignore geofence",
+          "description": "(Optional) Ignores geofences for the user until the specified reset time."
         }
       }
     }

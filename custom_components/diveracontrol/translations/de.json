@@ -391,8 +391,8 @@
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
       "fields": {
         "vehicle": {
-          "name": "Fahrzeug-ID",
-          "description": "(Erforderlich) ID des Ziel-Fahrzeugs."
+          "name": "Fahrzeug",
+          "description": "(Erforderlich) Sensoren des bzw der Ziel-Fahrzeug(e)."
         },
         "status": {
           "name": "Status",
@@ -903,6 +903,44 @@
         "newssurvey_sorting": {
           "name": "Sortierung",
           "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
+        }
+      }
+    },
+    "post_user_status": {
+      "name": "Nutzerstatus setzen",
+      "description": "Setzt den Nutzerstatus eines Nutzers.",
+      "fields": {
+        "id": {
+          "name": "Nutzerstatus",
+          "description": "(Erforderlich) Zu setzender Nutzerstatus."
+        },
+        "vehicle": {
+          "name": "Fahrzeug",
+          "description": "(Optional) Fahrzeug, dem der Nutzer zugewiesen werden soll - Zuordnung erlischt bei erneutem Statuswechsel."
+        },
+        "note": {
+          "name": "Notiz",
+          "description": "(Optional) Freitext zur Statusmeldung - Erlischt bei erneutem Statuswechsel."
+        },
+        "reset_date": {
+          "name": "Zurücksetzen am",
+          "description": "(Optional) Zeitpunkt, an dem der Status zurückgesetzt werden soll."
+        },
+        "reset_to": {
+          "name": "Zurücksetzen auf Status",
+          "description": "(Optional) Folgestatus bei Zurücksetzen."
+        },
+        "alarm_skip": {
+          "name": "Statusänderung bei offenem Alarm ignorieren",
+          "description": "(Optional) Ignoriert alle Statusänderungen, wenn gerade ein Einsatz anliegt."
+        },
+        "status_skip_statusplan": {
+          "name": "Statusplan ignorieren",
+          "description": "(Optional) Ignoriert alle geplanten Statusänderungen für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
+        },
+        "status_skip_geofence": {
+          "name": "Geofence ignorieren",
+          "description": "(Optional) Ignoriert Geofences für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
         }
       }
     }
