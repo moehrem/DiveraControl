@@ -1,7 +1,13 @@
 """Initializing DiveraControl integration."""
 
-import asyncio
+import asyncio  # noqa: I001
 import logging
+
+# IMPORTANT: import log_handler BEFORE any other module that uses logging to ensure the handler is registered in time
+from .log_handler import (
+    async_remove_diveracontrol_log_handler,
+    async_setup_diveracontrol_log_handler,
+)
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -34,10 +40,6 @@ from .const import (
 )
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraConfigFlowAPI
-from .log_handler import (
-    async_remove_diveracontrol_log_handler,
-    async_setup_diveracontrol_log_handler,
-)
 from .service import async_register_services
 
 PLATFORMS: list[Platform] = [
