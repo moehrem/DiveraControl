@@ -571,8 +571,8 @@
       "description": "Changes an existing alarm in Divera 24/7.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Required) Alarm ID of the alarm to change"
+          "name": "Alarm",
+          "description": "(Required) Sensor of the alarm to change"
         },
         "title": {
           "name": "Keyword",
@@ -721,8 +721,8 @@
       "description": "Opens or closes an existing alarm and optionally submits a report.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Required) ID of the alarm to be opened or closed. Only exactly one ID allowed"
+          "name": "Alarm",
+          "description": "(Required) Sensor of the alarm to be opened or closed."
         },
         "closed": {
           "name": "Closed",
@@ -736,15 +736,15 @@
     },
     "post_message": {
       "name": "Send message",
-      "description": "Sends a message to a channel or the channel assigned to the alarm.",
+      "description": "Sends a message to a free channel or the channel assigned to the alarm.",
       "fields": {
         "message_channel_id": {
           "name": "Message channel ID",
           "description": "(Either) ID of the channel where the message will be sent"
         },
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Or) Alarm ID whose message channel should be used"
+          "name": "Alarm",
+          "description": "(Or) Sensor of the alarm whose message channel should be used"
         },
         "text": {
           "name": "Message",
