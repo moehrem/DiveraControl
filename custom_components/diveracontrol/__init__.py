@@ -100,6 +100,10 @@ async def async_setup_entry(
     # update intervals and base-urls are shared on cluster level, so they are stored in the main config entry and not in the relation data
     coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
 
+    # Prepare coordinators and refresh tasks for parallel execution
+    refresh_tasks = []
+    ucr_info = []
+
     for (
         ucr_id,
         user_relation_data,
@@ -114,7 +118,6 @@ async def async_setup_entry(
             continue
 
         # extract user_name with default
-        # if user_name is missing, abort
         user_name = user_relation_data.get(D_USERNAME, "unknown user")
         if user_name == "unknown user":
             _LOGGER.warning(
@@ -123,17 +126,13 @@ async def async_setup_entry(
                 cluster_name,
             )
 
-        # create coordinator
+        # create coordinator (without await)
         try:
             coordinator = DiveraCoordinator(hass, config_entry, ucr_id)
-            await coordinator.async_config_entry_first_refresh()
-            coordinators_by_ucr[ucr_id] = coordinator
-            _LOGGER.debug(
-                "Successfully set up coordinator for user %s (ID: %s)",
-                user_name,
-                ucr_id,
-            )
-
+            # Store coordinator and metadata for later processing
+            ucr_info.append((ucr_id, user_name, coordinator))
+            # Create task for parallel refresh
+            refresh_tasks.append(coordinator.async_config_entry_first_refresh())
         except ConfigEntryNotReady as err:
             _LOGGER.error(
                 "Config entry not ready for cluster %s, user %s: %s",
@@ -163,6 +162,52 @@ async def async_setup_entry(
                 ucr_id,
                 err,
             )
+
+    # Execute all refresh tasks in parallel
+    if refresh_tasks:
+        results = await asyncio.gather(*refresh_tasks, return_exceptions=True)
+
+        # Process results and populate coordinators_by_ucr
+        for (ucr_id, user_name, coordinator), result in zip(ucr_info, results):
+            if isinstance(result, Exception):
+                # Handle errors from async_config_entry_first_refresh
+                if isinstance(result, ConfigEntryNotReady):
+                    _LOGGER.error(
+                        "Config entry not ready for cluster %s, user %s: %s",
+                        cluster_name,
+                        user_name,
+                        result,
+                    )
+                elif isinstance(result, ConfigEntryAuthFailed):
+                    _LOGGER.error(
+                        "Authentication failed for cluster %s, user %s: %s",
+                        cluster_name,
+                        user_name,
+                        result,
+                    )
+                elif isinstance(result, (TimeoutError, ConnectionError)):
+                    _LOGGER.error(
+                        "Connection failed for cluster %s, user %s: %s",
+                        cluster_name,
+                        user_name,
+                        result,
+                    )
+                else:
+                    _LOGGER.exception(
+                        "Unexpected error during refresh for cluster %s, user %s (ID: %s): %s",
+                        cluster_name,
+                        user_name,
+                        ucr_id,
+                        result,
+                    )
+            else:
+                # Success - add coordinator to the dict
+                coordinators_by_ucr[ucr_id] = coordinator
+                _LOGGER.debug(
+                    "Successfully set up coordinator for user %s (ID: %s)",
+                    user_name,
+                    ucr_id,
+                )
 
     if not coordinators_by_ucr:
         raise ConfigEntryNotReady("Failed to set up any user for this cluster")
