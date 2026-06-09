@@ -6,7 +6,7 @@ import pytest
 from aiohttp import ClientError, ClientSession
 
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_DATA,
@@ -53,14 +53,14 @@ class TestConfigFlowApiValidateLogin:
             D_CLUSTER_NAME: "Test Cluster",
             D_CLUSTER_ID: "group1",
             D_UCR_ID: "123",
-            D_API_KEY: "test_api_key",
+            D_ACCESSKEY: "test_api_key",
             D_USERGROUP_ID: "group1",
         }
         assert clusters["456"] == {
             D_CLUSTER_NAME: "Another Cluster",
             D_CLUSTER_ID: "group2",
             D_UCR_ID: "456",
-            D_API_KEY: "test_api_key",
+            D_ACCESSKEY: "test_api_key",
             D_USERGROUP_ID: "group2",
         }
 
@@ -197,7 +197,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
         )
 
         assert errors == {}
@@ -206,14 +206,14 @@ class TestConfigFlowApiValidateApiKey:
             D_CLUSTER_NAME: "Test Cluster",
             D_CLUSTER_ID: "group1",
             D_UCR_ID: "123",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
             D_USERGROUP_ID: "group1",
         }
         assert clusters["456"] == {
             D_CLUSTER_NAME: "Another Cluster",
             D_CLUSTER_ID: "group2",
             D_UCR_ID: "456",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
             D_USERGROUP_ID: "group2",
         }
 
@@ -225,7 +225,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "invalid_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "invalid_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "Invalid API key"}
@@ -238,7 +238,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.side_effect = ClientError("Connection failed")
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -251,7 +251,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.side_effect = TimeoutError("Request timed out")
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "cannot_connect"}
@@ -267,7 +267,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.return_value.__aenter__.return_value = mock_response
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "no_data"}
@@ -280,7 +280,7 @@ class TestConfigFlowApiValidateApiKey:
         mock_session.request.side_effect = Exception("Unexpected error")
 
         errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"api_key": "test_key"}, BASE_API_URL
+            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
         )
 
         assert errors == {"base": "Unexpected error"}

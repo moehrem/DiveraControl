@@ -15,11 +15,11 @@
           "use_webhooks": "Enable webhooks"
         }
       },
-      "api_key": {
+      "accesskey": {
         "title": "Enter API key",
         "description": "If the login fails or a system user should be logged in, the user's API key can be entered here as an alternative.",
         "data": {
-          "api_key": "API key",
+          "accesskey": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
           "base_api_url": "Base API URL",
@@ -37,7 +37,7 @@
         "title": "Change configuration for DiveraControl",
         "description": "By changing the API key, a different user can be assigned to the unit. Additionally, both intervals can be reconfigured.",
         "data": {
-          "api_key": "API key",
+          "accesskey": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
           "base_api_url": "Base API URL",
@@ -98,7 +98,7 @@
         "title": "Update API key for {username}",
         "description": "Set a new API key for user {username} in {cluster_name}.",
         "data": {
-          "api_key": "API key"
+          "accesskey": "API key"
         }
       }
     }
@@ -150,7 +150,7 @@
     "entry_method_options": {
       "options": {
         "login": "User login",
-        "api_key": "API-Key"
+        "accesskey": "API-Key"
       }
     },
     "notification_type_options": {
@@ -970,7 +970,7 @@
           "description": "Change the API key to update credentials. You can also adjust the query intervals.",
           "data": {
             "username": "Username",
-            "api_key": "API key",
+            "accesskey": "API key",
             "update_interval_data": "Query interval outside of alarms (seconds)",
             "update_interval_alarm": "Query interval during open alarms (seconds)",
             "base_api_url": "Base API URL"

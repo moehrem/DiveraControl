@@ -4,10 +4,10 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import D_API_KEY, D_CLUSTER_ID, D_CLUSTER_NAME, D_COORDINATOR, DOMAIN
+from .const import D_ACCESSKEY, D_CLUSTER_ID, D_COORDINATOR, DOMAIN
 from .log_handler import async_get_diveracontrol_logs
 
-TO_REDACT = [D_API_KEY, "accesskey"]
+TO_REDACT = [D_ACCESSKEY, "accesskey"]
 
 
 async def async_get_config_entry_diagnostics(
@@ -16,7 +16,7 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, object]:
     """Return cluster and user data integration including config_entry and coordinator data.
 
-    Attention: Only api_keys and accesskeys are redacted. Any further personal data, i.e. names,
+    Attention: Only accesskeys are redacted. Any further personal data, i.e. names,
     telephone numbers, qualifications are shown and must be handled carefully!
 
     Args:
@@ -43,7 +43,6 @@ async def async_get_config_entry_diagnostics(
 
     return async_redact_data(
         {
-            D_CLUSTER_NAME: config_entry.title,
             "config_entry": config_entry.data,
             "coordinators": coordinator_data,
             "logs": logs,

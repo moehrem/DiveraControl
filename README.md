@@ -259,7 +259,7 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 | **Diagnosedaten**         | Herunterladbar im Kontextmenü der Einheit | Enthält **alle lokalen Daten** (inkl. personenbezogener Daten!) |
 
 > **⚠️ Wichtig:**
-> - In Diagnosedaten werden **nur `api_key` und `accesskey` maskiert**.
+> - In Diagnosedaten wird **nur `accesskey` maskiert**.
 > - **Alle anderen Daten** (Nutzerdaten, Alarminhalte, etc.) sind **unverschlüsselt** enthalten.
 > - **Nie ungefiltert weitergeben!**
 

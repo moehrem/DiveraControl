@@ -5,11 +5,15 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, OptionsFlow, ConfigFlowResult
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
 from .const import (
     BASE_API_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_NAME,
     D_RELATIONS_KEY,
@@ -60,8 +64,8 @@ class DiveraControlOptionsFlow(OptionsFlow):
         return vol.Schema(
             {
                 vol.Required(
-                    D_API_KEY,
-                    default=selected_relation.get(D_API_KEY, ""),
+                    D_ACCESSKEY,
+                    default=selected_relation.get(D_ACCESSKEY, ""),
                 ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             }
         )
@@ -168,7 +172,7 @@ class DiveraControlOptionsFlow(OptionsFlow):
         updated_relations = dict(relations)
         updated_relations[self._selected_ucr_id] = {
             **selected_relation,
-            D_API_KEY: user_input[D_API_KEY],
+            D_ACCESSKEY: user_input[D_ACCESSKEY],
         }
 
         self.hass.config_entries.async_update_entry(

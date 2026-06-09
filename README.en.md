@@ -274,7 +274,7 @@ The integration **dynamically creates entities** per unit:
 | **Diagnostic Data** | Downloadable in the unit's context menu | Contains **all local data** (including personal data!) |
 
 > **⚠️ Important:**
-> - In diagnostic data, **only `api_key` and `accesskey` are masked**.
+> - In diagnostic data, **only `accesskey` is masked**.
 > - **All other data** (user data, alarm contents, etc.) are **unencrypted**.
 > - **Never share unfiltered!**
 

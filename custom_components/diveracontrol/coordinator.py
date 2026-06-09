@@ -10,7 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     BASE_API_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -114,10 +114,10 @@ class DiveraCoordinator(DataUpdateCoordinator):
         user_cluster_relation_data = self._get_relation_from_data(
             self.config_entry, self.ucr_id
         )
-        _api_key = user_cluster_relation_data.get(D_API_KEY)
+        _accesskey = user_cluster_relation_data.get(D_ACCESSKEY)
         _base_url = self.config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
-        if not _api_key or not _base_url:
+        if not _accesskey or not _base_url:
             raise UpdateFailed(
                 f"Missing relation data for ucr_id {self.ucr_id} in config entry data"
             )
@@ -126,7 +126,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             self.api = DiveraAPI(
                 self.hass,
                 self.ucr_id,
-                _api_key,
+                _accesskey,
                 _base_url,
             )
         except Exception as err:

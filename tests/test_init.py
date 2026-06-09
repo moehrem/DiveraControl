@@ -14,7 +14,7 @@ from custom_components.diveracontrol import (
     async_unload_entry,
 )
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -48,7 +48,7 @@ async def test_async_migrate_entry_from_v0_9(hass: HomeAssistant) -> None:
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
         version=0,
         minor_version=9,
@@ -76,7 +76,7 @@ async def test_async_migrate_entry_from_v0_8_succeeds(hass: HomeAssistant) -> No
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
         version=0,
         minor_version=8,
@@ -116,7 +116,7 @@ async def test_async_setup_entry_failures(
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
     )
 
@@ -144,7 +144,7 @@ async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
     )
     config_entry.add_to_hass(hass)
@@ -203,7 +203,7 @@ async def test_async_unload_entry_success(hass: HomeAssistant) -> None:
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
     )
 
@@ -233,7 +233,7 @@ async def test_async_unload_entry_failure(hass: HomeAssistant) -> None:
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
     )
 
@@ -253,7 +253,7 @@ async def test_async_migrate_entry_v1_2_0(hass: HomeAssistant) -> None:
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+            D_ACCESSKEY: "test_key",
         },
         version=1,
         minor_version=1,  # Before 1.2.0
@@ -285,7 +285,7 @@ async def test_async_migrate_entry_v1_4_to_v2_success(
         data={
             D_UCR_ID: old_ucr_id,
             D_CLUSTER_NAME: "Legacy Cluster",
-            D_API_KEY: "legacy_api_key",
+            D_ACCESSKEY: "legacy_api_key",
             D_BASE_API_URL: "https://app.divera247.com/",
             D_UPDATE_INTERVAL_DATA: 90,
             D_UPDATE_INTERVAL_ALARM: 45,
@@ -309,7 +309,7 @@ async def test_async_migrate_entry_v1_4_to_v2_success(
             D_RELATIONS_KEY: {
                 old_ucr_id: {
                     D_UCR_ID: old_ucr_id,
-                    D_API_KEY: "legacy_api_key",
+                    D_ACCESSKEY: "legacy_api_key",
                     D_USERGROUP_ID: "445566",
                 }
             },
@@ -325,7 +325,7 @@ async def test_async_migrate_entry_v1_4_to_v2_success(
             D_RELATIONS_KEY: {
                 "999999": {
                     D_UCR_ID: "999999",
-                    D_API_KEY: "legacy_api_key",
+                    D_ACCESSKEY: "legacy_api_key",
                     D_USERGROUP_ID: "778899",
                 }
             },
@@ -371,7 +371,7 @@ async def test_async_migrate_entry_v1_4_to_v2_validation_failure(
         data={
             D_UCR_ID: "123456",
             D_CLUSTER_NAME: "Legacy Cluster",
-            D_API_KEY: "legacy_api_key",
+            D_ACCESSKEY: "legacy_api_key",
             D_BASE_API_URL: "https://app.divera247.com/",
             D_UPDATE_INTERVAL_DATA: 90,
             D_UPDATE_INTERVAL_ALARM: 45,

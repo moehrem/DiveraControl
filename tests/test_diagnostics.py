@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
     D_CLUSTER_NAME,
     DOMAIN,
 )
@@ -51,7 +51,7 @@ async def test_async_get_config_entry_diagnostics_redacts_sensitive_data(
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="Test Cluster",
-        data={D_API_KEY: "secret_api_key", "plain": "ok"},
+        data={D_ACCESSKEY: "secret_api_key", "plain": "ok"},
     )
     config_entry.runtime_data = MagicMock(
         data={"accesskey": "secret_access", "value": 123}
@@ -62,7 +62,7 @@ async def test_async_get_config_entry_diagnostics_redacts_sensitive_data(
     diagnostics = await async_get_config_entry_diagnostics(hass, config_entry)
 
     assert diagnostics[D_CLUSTER_NAME] == "Test Cluster"
-    assert diagnostics["config_entry data"][D_API_KEY] == "**REDACTED**"
+    assert diagnostics["config_entry data"][D_ACCESSKEY] == "**REDACTED**"
     assert diagnostics["config_entry data"]["plain"] == "ok"
     assert diagnostics["cluster data"]["accesskey"] == "**REDACTED**"
     assert diagnostics["cluster data"]["value"] == 123

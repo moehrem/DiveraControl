@@ -11,7 +11,7 @@ from homeassistant.core import callback
 
 from .const import (
     BASE_API_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -36,7 +36,7 @@ from .schemas import (
 _LOGGER = logging.getLogger(__name__)
 STEP_USER = "user"
 STEP_LOGIN = "login"
-STEP_API_KEY = "api_key"
+STEP_API_KEY = "accesskey"
 STEP_MULTI_CLUSTER = "multi_cluster"
 
 
@@ -115,14 +115,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             return False
 
-        required_relation_keys = {D_API_KEY, D_UCR_ID, D_USERNAME, D_USERGROUP_ID}
+        required_relation_keys = {D_ACCESSKEY, D_UCR_ID, D_USERNAME, D_USERGROUP_ID}
         if not DiveraControlConfigFlow._validate_required_keys(
             relation_data, required_relation_keys, f"relation {ucr_id}"
         ):
             return False
 
         relation_type_checks = [
-            (D_API_KEY, str),
+            (D_ACCESSKEY, str),
             (D_UCR_ID, str),
             (D_USERNAME, str),
             (D_USERGROUP_ID, int),
@@ -295,7 +295,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         persist_config = {
             STEP_USER: ("_saved_login", [CONF_USERNAME]),
             STEP_LOGIN: ("_saved_login", [CONF_USERNAME]),
-            STEP_API_KEY: ("_saved_api_key", [D_API_KEY]),
+            STEP_API_KEY: ("_saved_api_key", [D_ACCESSKEY]),
         }
 
         if cur_step_id in persist_config:

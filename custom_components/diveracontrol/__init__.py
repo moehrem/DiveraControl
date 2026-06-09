@@ -21,7 +21,7 @@ from homeassistant.helpers import (
 
 from .const import (
     BASE_API_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -378,7 +378,7 @@ async def _migrate_to_v2_0_0(
     _LOGGER.info("Migrating config entry to integration version 2.0.0")
 
     user_input = {
-        D_API_KEY: config_entry.data.get(D_API_KEY, ""),
+        D_ACCESSKEY: config_entry.data.get(D_ACCESSKEY, ""),
     }
     base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 

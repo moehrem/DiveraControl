@@ -27,7 +27,7 @@ from .const import (
     API_USING_VEHICLE_SET_SINGLE,
     BASE_API_URL,
     BASE_API_V2_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
@@ -65,7 +65,7 @@ class DiveraAPI:
         self,
         hass: HomeAssistant,
         ucr_id: str,
-        api_key: str,
+        accesskey: str,
         base_url: str,
     ) -> None:
         """Initialize the API client.
@@ -73,14 +73,14 @@ class DiveraAPI:
         Args:
             hass (HomeAssistant): Instance of HomeAssistant.
             ucr_id (str): user_cluster_relation, the ID to identify the Divera-user.
-            api_key (str): API key to access Divera API.
+            accesskey (str): API key to access Divera API.
             base_url (str): Base URL for the Divera API.
 
         Returns:
             None
 
         """
-        self.api_key = api_key
+        self.accesskey = accesskey
         self.ucr_id = ucr_id
         self.hass = hass
         self.base_url = base_url
@@ -98,7 +98,7 @@ class DiveraAPI:
         Returns:
             URL with API key replaced by asterisks.
         """
-        return url.replace(self.api_key, "***")
+        return url.replace(self.accesskey, "***")
 
     async def _api_request(
         self,
@@ -128,11 +128,11 @@ class DiveraAPI:
         }
 
         # init "parameters" as dict
-        # IMPORTANT! Every API-call needs these two parameters: api_key and ucr_id
-        # api_key is needed for authentification
+        # IMPORTANT! Every API-call needs these two parameters: accesskey and ucr_id
+        # accesskey is needed for authentification
         # ucr_id is needed to identify the divera unit - without that parameter Divera will accept the call for the main unit of the user only!
         parameters: dict[str, str] = {}
-        parameters[API_ACCESS_KEY] = self.api_key
+        parameters[API_ACCESS_KEY] = self.accesskey
         parameters[D_UCR] = self.ucr_id
         url = f"{url}?{urlencode(parameters)}"
 
@@ -480,7 +480,7 @@ class DiveraConfigFlowAPI:
             return await response.json()
 
     def _map_to_clusters(
-        self, data_pull_all: dict[str, Any], api_key: str, user_input: dict[str, Any]
+        self, data_pull_all: dict[str, Any], accesskey: str, user_input: dict[str, Any]
     ) -> dict[str, dict[str, str]]:
         """Format cluster data from config flow validation for easier access."""
         clusters: dict[str, dict[str, str]] = {}
@@ -508,7 +508,7 @@ class DiveraConfigFlowAPI:
                     ucr: {
                         D_UCR_ID: ucr,
                         D_USERNAME: user_name,
-                        D_API_KEY: api_key,
+                        D_ACCESSKEY: accesskey,
                         D_USERGROUP_ID: int(data.get(D_USERGROUP_ID, 0)),
                     },
                 },
@@ -547,11 +547,11 @@ class DiveraConfigFlowAPI:
 
         clusters: dict[str, dict[str, str]] = {}
         validation_errors: dict[str, str] = {}
-        api_key: str = ""
+        accesskey: str = ""
 
-        # if no api key but username/password are provided: read api key
+        # if no accesskey but username/password are provided: read accesskey
         if (
-            D_API_KEY not in user_input
+            D_ACCESSKEY not in user_input
             and "username" in user_input
             and "password" in user_input
         ):
@@ -573,7 +573,7 @@ class DiveraConfigFlowAPI:
                     ), clusters
 
                 data_user = data_auth.get("data", {}).get("user", {})
-                api_key = data_user.get("access_token", "")
+                accesskey = data_user.get("access_token", "")
                 # data_ucr = data_auth.get("data", {}).get("ucr", [])
 
             except (ClientError, TimeoutError) as err:
@@ -586,10 +586,12 @@ class DiveraConfigFlowAPI:
                 _LOGGER.exception("Unexpected error during login validation")
                 return {"base": "unknown"}, {}
 
-        # with api key: read data and create cluster data
+        # with accesskey: read data and create cluster data
         try:
-            api_key = user_input.get(D_API_KEY, "") if api_key == "" else api_key
-            url_pull_all = f"{self._base_url}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={api_key}"
+            accesskey = (
+                user_input.get(D_ACCESSKEY, "") if accesskey == "" else accesskey
+            )
+            url_pull_all = f"{self._base_url}{BASE_API_V2_URL}{API_PULL_ALL}?{API_ACCESS_KEY}={accesskey}"
 
             data_pull_all = await self._request_pull_all(url_pull_all)
 
@@ -597,7 +599,7 @@ class DiveraConfigFlowAPI:
                 validation_errors["base"] = str(data_pull_all.get("message", {}))
                 return validation_errors, clusters
 
-            clusters = self._map_to_clusters(data_pull_all, api_key, user_input)
+            clusters = self._map_to_clusters(data_pull_all, accesskey, user_input)
 
         except ClientError, TimeoutError:
             validation_errors["base"] = "cannot_connect"

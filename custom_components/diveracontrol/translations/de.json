@@ -14,11 +14,11 @@
           "base_api_url": "Basis-API-URL"
         }
       },
-      "api_key": {
+      "accesskey": {
         "title": "Eingabe des API-Schlüssel",
         "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
           "base_api_url": "Basis-API-URL"
@@ -35,7 +35,7 @@
         "title": "Änderung der Konfiguration für DiveraControl",
         "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
           "base_api_url": "Basis-API-URL"
@@ -94,7 +94,7 @@
         "title": "API-Schlüssel für {username} aktualisieren",
         "description": "Setze einen neuen API-Schlüssel für den Benutzer {username} in {cluster_name}.",
         "data": {
-          "api_key": "API-Schlüssel"
+          "accesskey": "API-Schlüssel"
         }
       }
     }
@@ -146,7 +146,7 @@
     "entry_method_options": {
       "options": {
         "login": "Benutzeranmeldung",
-        "api_key": "API-Schlüssel"
+        "accesskey": "API-Schlüssel"
       }
     },
     "notification_type_options": {
@@ -966,7 +966,7 @@
           "description": "Ändere den API-Schlüssel, um die Zugangsdaten zu aktualisieren. Die Abfrageintervalle können ebenfalls angepasst werden.",
           "data": {
             "username": "Benutzername",
-            "api_key": "API-Schlüssel",
+            "accesskey": "API-Schlüssel",
             "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
             "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
             "base_api_url": "Basis-API-URL"
