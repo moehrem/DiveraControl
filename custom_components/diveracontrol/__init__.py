@@ -1,6 +1,6 @@
 """Initializing DiveraControl integration."""
 
-import asyncio  # noqa: I001
+import asyncio
 import logging
 
 # IMPORTANT: import log_handler BEFORE any other module that uses logging to ensure the handler is registered in time
@@ -41,6 +41,7 @@ from .const import (
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraConfigFlowAPI
 from .service import async_register_services
+from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 PLATFORMS: list[Platform] = [
     Platform.CALENDAR,
@@ -72,22 +73,27 @@ async def async_setup_entry(
         bool: True if setup succesfully, otherwise False.
 
     """
-    cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
+
+    cluster_id, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+        config_entry.data, hass
+    )
+
+    # cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
-    user_cluster_relations = config_entry.data.get(D_RELATIONS_KEY, {})
-    if not isinstance(user_cluster_relations, dict):
-        user_cluster_relations = {}
+    # user_cluster_relations = config_entry.data.get(D_RELATIONS_KEY, {})
+    # if not isinstance(user_cluster_relations, dict):
+    #     user_cluster_relations = {}
 
-    if not user_cluster_relations:
-        _LOGGER.error(
-            "No user cluster relations found for cluster %s, cannot set up coordinator",
-            cluster_name,
-        )
-        raise ConfigEntryNotReady("No user cluster relations found in config entry")
+    # if not user_cluster_relations:
+    #     _LOGGER.error(
+    #         "No user cluster relations found for cluster %s, cannot set up coordinator",
+    #         cluster_name,
+    #     )
+    #     raise ConfigEntryNotReady("No user cluster relations found in config entry")
 
     # Create coordinator instances per user relation.
     # every ucr has its own api key
@@ -97,7 +103,7 @@ async def async_setup_entry(
     for (
         ucr_id,
         user_relation_data,
-    ) in user_cluster_relations.items():
+    ) in ucrs.items():
         # validate user_relation_data type
         if not isinstance(user_relation_data, dict):
             _LOGGER.error(

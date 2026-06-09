@@ -17,6 +17,7 @@ from .const import (
     D_OPEN_ALARMS,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_RELATIONS_KEY,
     DOMAIN,
 )
 
@@ -165,3 +166,24 @@ async def get_translation(
             )
 
     return translation_str
+
+
+def get_cluster_coordinators_ucrs_from_config_hass(
+    config_entry: dict[str, Any], hass: HomeAssistant
+) -> tuple[str, dict[str, Any], list[Any]]:
+    """Get cluster_id, coordinators and UCR data from config entry.
+
+    Args:
+        config_entry: Config entry data.
+        hass: Home Assistant instance.
+
+    Returns:
+        Tuple containing cluster_id, coordinators dict and list of DiveraCoordinators.
+
+    """
+
+    cluster_id = config_entry.get(D_CLUSTER_ID)
+    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    ucrs = config_entry.get(D_RELATIONS_KEY)
+
+    return cluster_id, coordinators, ucrs
