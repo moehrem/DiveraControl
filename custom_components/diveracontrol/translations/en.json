@@ -137,15 +137,6 @@
       }
     }
   },
-  "common": {
-    "usergroup_message": "The unit {cluster_name} (ID {ucr_id}) was successfully created.",
-    "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera permissions, so some data may not be available.",
-    "usergroup_5": "The logged-in user is a monitor user. Access permissions depend on Divera permissions, so some data may not be available.",
-    "usergroup_8": "The logged-in user is a user with admin rights and has access to all data.",
-    "usergroup_14": "The logged-in user is the default API user. Access is therefore not possible to:\n- Alarm data\n- News\n- Appointments\n- Dashboards",
-    "usergroup_19": "The logged-in user is a system user and will therefore not have access to:\n- Alarm data\n- News\n- Appointments",
-    "usergroup_unknown": "A user from an unknown user group {usergroup_id} was logged in. Depending on granted permissions, not all data may be available."
-  },
   "selector": {
     "entry_method_options": {
       "options": {

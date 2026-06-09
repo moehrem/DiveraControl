@@ -18,7 +18,6 @@ from custom_components.diveracontrol.const import (
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERGROUP_ID,
     DOMAIN,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
@@ -76,10 +75,9 @@ def api_validation_clusters(api_post_auth_single_ucr: dict) -> dict:
         ucr_id = str(cluster.get("id", ""))
         clusters[ucr_id] = {
             D_CLUSTER_NAME: cluster.get(D_NAME, ""),
-            D_CLUSTER_ID: str(cluster.get(D_USERGROUP_ID, "")) or ucr_id,
+            D_CLUSTER_ID: cluster.get(D_CLUSTER_ID, ""),
             D_UCR_ID: ucr_id,
             D_ACCESSKEY: accesskey,
-            D_USERGROUP_ID: cluster.get(D_USERGROUP_ID, ""),
         }
 
     return clusters

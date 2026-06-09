@@ -25,7 +25,6 @@ from custom_components.diveracontrol.const import (
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USE_WEBHOOKS,
-    D_USERGROUP_ID,
     DOMAIN,
 )
 
@@ -310,7 +309,6 @@ async def test_async_migrate_entry_v1_4_to_v2_success(
                 old_ucr_id: {
                     D_UCR_ID: old_ucr_id,
                     D_ACCESSKEY: "legacy_api_key",
-                    D_USERGROUP_ID: "445566",
                 }
             },
         },
@@ -326,8 +324,7 @@ async def test_async_migrate_entry_v1_4_to_v2_success(
                 "999999": {
                     D_UCR_ID: "999999",
                     D_ACCESSKEY: "legacy_api_key",
-                    D_USERGROUP_ID: "778899",
-                }
+                },
             },
         },
     }

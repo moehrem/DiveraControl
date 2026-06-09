@@ -41,7 +41,6 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_USER,
     D_USERNAME,
-    D_USERGROUP_ID,
     MINOR_VERSION,
     PATCH_VERSION,
     PERM_ALARM,
@@ -509,7 +508,6 @@ class DiveraConfigFlowAPI:
                         D_UCR_ID: ucr,
                         D_USERNAME: user_name,
                         D_ACCESSKEY: accesskey,
-                        D_USERGROUP_ID: int(data.get(D_USERGROUP_ID, 0)),
                     },
                 },
             }

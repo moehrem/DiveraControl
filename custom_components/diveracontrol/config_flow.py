@@ -25,7 +25,7 @@ from .const import (
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
 )
-from .divera_api import D_USERGROUP_ID, DiveraConfigFlowAPI
+from .divera_api import DiveraConfigFlowAPI
 from .options_flow import DiveraControlOptionsFlow
 from .schemas import (
     get_api_key_form_schema,
@@ -115,7 +115,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             return False
 
-        required_relation_keys = {D_ACCESSKEY, D_UCR_ID, D_USERNAME, D_USERGROUP_ID}
+        required_relation_keys = {D_ACCESSKEY, D_UCR_ID, D_USERNAME}
         if not DiveraControlConfigFlow._validate_required_keys(
             relation_data, required_relation_keys, f"relation {ucr_id}"
         ):
@@ -125,7 +125,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             (D_ACCESSKEY, str),
             (D_UCR_ID, str),
             (D_USERNAME, str),
-            (D_USERGROUP_ID, int),
         ]
         return DiveraControlConfigFlow._validate_types(
             relation_data, relation_type_checks, f"relation {ucr_id}"

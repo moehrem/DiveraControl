@@ -13,7 +13,6 @@ from custom_components.diveracontrol.const import (
     D_NAME,
     D_UCR,
     D_UCR_ID,
-    D_USERGROUP_ID,
     BASE_API_URL,
 )
 from custom_components.diveracontrol.divera_api import DiveraConfigFlowAPI
@@ -49,19 +48,17 @@ class TestConfigFlowApiValidateLogin:
 
         assert errors == {}
         assert len(clusters) == 2
-        assert clusters["123"] == {
+        assert clusters["ucr123"] == {
             D_CLUSTER_NAME: "Test Cluster",
-            D_CLUSTER_ID: "group1",
-            D_UCR_ID: "123",
+            D_CLUSTER_ID: "cluster123",
+            D_UCR_ID: "ucr123",
             D_ACCESSKEY: "test_api_key",
-            D_USERGROUP_ID: "group1",
         }
-        assert clusters["456"] == {
+        assert clusters["ucr456"] == {
             D_CLUSTER_NAME: "Another Cluster",
-            D_CLUSTER_ID: "group2",
-            D_UCR_ID: "456",
+            D_CLUSTER_ID: "cluster456",
+            D_UCR_ID: "ucr456",
             D_ACCESSKEY: "test_api_key",
-            D_USERGROUP_ID: "group2",
         }
 
     async def test_validate_login_auth_failure(self, mock_session: MagicMock) -> None:
@@ -189,8 +186,8 @@ class TestConfigFlowApiValidateApiKey:
         mock_response.json.return_value = {
             D_DATA: {
                 D_UCR: {
-                    "123": {D_NAME: "Test Cluster", D_USERGROUP_ID: "group1"},
-                    "456": {D_NAME: "Another Cluster", D_USERGROUP_ID: "group2"},
+                    "ucr123": {D_NAME: "Test Cluster"},
+                    "ucr456": {D_NAME: "Another Cluster"},
                 }
             }
         }
@@ -202,19 +199,17 @@ class TestConfigFlowApiValidateApiKey:
 
         assert errors == {}
         assert len(clusters) == 2
-        assert clusters["123"] == {
+        assert clusters["ucr123"] == {
             D_CLUSTER_NAME: "Test Cluster",
-            D_CLUSTER_ID: "group1",
-            D_UCR_ID: "123",
+            D_CLUSTER_ID: "cluster123",
+            D_UCR_ID: "ucr123",
             D_ACCESSKEY: "test_key",
-            D_USERGROUP_ID: "group1",
         }
-        assert clusters["456"] == {
+        assert clusters["ucr456"] == {
             D_CLUSTER_NAME: "Another Cluster",
-            D_CLUSTER_ID: "group2",
-            D_UCR_ID: "456",
+            D_CLUSTER_ID: "cluster456",
+            D_UCR_ID: "ucr456",
             D_ACCESSKEY: "test_key",
-            D_USERGROUP_ID: "group2",
         }
 
     async def test_validate_api_key_http_error(self, mock_session: MagicMock) -> None:
