@@ -5,7 +5,6 @@ from collections.abc import Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import D_CLUSTER_ID, D_COORDINATOR, DOMAIN
 from .coordinator import DiveraCoordinator
 from .sensor_entity import (
     DiveraAlarmSensorManager,
@@ -16,6 +15,7 @@ from .sensor_entity import (
     DiveraUserSensor,
     DiveraVehicleSensorManager,
 )
+from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 
 async def async_setup_entry(
@@ -25,8 +25,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Divera sensors."""
 
-    cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
-    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    _, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+        config_entry.data, hass
+    )
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
     static_sensors = []

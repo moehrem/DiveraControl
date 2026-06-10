@@ -9,13 +9,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    BASE_API_URL,
     D_ACCESSKEY,
+    D_ALARM,
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
+    D_OPEN_ALARMS,
     D_RELATIONS_KEY,
-    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USERNAME,
@@ -24,7 +24,6 @@ from .const import (
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
-from .utils import set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,7 +104,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
         _accesskey = self.ucr_data.get(D_ACCESSKEY)
         _base_url = self.config_entry.data.get(
             D_BASE_API_URL
-        )  # no fallback to BASE_API_URL, data should be present. Also enforce error in next step.
+        )  # no fallback to BASE_API_URL, url should be present. If not for whatever reason: enforce error in next step.
 
         if not _accesskey or not _base_url:
             raise UpdateFailed(
@@ -122,34 +121,41 @@ class DiveraCoordinator(DataUpdateCoordinator):
         except Exception as err:
             raise UpdateFailed(f"Error setting up API: {err}") from err
 
+        if self.api is None:
+            raise UpdateFailed(
+                f"API client could not be initialized for cluster '{self.cluster_name}' and user '{self.user_name}'"
+            )
+
     async def _async_update_data(self) -> dict[str, Any]:
-        """Data update by fetching data from Divera API.
+        """Fetch data from API and update coordinator data.
 
         Returns:
-            cluster_data (dict): The updated data dictionary with the latest Divera information.
-
-        Raises:
-            UpdateFailed: If there is an error fetching data from the API.
+            dict[str, Any]: Updated data fetched from the API.
 
         """
-
-        if self.api is None:
-            raise UpdateFailed("API client not initialized")
 
         try:
             raw_ucr_data = await self.api.get_pull_all()
             new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
 
-            # dynamically change update interval
-            self.update_interval = set_update_interval(
-                new_cluster_data, self.interval_data, self.update_interval
+            # change update interval based on open alarms
+            open_alarms = new_cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
+            new_interval = (
+                self.interval_data[D_UPDATE_INTERVAL_ALARM]
+                if open_alarms > 0
+                else self.interval_data[D_UPDATE_INTERVAL_DATA]
             )
 
-            _LOGGER.debug(
-                "Successfully updated data for unit '%s'",
-                self.cluster_name,
-            )
+            if self.update_interval != new_interval:
+                self.update_interval = new_interval
+                _LOGGER.debug(
+                    "Update interval changed to %s for unit '%s' (open alarms: %d)",
+                    new_interval,
+                    self.cluster_name,
+                    open_alarms,
+                )
+
+            return new_cluster_data
+
         except Exception as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
-        else:
-            return new_cluster_data

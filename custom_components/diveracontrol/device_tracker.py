@@ -5,12 +5,12 @@ from collections.abc import Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import D_CLUSTER_ID, D_COORDINATOR, DOMAIN
 from .coordinator import DiveraCoordinator
 from .device_tracker_entity import (
     DiveraAlarmTrackerManager,
     DiveraVehicleTrackerManager,
 )
+from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 
 async def async_setup_entry(
@@ -20,8 +20,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up Divera device trackers."""
 
-    cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
-    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    _, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+        config_entry.data, hass
+    )
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
     for ucr in ucrs:
