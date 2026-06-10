@@ -32,21 +32,6 @@ _LOGGER = logging.getLogger(__name__)
 class DiveraCoordinator(DataUpdateCoordinator):
     """Manages all data handling."""
 
-    @staticmethod
-    def _get_relation_from_data(
-        config_entry: ConfigEntry, ucr_id: str
-    ) -> dict[str, Any]:
-        """Return relation data for a given ucr_id from config entry data."""
-
-        relations = config_entry.data.get(D_RELATIONS_KEY, {})
-        if not isinstance(relations, dict):
-            return {}
-
-        relation = relations.get(str(ucr_id), {})
-        if isinstance(relation, dict):
-            return dict(relation)
-        return {}
-
     def __init__(
         self,
         hass: HomeAssistant,
@@ -55,10 +40,16 @@ class DiveraCoordinator(DataUpdateCoordinator):
     ) -> None:
         """Initialize DiveraControl coordinator.
 
+        Each coordinator instance is associated with one user cluster relation (ucr) and handles data fetching and updates for that relation.
+        The coordinator uses the access key from the relation data to authenticate with the Divera API and fetch relevant data.
+
+        Relevant data is always fetched based on the ucr_id. But update intervals and base url are shared on cluster level, so they are stored in the main config entry and
+        not in the relation data. This means that if you have multiple ucrs for the same cluster, they will share the same update intervals and base url.
+
         Args:
             hass (HomeAssistant): Home Assistant instance.
             config_entry (ConfigEntry): Configuration entry for the integration.
-            ucr_id (str): User relation ID.
+            ucr_id (str): User cluster relation ID - basically the Divera user identification number.
 
         Returns:
             None
@@ -70,13 +61,13 @@ class DiveraCoordinator(DataUpdateCoordinator):
         self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
 
-        user_cluster_relation_data = self._get_relation_from_data(config_entry, ucr_id)
-        self.ucr_id: str = user_cluster_relation_data.get(D_UCR_ID, ucr_id)
-        self.user_name: str = user_cluster_relation_data.get(D_USERNAME, "")
+        self.ucr_id: str = ucr_id
+        self.ucr_data: dict[str, Any] = config_entry.data.get(D_RELATIONS_KEY, {}).get(
+            str(ucr_id), {}
+        )
+        self.user_name: str = self.ucr_data.get(D_USERNAME, "")
 
-        self._initial_raw_ucr_data: dict[str, Any] | None = None
-
-        self.interval_data = {
+        self.interval_data: dict[str, timedelta] = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
                 seconds=config_entry.data.get(
                     D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
@@ -111,15 +102,14 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         """
 
-        user_cluster_relation_data = self._get_relation_from_data(
-            self.config_entry, self.ucr_id
-        )
-        _accesskey = user_cluster_relation_data.get(D_ACCESSKEY)
-        _base_url = self.config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
+        _accesskey = self.ucr_data.get(D_ACCESSKEY)
+        _base_url = self.config_entry.data.get(
+            D_BASE_API_URL
+        )  # no fallback to BASE_API_URL, data should be present. Also enforce error in next step.
 
         if not _accesskey or not _base_url:
             raise UpdateFailed(
-                f"Missing relation data for ucr_id {self.ucr_id} in config entry data"
+                f"Missing relation data for user {self.user_name} (ucr_id {self.ucr_id}) in config entry data"
             )
 
         try:
@@ -133,7 +123,7 @@ class DiveraCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Error setting up API: {err}") from err
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from Divera API.
+        """Data update by fetching data from Divera API.
 
         Returns:
             cluster_data (dict): The updated data dictionary with the latest Divera information.

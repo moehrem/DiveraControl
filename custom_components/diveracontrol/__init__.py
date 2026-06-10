@@ -74,31 +74,19 @@ async def async_setup_entry(
 
     """
 
-    cluster_id, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+    cluster_id, _, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
         config_entry.data, hass
     )
 
-    # cluster_id: str = config_entry.data.get(D_CLUSTER_ID) or ""
     cluster_name: str = config_entry.data.get(D_CLUSTER_NAME) or ""
 
     _LOGGER.debug("Setting up cluster: %s (%s)", cluster_name, cluster_id)
     async_setup_diveracontrol_log_handler(hass)
 
-    # user_cluster_relations = config_entry.data.get(D_RELATIONS_KEY, {})
-    # if not isinstance(user_cluster_relations, dict):
-    #     user_cluster_relations = {}
-
-    # if not user_cluster_relations:
-    #     _LOGGER.error(
-    #         "No user cluster relations found for cluster %s, cannot set up coordinator",
-    #         cluster_name,
-    #     )
-    #     raise ConfigEntryNotReady("No user cluster relations found in config entry")
-
     # Create coordinator instances per user relation.
-    # every ucr has its own api key
+    # every ucr has its own access key
     # update intervals and base-urls are shared on cluster level, so they are stored in the main config entry and not in the relation data
-    coordinators_by_ucr: dict[str, DiveraCoordinator] = {}
+    coordinators: dict[str, DiveraCoordinator] = {}
 
     # Prepare coordinators and refresh tasks for parallel execution
     refresh_tasks = []
@@ -126,12 +114,10 @@ async def async_setup_entry(
                 cluster_name,
             )
 
-        # create coordinator (without await)
+        # create coordinator, store info for refresh task, and handle setup errors
         try:
             coordinator = DiveraCoordinator(hass, config_entry, ucr_id)
-            # Store coordinator and metadata for later processing
             ucr_info.append((ucr_id, user_name, coordinator))
-            # Create task for parallel refresh
             refresh_tasks.append(coordinator.async_config_entry_first_refresh())
         except ConfigEntryNotReady as err:
             _LOGGER.error(
@@ -167,7 +153,7 @@ async def async_setup_entry(
     if refresh_tasks:
         results = await asyncio.gather(*refresh_tasks, return_exceptions=True)
 
-        # Process results and populate coordinators_by_ucr
+        # Process results and populate coordinators
         for (ucr_id, user_name, coordinator), result in zip(ucr_info, results):
             if isinstance(result, Exception):
                 # Handle errors from async_config_entry_first_refresh
@@ -202,19 +188,19 @@ async def async_setup_entry(
                     )
             else:
                 # Success - add coordinator to the dict
-                coordinators_by_ucr[ucr_id] = coordinator
+                coordinators[ucr_id] = coordinator
                 _LOGGER.debug(
                     "Successfully set up coordinator for user %s (ID: %s)",
                     user_name,
                     ucr_id,
                 )
 
-    if not coordinators_by_ucr:
+    if not coordinators:
         raise ConfigEntryNotReady("Failed to set up any user for this cluster")
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][cluster_id] = {
-        D_COORDINATOR: coordinators_by_ucr,
+        D_COORDINATOR: coordinators,
     }
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
@@ -222,7 +208,7 @@ async def async_setup_entry(
     _LOGGER.debug(
         "Setting up cluster %s (%s users) successfully",
         cluster_name,
-        len(coordinators_by_ucr),
+        len(coordinators),
     )
 
     return True
