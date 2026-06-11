@@ -495,7 +495,6 @@ class DiveraConfigFlowAPI:
             clusters[cluster_id] = {
                 D_CLUSTER_ID: cluster_id,
                 D_CLUSTER_NAME: data.get(D_NAME),
-                D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
                 D_BASE_API_URL: user_input.get(D_BASE_API_URL, BASE_API_URL),
                 D_UPDATE_INTERVAL_DATA: user_input.get(
                     D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
@@ -505,7 +504,6 @@ class DiveraConfigFlowAPI:
                 ),
                 D_RELATIONS_KEY: {
                     ucr: {
-                        D_UCR_ID: ucr,
                         D_USERNAME: user_name,
                         D_ACCESSKEY: accesskey,
                     },
@@ -532,6 +530,92 @@ class DiveraConfigFlowAPI:
 
         return {"base": str(raw_errors)}
 
+    def _validate_entries_structure(
+        self, entries: dict[str, dict[str, Any]]
+    ) -> tuple[bool, dict[str, str]]:
+        """Validate that all cluster entries have the required structure.
+
+        Args:
+            entries: Dictionary of cluster entries to validate.
+
+        Returns:
+            Tuple of (is_valid, errors) where errors contains specific error messages.
+
+        """
+        errors: dict[str, str] = {}
+
+        if not entries:
+            errors["base"] = "no_clusters_found"
+            return False, errors
+
+        required_cluster_keys = {
+            D_CLUSTER_ID,
+            D_CLUSTER_NAME,
+            D_RELATIONS_KEY,
+            D_BASE_API_URL,
+            D_UPDATE_INTERVAL_ALARM,
+            D_UPDATE_INTERVAL_DATA,
+        }
+        required_relation_keys = {D_ACCESSKEY, D_USERNAME}
+
+        for cluster_id, entry in entries.items():
+            # Validate cluster structure
+            if not isinstance(entry, dict):
+                errors["base"] = f"invalid_cluster_structure: {cluster_id}"
+                return False, errors
+
+            missing_cluster_keys = required_cluster_keys - entry.keys()
+            if missing_cluster_keys:
+                errors["base"] = f"missing_cluster_fields: {missing_cluster_keys}"
+                return False, errors
+
+            # Validate cluster field types
+            if not isinstance(entry.get(D_CLUSTER_ID), str):
+                errors["base"] = f"invalid_cluster_id_type: {cluster_id}"
+                return False, errors
+            if not isinstance(entry.get(D_CLUSTER_NAME), str):
+                errors["base"] = f"invalid_cluster_name_type: {cluster_id}"
+                return False, errors
+            if not isinstance(entry.get(D_BASE_API_URL), str):
+                errors["base"] = f"invalid_base_api_url_type: {cluster_id}"
+                return False, errors
+            if not isinstance(entry.get(D_UPDATE_INTERVAL_ALARM), int):
+                errors["base"] = f"invalid_update_interval_alarm_type: {cluster_id}"
+                return False, errors
+            if not isinstance(entry.get(D_UPDATE_INTERVAL_DATA), int):
+                errors["base"] = f"invalid_update_interval_data_type: {cluster_id}"
+                return False, errors
+
+            # Validate relations
+            relations = entry.get(D_RELATIONS_KEY, {})
+            if not isinstance(relations, dict):
+                errors["base"] = f"invalid_relations_type: {cluster_id}"
+                return False, errors
+
+            if not relations:
+                errors["base"] = f"empty_relations: {cluster_id}"
+                return False, errors
+
+            for ucr_id, relation in relations.items():
+                if not isinstance(relation, dict):
+                    errors["base"] = f"invalid_relation_structure: {ucr_id} in cluster {cluster_id}"
+                    return False, errors
+
+                missing_relation_keys = required_relation_keys - relation.keys()
+                if missing_relation_keys:
+                    errors["base"] = f"missing_relation_fields: {missing_relation_keys} in UCR {ucr_id}"
+                    return False, errors
+
+                # Validate relation field types
+                if not isinstance(relation.get(D_ACCESSKEY), str):
+                    errors["base"] = f"invalid_accesskey_type: {ucr_id} in cluster {cluster_id}"
+                    return False, errors
+                if not isinstance(relation.get(D_USERNAME), str):
+                    errors["base"] = f"invalid_username_type: {ucr_id} in cluster {cluster_id}"
+                    return False, errors
+
+        return True, errors
+
     async def request_access(
         self,
         user_input: dict[str, Any],
@@ -540,6 +624,10 @@ class DiveraConfigFlowAPI:
 
         Args:
             user_input (dict): User input containing API key or login credentials.
+
+        Returns:
+            Tuple of (errors, clusters) where errors contains validation errors
+            and clusters contains the validated cluster data.
 
         """
 
@@ -599,9 +687,14 @@ class DiveraConfigFlowAPI:
 
             clusters = self._map_to_clusters(data_pull_all, accesskey, user_input)
 
-        except ClientError, TimeoutError:
+            # Validate the structure of the mapped clusters
+            is_valid, entry_errors = self._validate_entries_structure(clusters)
+            if not is_valid:
+                return entry_errors, {}
+
+        except (ClientError, TimeoutError):
             validation_errors["base"] = "cannot_connect"
-        except TypeError, AttributeError:
+        except (TypeError, AttributeError):
             validation_errors["base"] = "no_data"
         except Exception:
             validation_errors["base"] = "unknown"

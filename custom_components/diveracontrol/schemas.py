@@ -18,7 +18,6 @@ from .const import (
     BASE_API_URL,
     D_ACCESSKEY,
     D_BASE_API_URL,
-    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USERNAME,
@@ -203,7 +202,7 @@ def get_reconfigure_cluster_form_schema(
 
     return vol.Schema(
         {
-            vol.Required(D_UCR_ID, default=options[0]["value"]): SelectSelector(
+            vol.Required("ucr_id", default=options[0]["value"]): SelectSelector(
                 SelectSelectorConfig(
                     options=options,
                     multiple=False,

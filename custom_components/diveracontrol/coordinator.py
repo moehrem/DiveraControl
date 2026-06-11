@@ -139,7 +139,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
             new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
 
             # change update interval based on open alarms
-            open_alarms = new_cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
+            # open_alarms = new_cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
+            open_alarms = len(new_cluster_data.get(D_ALARM, {}).get("items", {}))
             new_interval = (
                 self.interval_data[D_UPDATE_INTERVAL_ALARM]
                 if open_alarms > 0

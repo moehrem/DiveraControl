@@ -17,7 +17,6 @@ from .const import (
     D_BASE_API_URL,
     D_CLUSTER_NAME,
     D_RELATIONS_KEY,
-    D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
     D_USERNAME,
@@ -41,22 +40,13 @@ class DiveraControlOptionsFlow(OptionsFlow):
         return self._config_entry.data.get(D_CLUSTER_NAME, "DiveraControl")
 
     def _relations(self) -> dict[str, dict[str, Any]]:
-        """Return normalized user relations from config entry data."""
+        """Return user relations from config entry data."""
         relations = self._config_entry.data.get(D_RELATIONS_KEY, {})
         if not isinstance(relations, dict):
             return {}
 
-        normalized_relations: dict[str, dict[str, Any]] = {}
-        for raw_ucr_id, relation_data in relations.items():
-            if not isinstance(relation_data, dict):
-                continue
-            ucr_id = str(raw_ucr_id)
-            normalized_relations[ucr_id] = {
-                **relation_data,
-                D_UCR_ID: relation_data.get(D_UCR_ID, ucr_id),
-            }
-
-        return normalized_relations
+        # Normalize keys to strings
+        return {str(ucr_id): relation_data for ucr_id, relation_data in relations.items()}
 
     @staticmethod
     def _user_api_key_schema(selected_relation: dict[str, Any]) -> vol.Schema:
@@ -141,7 +131,7 @@ class DiveraControlOptionsFlow(OptionsFlow):
                 },
             )
 
-        self._selected_ucr_id = str(user_input[D_UCR_ID])
+        self._selected_ucr_id = str(user_input.get("ucr_id", ""))
         return await self.async_step_user_api_key()
 
     async def async_step_user_api_key(

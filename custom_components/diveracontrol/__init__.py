@@ -473,7 +473,7 @@ async def _migrate_to_v2_0_0(
         relation_data.pop(D_BASE_API_URL, None)
         relation_data.pop(D_UPDATE_INTERVAL_DATA, None)
         relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
-        relation_data[D_UCR_ID] = relation_data.get(D_UCR_ID, ucr_id)
+        relation_data.pop(D_UCR_ID, None)  # Remove redundant UCR_ID from relation data
         user_cluster_relations[ucr_id] = relation_data
 
     updated_data = {
