@@ -222,7 +222,7 @@ A distinction is made between:
 
 ### 📟 Actions
 
-Actions start with **"DiveraControl:"** and can be used in **automations, dashboards, or scripts**.
+The integration offers several actions per device/user, that can be used in **automations, dashboards, or scripts**.
 
 | **Action** | **Parameters** (Examples) | **Description** | **Permission** |
 |------------|---------------------------|----------------|----------------|
@@ -242,6 +242,17 @@ Actions start with **"DiveraControl:"** and can be used in **automations, dashbo
 > - Buttons can be linked to actions in dashboards (selection aids available).
 > - **Testing:** Actions can be manually tested under *"Settings" → "Developer Tools" → "Actions".*
 > - [Home Assistant Actions Documentation](https://www.home-assistant.io/docs/scripts/perform-actions/)
+
+---
+
+### 📟 Trigger
+
+The integration creates some triggers. These triggers are also available per device/user, thus can be used in **Automations** very easily.
+
+| **Trigger**               | **condition to trigger**        |
+|---------------------------|---------------------------------|
+| **New alarm**             | number of "open alarms" raises  |
+| **All alarms closed**     | number of "open alarms" is zero |
 
 ---
 

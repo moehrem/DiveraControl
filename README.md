@@ -210,7 +210,7 @@ Es wird unterschieden zwischen:
 ---
 ### 📟 Aktionen
 
-Aktionen beginnen mit **"DiveraControl:"** und können in **Automationen, Dashboards oder Skripten** genutzt werden.
+Es werden für jedes Gerät/jeden Nutzer verschiedene Aktionen bereitgestell. Diese können in **Automationen, Dashboards oder Skripten** genutzt werden.
 
 | **Aktion**                          | **Parameter** (Beispiele)               | **Beschreibung**                          | **Berechtigung**          |
 |-------------------------------------|-----------------------------------------|------------------------------------------|---------------------------|
@@ -230,6 +230,16 @@ Aktionen beginnen mit **"DiveraControl:"** und können in **Automationen, Dashbo
 > - In Dashboards können Buttons mit Aktionen verknüpft werden (Auswahlhilfen verfügbar).
 > - **Testen:** Unter *"Einstellungen" → "Entwicklungswerkzeuge" → "Aktionen"* können Aktionen manuell getestet werden.
 > - [Dokumentation zu Aktionen in Home Assistant](https://www.home-assistant.io/docs/scripts/perform-actions/)
+
+---
+### 📟 Auslöser
+
+Die Integration stellt einige Auslöser zu jedem Gerät/Nutzer bereit. Auch diese Auslöser können in **Automationen** genutzt werden.
+
+| **Auslöser**                    | **Bedingung zur Auslösung**            |
+|---------------------------------|----------------------------------------|
+| **Neuer Alarm**                 | Anzahl "offene Alarme" erhöht sich     |
+| **Alle Alarme geschlossen**     | Anzahl "offene Alarme" ist gleich Null |
 
 ---
 #### ⚠️ Wichtige Hinweise zu Aktionen
