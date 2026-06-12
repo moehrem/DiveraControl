@@ -43,10 +43,10 @@
       }
     },
     "error": {
-      "cannot_auth": "Ungültiger Benutzername oder Passwort.",
+      "invalid_credentials": "Ungültiger Benutzername oder Passwort.",
       "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
       "no_external_url": "Keine externe URL konfiguriert.",
-      "no_ucr": "Keine verbundenen Einheiten gefunden.",
+      "no_data": "Keine Daten erhalten, bitte überprüfe die Protokolle auf Details.",
       "unknown": "Unbekannter Fehler"
     },
     "abort": {

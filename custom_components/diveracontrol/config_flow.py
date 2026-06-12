@@ -16,7 +16,7 @@ from .const import (
     D_RELATIONS_KEY,
     DOMAIN,
 )
-from .divera_api import DiveraConfigFlowAPI
+from .divera_api import DiveraAPIClient
 from .options_flow import DiveraControlOptionsFlow
 from .schemas import (
     get_api_key_form_schema,
@@ -146,7 +146,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _request_possible_entries(self, user_input: dict[str, Any]) -> None:
         """Call API for access validation and candidate clusters."""
         base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
-        config_flow_api = DiveraConfigFlowAPI(self.hass, base_api_url)
+        config_flow_api = DiveraAPIClient(self.hass, base_api_url)
         self.errors, self.possible_entries = await config_flow_api.request_access(
             user_input
         )
@@ -225,8 +225,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         for cluster_id, cluster_data in self.possible_entries.items():
             new_relations = cluster_data.get(D_RELATIONS_KEY, {})
 
-            # Data is already validated by DiveraConfigFlowAPI, so new_relations is guaranteed to be a dict
-
             # Find existing entry for this cluster
             existing_config_entry = self._find_existing_cluster_entry(cluster_id)
 
@@ -287,7 +285,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self._create_cluster()
 
         new_relations = self.final_entry.get(D_RELATIONS_KEY, {})
-        # Data is already validated by DiveraConfigFlowAPI, so new_relations is guaranteed to be a dict
         if not new_relations:
             return self.async_abort(reason="already_configured")
 
@@ -336,7 +333,6 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         selected_cluster_id = self.final_entry.get(D_CLUSTER_ID)
         await self.async_set_unique_id(selected_cluster_id)
 
-        # Data is already validated by DiveraConfigFlowAPI.request_access
         return self.async_create_entry(
             title=self.final_entry[D_CLUSTER_NAME],
             data=self.final_entry,

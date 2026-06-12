@@ -39,7 +39,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import DiveraCoordinator
-from .divera_api import DiveraConfigFlowAPI
+from .divera_api import DiveraAPIClient
 from .service import async_register_services
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
@@ -419,7 +419,7 @@ async def _migrate_to_v2_0_0(
     }
     base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
-    config_api = DiveraConfigFlowAPI(hass, base_api_url)
+    config_api = DiveraAPIClient(hass, base_api_url)
     validation_errors, clusters = await config_api.request_access(user_input)
 
     if validation_errors:
