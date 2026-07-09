@@ -145,6 +145,7 @@
       "post_alarm": "Alarm erstellen",
       "put_alarm": "Alarm ändern",
       "post_close_alarm": "Alarm öffnen/schließen",
+      "post_confirm_alarm": "Alarm bestätigen",
       "post_message": "Nachricht senden",
       "post_using_vehicle_property": "Fahrzeugeigenschaften ändern",
       "post_using_vehicle_crew": "Fahrzeugbesatzung ändern",
@@ -243,11 +244,17 @@
     "no_alarm_id": {
       "message": "Keine Alarm-ID angegeben."
     },
+    "no_status_id": {
+      "message": "Keine Status-ID angegeben."
+    },
     "api_put_alarm_failed": {
       "message": "Aktualisierung des Alarms {alarm_id} fehlgeschlagen. Fehler: {err}"
     },
     "api_post_close_alarm_failed": {
       "message": "Öffnen/Schließen des Alarms {alarm_id} fehlgeschlagen."
+    },
+    "api_post_confirm_alarm_failed": {
+      "message": "Bestätigung des Alarms {alarm_id} fehlgeschlagen. Fehler: {err}"
     },
     "both_message_channel_and_alarm_id": {
       "message": "Entweder Nachrichtenkanal-ID oder Alarm-ID muss angegeben werden, nicht beides."
@@ -689,6 +696,24 @@
         "report": {
           "name": "Bericht",
           "description": "(Optional) Einsatzbericht."
+        }
+      }
+    },
+    "post_confirm_alarm": {
+      "name": "Alarm bestätigen",
+      "description": "Bestätigt einen bestehenden Alarm mit einer Status-ID und optionalen Notizen.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm-ID",
+          "description": "(Erforderlich) ID des zu bestätigenden Alarms. Nur genau eine ID zulässig!"
+        },
+        "status_id": {
+          "name": "Status-ID",
+          "description": "(Erforderlich) Status-ID zur Bestätigung (1-10; 10 = Notfall)."
+        },
+        "note": {
+          "name": "Notiz",
+          "description": "(Optional) Notiz zur Bestätigung des Alarms."
         }
       }
     },

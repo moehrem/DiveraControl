@@ -523,6 +523,30 @@ post_close_alarm:
         text:
           multiline: true
 
+post_confirm_alarm:
+  target:
+    entity:
+      integration: diveracontrol
+  fields:
+    alarm_id:
+      required: true
+      example: 54321
+      selector:
+        number:
+    status_id:
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 0
+          mode: box
+    note:
+      required: false
+      example: "Alarm bestätigt, Einsatz läuft"
+      selector:
+        text:
+          multiline: true
+
 post_message:
   target:
     entity:

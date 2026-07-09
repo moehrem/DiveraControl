@@ -298,6 +298,28 @@ class DiveraAPI:
 
         await self._api_request(part_url, method, payload=payload)
 
+    async def post_confirm_alarm(
+        self,
+        payload: dict[str, str],
+        alarm_id: int,
+    ) -> None:
+        """POST to confirm an existing alarm to Divera API.
+
+        Args:
+            alarm_id (int): Divera-Alarm-ID which had to be confirmed.
+            payload (dict): Dictionary of data to send to Divera-API.
+
+        """
+
+        _LOGGER.debug("Posting to confirm alarm %s for cluster %s", alarm_id, self.ucr_id)
+
+        self.permissions.check(PERM_ALARM)
+
+        part_url = f"{BASE_API_V2_URL}{API_ALARM}/confirm/{alarm_id}"
+        method = "POST"
+
+        await self._api_request(part_url, method, payload=payload)
+
     async def post_message(
         self,
         payload: dict[str, str],
