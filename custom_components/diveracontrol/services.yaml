@@ -538,8 +538,6 @@ post_confirm_alarm:
       example: 1
       selector:
         number:
-          min: 0
-          mode: box
     note:
       required: false
       example: "Alarm bestätigt, Einsatz läuft"

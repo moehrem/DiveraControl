@@ -713,7 +713,7 @@
         },
         "status_id": {
           "name": "Status ID",
-          "description": "(Required) Status ID for confirmation (1-10; 10 = emergency)."
+          "description": "(Required) Status ID for confirmation."
         },
         "note": {
           "name": "Note",

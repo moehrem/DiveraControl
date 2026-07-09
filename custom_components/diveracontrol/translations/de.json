@@ -709,7 +709,7 @@
         },
         "status_id": {
           "name": "Status-ID",
-          "description": "(Erforderlich) Status-ID zur Bestätigung (1-10; 10 = Notfall)."
+          "description": "(Erforderlich) Status-ID zur Bestätigung."
         },
         "note": {
           "name": "Notiz",
