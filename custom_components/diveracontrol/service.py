@@ -88,6 +88,17 @@ POST_CLOSE_ALARM_VALIDATION_RULES = {
     }
 }
 
+POST_CONFIRM_ALARM_VALIDATION_RULES = {
+    "alarm_id": {
+        "condition": lambda data: not data.get("alarm_id"),
+        "error_key": "no_alarm_id",
+    },
+    "status_id": {
+        "condition": lambda data: not data.get("status_id"),
+        "error_key": "no_status_id",
+    }
+}
+
 POST_MESSAGE_VALIDATION_RULES = {
     "both_message_channel_and_alarm_id": {
         "condition": lambda data: (
@@ -515,6 +526,46 @@ async def handle_post_close_alarm(
         raise
 
 
+async def handle_post_confirm_alarm(
+    hass: HomeAssistant,
+    call: ServiceCall,
+):
+    """POST confirm an existing alarm.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
+    # prepare data
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_CONFIRM_ALARM_VALIDATION_RULES
+    )
+
+    # create payload
+    payload = _build_payload(data, keys={"status_id": {}, "note": {}})
+
+    # call api function and handle entity
+    alarm_id: Any = data.get("alarm_id")
+    try:
+        await api.post_confirm_alarm(payload, alarm_id)
+        await coordinator.async_request_refresh()
+
+    except HomeAssistantError as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_post_confirm_alarm_failed.message",
+            {"alarm_id": alarm_id, "err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise
+
+
 async def handle_post_message(
     hass: HomeAssistant,
     call: ServiceCall,
@@ -816,6 +867,7 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         "post_alarm": handle_post_alarm,
         "put_alarm": handle_put_alarm,
         "post_close_alarm": handle_post_close_alarm,
+        "post_confirm_alarm": handle_post_confirm_alarm,
         "post_message": handle_post_message,
         "post_using_vehicle_property": handle_post_using_vehicle_property,
         "post_using_vehicle_crew": handle_post_using_vehicle_crew,
