@@ -16,6 +16,7 @@ from custom_components.diveracontrol.service import (
     async_register_services,
     handle_post_alarm,
     handle_post_close_alarm,
+    handle_post_confirm_alarm,
     handle_post_message,
     handle_post_news,
     handle_post_using_vehicle_crew,
@@ -233,6 +234,36 @@ class TestHandlePostVehicleStatus:
 
         with pytest.raises(ServiceValidationError):
             await handle_post_vehicle_status(mock_hass, mock_service_call)
+
+
+class TestHandlePostConfirmAlarm:
+    """Test handle_post_confirm_alarm handler."""
+
+    @patch("custom_components.diveracontrol.service.normalize_service_call_data")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
+    async def test_success(
+        self,
+        mock_get_ucr_data,
+        mock_normalize,
+        mock_hass,
+        mock_api_instance,
+        mock_service_call,
+    ):
+        """Test confirm alarm payload structure."""
+        mock_normalize.return_value = {
+            "device_id": "test_device",
+            "alarm_id": 42,
+            "status_id": 0,
+            "note": "confirmed",
+        }
+        mock_get_ucr_data.return_value = mock_api_instance
+
+        await handle_post_confirm_alarm(mock_hass, mock_service_call)
+
+        mock_api_instance.post_confirm_alarm.assert_called_once_with(
+            {"Status": {"id": 0, "note": "confirmed"}},
+            42,
+        )
 
 
 class TestHandlePostAlarm:

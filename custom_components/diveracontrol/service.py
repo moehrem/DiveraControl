@@ -547,7 +547,10 @@ async def handle_post_confirm_alarm(
     )
 
     # create payload
-    payload = _build_payload(data, keys={"status_id": {}, "note": {}})
+    status_data: dict[str, Any] = {"id": data.get("status_id")}
+    if data.get("note") is not None:
+        status_data["note"] = data.get("note")
+    payload = {"Status": status_data}
 
     # call api function and handle entity
     alarm_id: Any = data.get("alarm_id")
