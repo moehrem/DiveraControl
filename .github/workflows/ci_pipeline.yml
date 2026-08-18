@@ -10,7 +10,6 @@ permissions:
   contents: read
 
 concurrency:
-  # Bei Push: "CI-push-dev", bei PR zu main: "CI-pr-123"
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.number }}
   cancel-in-progress: true
 
@@ -23,54 +22,54 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: ./.github/actions/setup-python
         with:
           python-version: "3.11"
+          cache-dependencies: "true"
 
-      - name: Install dependencies
-        run: |
-          pip install black pylint
+      - name: Install ruff
+        run: pip install ruff
 
       - name: Autoformat with Black
         run: black . --line-length=88 --fast
 
-      - name: Run Pylint
-        run: |
-          pylint custom_components/diveracontrol --exit-zero
+      - name: Run ruff
+        run: ruff check custom_components/diveracontrol
 
   security_checks:
     name: "🔒 Security Checks"
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
+        uses: ./.github/actions/setup-python
         with:
           python-version: "3.13"
+          cache-dependencies: "true"
 
       - name: 🔒 Install Security Tools
-        run: pip install bandit safety
+        run: pip install bandit pip-audit
 
       - name: 🔍 Run Bandit (Code Security)
         run: bandit -r custom_components/ -ll -i
 
-      - name: 🛡️ Run Safety (Dependency Security)
-        run: safety check --full-report
+      - name: 🛡️ Run pip-audit (Dependency Security)
+        run: pip-audit
 
   secrets_scan:
     name: "🕵️ Secret Scanning"
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code (Full History)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: 🐽 TruffleHog OSS
         uses: trufflesecurity/trufflehog@v3.88.6
         with:
-          base: HEAD~50
           head: HEAD
           extra_args: "--only-verified --json"

@@ -1,0 +1,36 @@
+name: Setup Python
+description: Sets up Python and installs dependencies
+inputs:
+  python-version:
+    description: Python version to set up
+    default: "3.11"
+  cache-dependencies:
+    description: Whether to cache pip dependencies
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+    
+    - name: Cache pip dependencies
+      if: inputs.cache-dependencies == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        if [ -f "requirements_test.txt" ]; then
+          pip install -r requirements_test.txt
+        fi
+        if [ -f "requirements.txt" ]; then
+          pip install -r requirements.txt
+        fi
+      shell: bash
