@@ -178,6 +178,7 @@
       "post_alarm": "Create alarm",
       "put_alarm": "Change alarm",
       "post_close_alarm": "Open/close alarm",
+      "post_confirm_alarm": "Confirm alarm",
       "post_message": "Send message",
       "post_using_vehicle_property": "Change vehicle properties",
       "post_using_vehicle_crew": "Change vehicle crew",
@@ -276,11 +277,17 @@
     "no_alarm_id": {
       "message": "No alarm ID provided"
     },
+    "no_status_id": {
+      "message": "No status ID provided"
+    },
     "api_put_alarm_failed": {
       "message": "Updating alarm {alarm_id} failed. Error: {err}"
     },
     "api_post_close_alarm_failed": {
       "message": "Opening/closing alarm {alarm_id} failed"
+    },
+    "api_post_confirm_alarm_failed": {
+      "message": "Confirming alarm {alarm_id} failed. Error: {err}"
     },
     "both_message_channel_and_alarm_id": {
       "message": "Either message channel ID or alarm ID must be provided, not both"
@@ -722,6 +729,24 @@
         "report": {
           "name": "Report",
           "description": "(Optional) Incident report"
+        }
+      }
+    },
+    "post_confirm_alarm": {
+      "name": "Confirm alarm",
+      "description": "Confirms an existing alarm with a status ID and optional notes.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "(Required) ID of the alarm to be confirmed. Only exactly one ID allowed"
+        },
+        "status_id": {
+          "name": "Status ID",
+          "description": "(Required) Status ID for confirmation."
+        },
+        "note": {
+          "name": "Note",
+          "description": "(Optional) Note for confirming the alarm."
         }
       }
     },
