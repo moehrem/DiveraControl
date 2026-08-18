@@ -7,13 +7,12 @@ from typing import Any
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-
-# from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.dt import parse_datetime, utc_from_timestamp
+from homeassistant.util.dt import parse_datetime, utc_from_timestamp, utcnow
 
 from .const import D_EVENTS
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
+
 # from .utils import get_user_device_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,8 +29,6 @@ class DiveraCalendar(BaseDiveraEntity, CalendarEntity):
         """Initialize the calendar entity."""
         super().__init__(coordinator)
 
-        # self.ucr_id = coordinator.ucr_id
-        # self._attr_device_info = get_user_device_info(coordinator)
         self._attr_unique_id = f"{self.ucr_id}_calendar"
         self.entity_id = f"calendar.{self.ucr_id}_calendar"
 
@@ -53,7 +50,7 @@ class DiveraCalendar(BaseDiveraEntity, CalendarEntity):
         if not self._event_list:
             return None
 
-        now = datetime.now(UTC)
+        now = utcnow()
 
         # Filter future events only and parse datetimes
         upcoming_events = []

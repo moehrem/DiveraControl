@@ -14,11 +14,11 @@
           "base_api_url": "Basis-API-URL"
         }
       },
-      "api_key": {
+      "accesskey": {
         "title": "Eingabe des API-Schlüssel",
         "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
           "base_api_url": "Basis-API-URL"
@@ -35,7 +35,7 @@
         "title": "Änderung der Konfiguration für DiveraControl",
         "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
           "base_api_url": "Basis-API-URL"
@@ -43,10 +43,10 @@
       }
     },
     "error": {
-      "cannot_auth": "Ungültiger Benutzername oder Passwort.",
+      "invalid_credentials": "Ungültiger Benutzername oder Passwort.",
       "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
       "no_external_url": "Keine externe URL konfiguriert.",
-      "no_ucr": "Keine verbundenen Einheiten gefunden.",
+      "no_data": "Keine Daten erhalten, bitte überprüfe die Protokolle auf Details.",
       "unknown": "Unbekannter Fehler"
     },
     "abort": {
@@ -59,6 +59,44 @@
       "reconfigure_successful": "Neukonfiguration erfolgreich.",
       "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen.",
       "merge_successful": "Neuauthentifizierung erfolgreich."
+    }
+  },
+  "options": {
+    "abort": {
+      "no_ucr": "Für diese Einheit sind keine Nutzer verfügbar."
+    },
+    "step": {
+      "init": {
+        "title": "Einheit neu konfigurieren",
+        "description": "Wähle aus, welche Einstellungen für {cluster_name} neu konfiguriert werden sollen.",
+        "menu_options": {
+          "cluster_settings": "Einheitseinstellungen",
+          "user_select": "Benutzereinstellungen"
+        }
+      },
+      "cluster_settings": {
+        "title": "Einheitseinstellungen für {cluster_name}",
+        "description": "Die unten stehenden Einstellungen können angepasst werden. Die Änderungen werden nach dem Speichern sofort übernommen, die Integration wird neu geladen.",
+        "data": {
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL"
+        }
+      },
+      "user_select": {
+        "title": "Benutzereinstellungen für {cluster_name} auswählen",
+        "description": "Wähle den Benutzer aus, dessen Einstellungen aktualisiert werden sollen.",
+        "data": {
+          "ucr_id": "Benutzer"
+        }
+      },
+      "user_api_key": {
+        "title": "API-Schlüssel für {username} aktualisieren",
+        "description": "Setze einen neuen API-Schlüssel für den Benutzer {username} in {cluster_name}.",
+        "data": {
+          "accesskey": "API-Schlüssel"
+        }
+      }
     }
   },
   "issues": {
@@ -95,20 +133,11 @@
       }
     }
   },
-  "common": {
-    "usergroup_message": "Die Einheit {cluster_name} (ID {ucr_id}) wurde erfolgreich erstellt.",
-    "usergroup_4": "Der angemeldete Nutzer ist ein Standardnutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_5": "Der angemeldete Nutzer ist ein Monitorbenutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_8": "Der angemeldete Nutzer ist ein Nutzer mit Adminrechten und hat Zugriff auf alle Daten.",
-    "usergroup_14": "Der angemeldete Nutzer ist der Standard-API-Nutzer. Ein Zugriff ist daher nicht möglich auf:\n- Alarmdaten\n- News\n- Termine\n- Dashboards",
-    "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
-    "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
-  },
   "selector": {
     "entry_method_options": {
       "options": {
         "login": "Benutzeranmeldung",
-        "api_key": "API-Schlüssel"
+        "accesskey": "API-Schlüssel"
       }
     },
     "notification_type_options": {
@@ -360,8 +389,8 @@
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
       "fields": {
         "vehicle": {
-          "name": "Fahrzeug-ID",
-          "description": "(Erforderlich) ID des Ziel-Fahrzeugs."
+          "name": "Fahrzeug",
+          "description": "(Erforderlich) Sensoren des bzw der Ziel-Fahrzeug(e)."
         },
         "status": {
           "name": "Status",
@@ -536,8 +565,8 @@
       "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Erforderlich) Alarm ID des Alarms, der geändert werden soll."
+          "name": "Alarm",
+          "description": "(Erforderlich) Sensor des Alarms, der geändert werden soll."
         },
         "title": {
           "name": "Stichwort",
@@ -686,8 +715,8 @@
       "description": "Öffnet oder schließt einen bestehenden Alarm und übermittelt optional einen Bericht.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu öffnenden oder zu schließenden Alarms. Nur genau eine ID zulässig!"
+          "name": "Alarm",
+          "description": "(Erforderlich) Sensor des zu öffnenden oder zu schließenden Alarms."
         },
         "closed": {
           "name": "Geschlossen",
@@ -719,15 +748,15 @@
     },
     "post_message": {
       "name": "Nachricht senden",
-      "description": "Sendet eine Nachricht an einen Kanal oder den dem Alarm zugeordneten Kanal.",
+      "description": "Sendet eine Nachricht an einen freien Kanal oder den dem Alarm zugeordneten Kanal.",
       "fields": {
         "message_channel_id": {
           "name": "Nachrichtenkanal-ID",
           "description": "(Entweder) ID des Kanals, in den die Nachricht gesendet wird."
         },
         "alarm_id": {
-          "name": "Alarm-ID",
-          "description": "(Oder) Alarm-ID, dessen Nachrichtenkanal verwendet werden soll."
+          "name": "Alarm",
+          "description": "(Oder) Sensor des Alarms, dessen Nachrichtenkanal verwendet werden soll."
         },
         "text": {
           "name": "Nachricht",
@@ -892,6 +921,44 @@
           "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
         }
       }
+    },
+    "post_user_status": {
+      "name": "Nutzerstatus setzen",
+      "description": "Setzt den Nutzerstatus eines Nutzers.",
+      "fields": {
+        "id": {
+          "name": "Nutzerstatus",
+          "description": "(Erforderlich) Zu setzender Nutzerstatus."
+        },
+        "vehicle": {
+          "name": "Fahrzeug",
+          "description": "(Optional) Fahrzeug, dem der Nutzer zugewiesen werden soll - Zuordnung erlischt bei erneutem Statuswechsel."
+        },
+        "note": {
+          "name": "Notiz",
+          "description": "(Optional) Freitext zur Statusmeldung - Erlischt bei erneutem Statuswechsel."
+        },
+        "reset_date": {
+          "name": "Zurücksetzen am",
+          "description": "(Optional) Zeitpunkt, an dem der Status zurückgesetzt werden soll."
+        },
+        "reset_to": {
+          "name": "Zurücksetzen auf Status",
+          "description": "(Optional) Folgestatus bei Zurücksetzen."
+        },
+        "alarm_skip": {
+          "name": "Statusänderung bei offenem Alarm ignorieren",
+          "description": "(Optional) Ignoriert alle Statusänderungen, wenn gerade ein Einsatz anliegt."
+        },
+        "status_skip_statusplan": {
+          "name": "Statusplan ignorieren",
+          "description": "(Optional) Ignoriert alle geplanten Statusänderungen für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
+        },
+        "status_skip_geofence": {
+          "name": "Geofence ignorieren",
+          "description": "(Optional) Ignoriert Geofences für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
+        }
+      }
     }
   },
   "config_subentries": {
@@ -915,7 +982,7 @@
           "description": "Ändere den API-Schlüssel, um die Zugangsdaten zu aktualisieren. Die Abfrageintervalle können ebenfalls angepasst werden.",
           "data": {
             "username": "Benutzername",
-            "api_key": "API-Schlüssel",
+            "accesskey": "API-Schlüssel",
             "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
             "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
             "base_api_url": "Basis-API-URL"

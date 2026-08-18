@@ -18,6 +18,7 @@ post_vehicle_status:
           integration: diveracontrol
           multiple: true
           domain: sensor
+          device_class: diveracontrol__vehicle
     status:
       required: false
       example: 123456
@@ -106,10 +107,13 @@ post_alarm:
         boolean:
     vehicle:
       required: false
-      example: 1, 2, 3, 4
+      example: 123456
       selector:
-        text:
-          multiline: false
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__vehicle
     notification_filter_status:
       required: false
       example: false
@@ -283,8 +287,11 @@ put_alarm:
       required: true
       example: 12345678
       selector:
-        number:
-          mode: box
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__alarm
     title:
       required: true
       example: FEU
@@ -333,10 +340,13 @@ put_alarm:
         boolean:
     vehicle:
       required: false
-      example: 1, 2, 3, 4
+      example: 123456
       selector:
-        text:
-          multiline: false
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__vehicle
     notification_filter_status:
       required: false
       example: false
@@ -508,9 +518,13 @@ post_close_alarm:
   fields:
     alarm_id:
       required: true
-      example: 54321
+      example: 12345678
       selector:
-        number:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__alarm
     closed:
       required: true
       example: true
@@ -557,9 +571,13 @@ post_message:
         number:
     alarm_id:
       required: false
-      example: 54321
+      example: 12345678
       selector:
-        number:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__alarm
     text:
       required: false
       example: "Dies ist eine Testnachricht."
@@ -580,6 +598,7 @@ post_using_vehicle_property:
           integration: diveracontrol
           multiple: true
           domain: sensor
+          device_class: diveracontrol__vehicle
     properties:
       required: false
       example: |
@@ -602,6 +621,7 @@ post_using_vehicle_crew:
           integration: diveracontrol
           multiple: true
           domain: sensor
+          device_class: diveracontrol__vehicle
     mode:
       required: true
       example: add
@@ -779,12 +799,12 @@ post_user_status:
       integration: diveracontrol
   fields:
     id:
-      required: true
-      example: 123
+      required: false
+      example: 67890
       selector:
         number:
-          min: 0
-          mode: box
+          min: 1
+          max: 10
     vehicle:
       required: false
       example: 123456
@@ -793,6 +813,7 @@ post_user_status:
           integration: diveracontrol
           multiple: true
           domain: sensor
+          device_class: diveracontrol__vehicle
     note:
       required: false
       example: "Komme mit dem Fahrrad"

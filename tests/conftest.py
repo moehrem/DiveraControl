@@ -11,14 +11,13 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_NAME,
     D_UCR_ID,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USERGROUP_ID,
     DOMAIN,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
@@ -69,17 +68,16 @@ def api_validation_clusters(api_post_auth_single_ucr: dict) -> dict:
     """Extract and format cluster data from authentication response."""
     clusters = {}
     data_user = api_post_auth_single_ucr.get("data", {}).get("user", {})
-    api_key = data_user.get("accesskey", "")
+    accesskey = data_user.get("accesskey", "")
     data_ucr = api_post_auth_single_ucr.get("data", {}).get("ucr", {})
 
     for cluster in data_ucr:
         ucr_id = str(cluster.get("id", ""))
         clusters[ucr_id] = {
             D_CLUSTER_NAME: cluster.get(D_NAME, ""),
-            D_CLUSTER_ID: str(cluster.get(D_USERGROUP_ID, "")) or ucr_id,
+            D_CLUSTER_ID: cluster.get(D_CLUSTER_ID, ""),
             D_UCR_ID: ucr_id,
-            D_API_KEY: api_key,
-            D_USERGROUP_ID: cluster.get(D_USERGROUP_ID, ""),
+            D_ACCESSKEY: accesskey,
         }
 
     return clusters
@@ -95,7 +93,7 @@ def mock_config_entry() -> MockConfigEntry:
             D_UCR_ID: "123456",
             D_CLUSTER_ID: "98765",
             D_CLUSTER_NAME: "Löschzug Musterstadt",
-            D_API_KEY: "test_api_key_123456",
+            D_ACCESSKEY: "test_api_key_123456",
             D_UPDATE_INTERVAL_DATA: UPDATE_INTERVAL_DATA,
             D_UPDATE_INTERVAL_ALARM: UPDATE_INTERVAL_ALARM,
         },
@@ -118,7 +116,7 @@ def user_input_login() -> dict:
 def user_input_api_key() -> dict:
     """Return valid user input for API key config flow step."""
     return {
-        D_API_KEY: "test_api_key_123456",
+        D_ACCESSKEY: "test_api_key_123456",
         D_UPDATE_INTERVAL_DATA: 60,
         D_UPDATE_INTERVAL_ALARM: 30,
     }

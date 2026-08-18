@@ -422,7 +422,7 @@ class ServiceDataNormalizer:
             # Integer list fields
             "group": IntListNormalizer("group"),
             "user_cluster_relation": IntListNormalizer("user_cluster_relation"),
-            "vehicle": IntListNormalizer("vehicle"),
+            "vehicle": VehicleIdNormalizer("vehicle"),
             "crew": IntListNormalizer("crew"),
             "answers": IntListNormalizer("answers"),
             "sorting": IntListNormalizer("sorting"),

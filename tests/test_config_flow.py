@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
     D_CLUSTER_ID,
     D_UCR_ID,
     DOMAIN,
@@ -105,7 +105,7 @@ async def test_user_creds_multi_ucr(
     assert result["title"] == "Rüstzug Musterstadt"
     assert result["data"][D_CLUSTER_ID] == "98765"
     assert result["data"][D_UCR_ID] == "456789"
-    assert result["data"][D_API_KEY] == "test_api_key_123456"
+    assert result["data"][D_ACCESSKEY] == "test_api_key_123456"
 
 
 async def test_user_creds_network_error(
@@ -174,15 +174,15 @@ async def test_api_key_multi_ucr(hass: HomeAssistant, user_input_api_key: dict) 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    # Proceed to the api_key step (method select form)
+    # Proceed to the accesskey step (method select form)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], user_input={"method": "api_key"}
+        result["flow_id"], user_input={"method": "accesskey"}
     )
 
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "api_key"
+    assert result["step_id"] == "accesskey"
 
-    # Provide api_key
+    # Provide accesskey
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input=user_input_api_key
     )
@@ -200,7 +200,7 @@ async def test_api_key_multi_ucr(hass: HomeAssistant, user_input_api_key: dict) 
     assert result["title"] == "Rüstzug Musterstadt"
     assert result["data"][D_CLUSTER_ID] == "22222"
     assert result["data"][D_UCR_ID] == "456789"
-    assert result["data"][D_API_KEY] == "test_api_key_123456"
+    assert result["data"][D_ACCESSKEY] == "test_api_key_123456"
 
 
 # reconfigure
@@ -255,7 +255,7 @@ async def test_reconfigure(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         user_input={
-            D_API_KEY: new_api_key,
+            D_ACCESSKEY: new_api_key,
             D_UPDATE_INTERVAL_DATA: new_interval_data,
             D_UPDATE_INTERVAL_ALARM: new_interval_alarm,
         },
@@ -270,7 +270,7 @@ async def test_reconfigure(
     # Verify that the config entry was updated with new values
     updated_entry = hass.config_entries.async_get_entry(mock_config_entry.entry_id)
     assert updated_entry is not None
-    assert updated_entry.data[D_API_KEY] == new_api_key
+    assert updated_entry.data[D_ACCESSKEY] == new_api_key
     assert updated_entry.data[D_UPDATE_INTERVAL_DATA] == new_interval_data
     assert updated_entry.data[D_UPDATE_INTERVAL_ALARM] == new_interval_alarm
     # Verify base_url is present from migration
@@ -314,13 +314,13 @@ async def test_multi_cluster_show_form_without_input(hass: HomeAssistant) -> Non
         "123456": {
             "cluster_name": "Test Cluster 1",
             "ucr_id": "123456",
-            "api_key": "test_key",
+            "accesskey": "test_key",
             "usergroup_id": "8",
         },
         "456789": {
             "cluster_name": "Test Cluster 2",
             "ucr_id": "456789",
-            "api_key": "test_key",
+            "accesskey": "test_key",
             "usergroup_id": "4",
         },
     }
@@ -359,12 +359,12 @@ async def test_api_key_network_error(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
 
-        # Proceed to the api_key step (method select form)
+        # Proceed to the accesskey step (method select form)
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], user_input={"method": "api_key"}
+            result["flow_id"], user_input={"method": "accesskey"}
         )
 
-        # Provide api_key
+        # Provide accesskey
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input=user_input_api_key
         )

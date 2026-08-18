@@ -28,6 +28,7 @@ from .utils import get_translation, get_ucr_data_from_device
 
 _LOGGER = logging.getLogger(__name__)
 
+# post vehicle status validation rules
 POST_VEHICLE_VALIDATION_RULES = {
     "vehicle": {
         "condition": lambda data: not data.get("vehicle"),

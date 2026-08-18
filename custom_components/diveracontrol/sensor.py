@@ -5,7 +5,6 @@ from collections.abc import Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import D_CLUSTER_ID, D_COORDINATOR, DOMAIN
 from .coordinator import DiveraCoordinator
 from .sensor_entity import (
     DiveraAlarmSensorManager,
@@ -16,6 +15,7 @@ from .sensor_entity import (
     DiveraUserSensor,
     DiveraVehicleSensorManager,
 )
+from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 
 async def async_setup_entry(
@@ -25,25 +25,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Divera sensors."""
 
-    cluster_id = str(config_entry.data.get(D_CLUSTER_ID, ""))
-    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    _, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+        config_entry.data, hass
+    )
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
 
     static_sensors = []
 
     for ucr in ucrs:
-
-        def _add_for_subentry(entities: list, update_before_add: bool = False) -> None:
-            async_add_entities(
-                entities,
-                update_before_add=update_before_add,
-                config_subentry_id=ucr.subentry_id,
-            )
-
         # Create manager helpers that handle dynamic sensors
-        alarm_manager = DiveraAlarmSensorManager(ucr, _add_for_subentry)
-        vehicle_manager = DiveraVehicleSensorManager(ucr, _add_for_subentry)
-        availability_manager = DiveraAvailabilitySensorManager(ucr, _add_for_subentry)
+        alarm_manager = DiveraAlarmSensorManager(ucr, async_add_entities)
+        vehicle_manager = DiveraVehicleSensorManager(ucr, async_add_entities)
+        availability_manager = DiveraAvailabilitySensorManager(ucr, async_add_entities)
 
         # Start managers (they register listeners and create dynamic entities)
         alarm_manager.start()
@@ -61,7 +54,4 @@ async def async_setup_entry(
             DiveraUnitSensor(ucr),
             DiveraUserSensor(ucr),
         ]
-        async_add_entities(
-            static_sensors,
-            config_subentry_id=ucr.subentry_id,
-        )
+        async_add_entities(static_sensors)

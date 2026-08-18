@@ -38,7 +38,7 @@ def api_client(hass: HomeAssistant) -> Generator[DiveraAPI]:
         api = DiveraAPI(
             hass=hass,
             ucr_id="123456",
-            api_key="test_api_key_123",
+            accesskey="test_api_key_123",
             base_url=BASE_API_URL,
         )
         yield api
@@ -52,11 +52,11 @@ class TestDiveraAPIInit:
         from custom_components.diveracontrol.const import BASE_API_URL
 
         api = DiveraAPI(
-            hass=hass, ucr_id="123456", api_key="test_key", base_url=BASE_API_URL
+            hass=hass, ucr_id="123456", accesskey="test_key", base_url=BASE_API_URL
         )
 
         assert api.ucr_id == "123456"
-        assert api.api_key == "test_key"
+        assert api.accesskey == "test_key"
         assert api.hass == hass
         assert api.session is not None
 
