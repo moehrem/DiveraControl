@@ -50,7 +50,7 @@ class DiveraCalendar(BaseDiveraEntity, CalendarEntity):
         if not self._event_list:
             return None
 
-        now = utcnow
+        now = utcnow()
 
         # Filter future events only and parse datetimes
         upcoming_events = []

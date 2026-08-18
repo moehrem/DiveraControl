@@ -711,7 +711,7 @@ class DiveraAPI(DiveraAPIClient):
         accesskey: str,
         base_url: str,
         timeout: float = 10.0,
-        max_retries: int = 2,
+        max_retries: int = 5,
     ) -> None:
         """Initialize the API client.
 
@@ -721,7 +721,7 @@ class DiveraAPI(DiveraAPIClient):
             accesskey: API key to access Divera API.
             base_url: Base URL for the Divera API.
             timeout: Request timeout in seconds. Defaults to 10.
-            max_retries: Maximum number of retries for failed requests. Defaults to 2.
+            max_retries: Maximum number of retries for failed requests. Defaults to 5.
         """
         super().__init__(hass, base_url, timeout, max_retries)
         self.ucr_id = ucr_id
