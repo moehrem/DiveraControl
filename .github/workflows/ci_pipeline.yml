@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: ./.github/actions/setup-python
         with:
-          python-version: "3.11"
+          python-version: "3.12"  # ← Python 3.12 verwenden
           cache-dependencies: "true"
 
       - name: Install ruff
@@ -47,7 +47,7 @@ jobs:
       - name: 🐍 Set up Python
         uses: ./.github/actions/setup-python
         with:
-          python-version: "3.13"
+          python-version: "3.12"  # ← Python 3.12 verwenden
           cache-dependencies: "true"
 
       - name: 🔒 Install Security Tools
