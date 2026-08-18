@@ -1,7 +1,7 @@
 request_refresh:
   target:
     device:
-      integration: diveracontrol
+      - integration: diveracontrol
   fields: {}
 
 post_vehicle_status:
