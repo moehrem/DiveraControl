@@ -1,8 +1,11 @@
 request_refresh:
-  target:
+  fields:
     device:
-      - integration: diveracontrol
-  fields: {}
+      required: false
+      selector:
+        device:
+          integration: diveracontrol
+          multiple: false
 
 post_vehicle_status:
   target:
