@@ -334,47 +334,8 @@ class DiveraAPIClient:
         """Request authentication login from Divera API for config flow.
 
         Args:
-            alarm_id (int): Divera-Alarm-ID which had to be changed.
-            payload (dict): Dictionary of data to send to Divera-API.
-
-        """
-
-        _LOGGER.debug("Posting to close alarm %s for cluster %s", alarm_id, self.ucr_id)
-
-        self.permissions.check(PERM_ALARM)
-
-        part_url = f"{BASE_API_V2_URL}{API_ALARM}/close/{alarm_id}"
-        method = "POST"
-
-        await self._api_request(part_url, method, payload=payload)
-
-    async def post_message(
-        self,
-        payload: dict[str, str],
-    ) -> None:
-        """POST to close an existing alarm to Divera API.
-
-        Args:
-            payload (dict): Dictionary of data to send to Divera-API.
-
-        """
-        _LOGGER.debug("Posting message for cluster %s", self.ucr_id)
-
-        self.permissions.check(PERM_MESSAGES)
-
-        part_url = f"{BASE_API_V2_URL}{API_MESSAGES}"
-        method = "POST"
-
-        await self._api_request(part_url, method, payload=payload)
-
-    async def get_vehicle_property(
-        self,
-        vehicle_id: int,
-    ) -> dict[str, str]:
-        """GET individual vehicle poroperties for vehicle from Divera API.
-
-        Args:
-            vehicle_id (int): ID of the vehicle to fetch property data from.
+            username: Username for authentication.
+            password: Password for authentication.
 
         Returns:
             dict: JSON response from the API.
