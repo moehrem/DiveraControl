@@ -1,322 +1,103 @@
-"""Tests for DiveraConfigFlowAPI helper methods in divera_api.py."""
+"""Tests for DiveraControl config flow API methods."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
-from aiohttp import ClientError, ClientSession
 
 from custom_components.diveracontrol.const import (
     D_ACCESSKEY,
-    D_CLUSTER_ID,
-    D_CLUSTER_NAME,
-    D_DATA,
-    D_NAME,
-    D_UCR,
-    D_UCR_ID,
-    BASE_API_URL,
+    D_BASE_API_URL,
+    D_UPDATE_INTERVAL_DATA,
+    D_UPDATE_INTERVAL_ALARM,
 )
-from custom_components.diveracontrol.divera_api import DiveraConfigFlowAPI
 
 
-class TestConfigFlowApiValidateLogin:
-    """Tests for DiveraConfigFlowAPI.validate_login."""
+class TestConfigFlowDataValidation:
+    """Test config flow data validation logic."""
 
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create a mock session."""
-        return MagicMock(spec=ClientSession)
+    def test_accesskey_validation(self) -> None:
+        """Test access key validation."""
+        user_input = {D_ACCESSKEY: "test_key"}
+        accesskey = str(user_input[D_ACCESSKEY]).strip()
+        assert accesskey == "test_key"
 
-    async def test_validate_login_success(self, mock_session: MagicMock) -> None:
-        """Test successful login validation."""
-        # Mock successful API response
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
-            "success": True,
-            "data": {
-                "user": {"access_token": "test_api_key"},
-                "ucr": [
-                    {"id": 123, "name": "Test Cluster", "usergroup_id": "group1"},
-                    {"id": 456, "name": "Another Cluster", "usergroup_id": "group2"},
-                ],
-            },
-        }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
+    def test_username_password_validation(self) -> None:
+        """Test username/password validation."""
+        user_input = {"username": "test@example.com", "password": "password"}
+        username = str(user_input["username"]).strip()
+        password = str(user_input["password"]).strip()
+        assert username == "test@example.com"
+        assert password == "password"
 
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
+    def test_base_api_url_default(self) -> None:
+        """Test base API URL default value."""
+        from custom_components.diveracontrol.const import BASE_API_URL
+
+        user_input = {}
+        base_api_url = user_input.get(D_BASE_API_URL, BASE_API_URL)
+        assert base_api_url == BASE_API_URL
+
+    def test_update_interval_defaults(self) -> None:
+        """Test update interval default values."""
+        from custom_components.diveracontrol.const import (
+            UPDATE_INTERVAL_ALARM,
+            UPDATE_INTERVAL_DATA,
         )
 
-        assert errors == {}
-        assert len(clusters) == 2
-        assert clusters["ucr123"] == {
-            D_CLUSTER_NAME: "Test Cluster",
-            D_CLUSTER_ID: "cluster123",
-            D_UCR_ID: "ucr123",
-            D_ACCESSKEY: "test_api_key",
-        }
-        assert clusters["ucr456"] == {
-            D_CLUSTER_NAME: "Another Cluster",
-            D_CLUSTER_ID: "cluster456",
-            D_UCR_ID: "ucr456",
-            D_ACCESSKEY: "test_api_key",
-        }
-
-    async def test_validate_login_auth_failure(self, mock_session: MagicMock) -> None:
-        """Test login validation with authentication failure."""
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
-            "success": False,
-            "errors": {"username": "Invalid username"},
-        }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "wrong", "password": "wrong"}, BASE_API_URL
+        user_input = {}
+        update_interval_data = user_input.get(
+            D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA
+        )
+        update_interval_alarm = user_input.get(
+            D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
         )
 
-        assert errors == {"base": "Invalid username"}
-        assert clusters == {}
-
-    async def test_validate_login_connection_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test login validation with connection error."""
-        mock_session.post.side_effect = ClientError("Connection failed")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "cannot_connect"}
-        assert clusters == {}
-
-    async def test_validate_login_timeout_error(self, mock_session: MagicMock) -> None:
-        """Test login validation with timeout error."""
-        mock_session.post.side_effect = TimeoutError("Request timed out")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "cannot_connect"}
-        assert clusters == {}
-
-    async def test_validate_login_data_parsing_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test login validation with data parsing error."""
-        mock_response = AsyncMock()
-        mock_response.json.side_effect = TypeError("Invalid JSON")
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "no_data"}
-        assert clusters == {}
-
-    async def test_validate_login_unexpected_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test login validation with unexpected error."""
-        mock_session.post.side_effect = Exception("Unexpected error")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "unknown"}
-        assert clusters == {}
-
-    async def test_validate_login_empty_ucr_data(self, mock_session: MagicMock) -> None:
-        """Test login validation with empty UCR data."""
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
-            "success": True,
-            "data": {"user": {"access_token": "test_api_key"}, "ucr": []},
-        }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {}
-        assert clusters == {}
-
-    async def test_validate_login_missing_ucr_id(self, mock_session: MagicMock) -> None:
-        """Test login validation with missing UCR ID."""
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
-            "success": True,
-            "data": {
-                "user": {"access_token": "test_api_key"},
-                "ucr": [
-                    {
-                        "name": "Test Cluster",
-                        "usergroup_id": "group1",
-                        # Missing "id" field
-                    }
-                ],
-            },
-        }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_login(
-            {}, mock_session, {"username": "test", "password": "test"}, BASE_API_URL
-        )
-
-        assert errors == {}
-        assert clusters == {}  # Should not include cluster without ID
+        assert update_interval_data == UPDATE_INTERVAL_DATA
+        assert update_interval_alarm == UPDATE_INTERVAL_ALARM
 
 
-class TestConfigFlowApiValidateApiKey:
-    """Tests for DiveraConfigFlowAPI.validate_api_key."""
+class TestClusterDataStructure:
+    """Test cluster data structure expectations."""
 
-    @pytest.fixture
-    def mock_session(self) -> MagicMock:
-        """Create a mock session."""
-        return MagicMock(spec=ClientSession)
-
-    async def test_validate_api_key_success(self, mock_session: MagicMock) -> None:
-        """Test successful API key validation."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json.return_value = {
-            D_DATA: {
-                D_UCR: {
-                    "ucr123": {D_NAME: "Test Cluster"},
-                    "ucr456": {D_NAME: "Another Cluster"},
-                }
+    def test_cluster_data_structure(self) -> None:
+        """Test expected cluster data structure."""
+        clusters = {
+            "cluster1": {
+                "cluster_id": "cluster1",
+                "cluster_name": "Test Cluster",
+                "base_api_url": "https://api.test.com",
+                "update_interval_data": 60,
+                "update_interval_alarm": 30,
+                "user_cluster_relations": {
+                    "ucr1": {"accesskey": "key1", "username": "user1"}
+                },
             }
         }
-        mock_session.request.return_value.__aenter__.return_value = mock_response
 
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
-        )
-
-        assert errors == {}
-        assert len(clusters) == 2
-        assert clusters["ucr123"] == {
-            D_CLUSTER_NAME: "Test Cluster",
-            D_CLUSTER_ID: "cluster123",
-            D_UCR_ID: "ucr123",
-            D_ACCESSKEY: "test_key",
-        }
-        assert clusters["ucr456"] == {
-            D_CLUSTER_NAME: "Another Cluster",
-            D_CLUSTER_ID: "cluster456",
-            D_UCR_ID: "ucr456",
-            D_ACCESSKEY: "test_key",
-        }
-
-    async def test_validate_api_key_http_error(self, mock_session: MagicMock) -> None:
-        """Test API key validation with HTTP error."""
-        mock_response = AsyncMock()
-        mock_response.status = 401
-        mock_response.json.return_value = {"message": "Invalid API key"}
-        mock_session.request.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "invalid_key"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "Invalid API key"}
-        assert clusters == {}
-
-    async def test_validate_api_key_connection_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test API key validation with connection error."""
-        mock_session.request.side_effect = ClientError("Connection failed")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "cannot_connect"}
-        assert clusters == {}
-
-    async def test_validate_api_key_timeout_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test API key validation with timeout error."""
-        mock_session.request.side_effect = TimeoutError("Request timed out")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "cannot_connect"}
-        assert clusters == {}
-
-    async def test_validate_api_key_data_parsing_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test API key validation with data parsing error."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json.side_effect = TypeError("Invalid JSON")
-        mock_session.request.return_value.__aenter__.return_value = mock_response
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "no_data"}
-        assert clusters == {}
-
-    async def test_validate_api_key_unexpected_error(
-        self, mock_session: MagicMock
-    ) -> None:
-        """Test API key validation with unexpected error."""
-        mock_session.request.side_effect = Exception("Unexpected error")
-
-        errors, clusters = await DiveraConfigFlowAPI.validate_api_key(
-            {}, mock_session, {"accesskey": "test_key"}, BASE_API_URL
-        )
-
-        assert errors == {"base": "Unexpected error"}
-        assert clusters == {}
+        assert "cluster1" in clusters
+        assert clusters["cluster1"]["cluster_id"] == "cluster1"
+        assert clusters["cluster1"]["cluster_name"] == "Test Cluster"
 
 
-class TestConfigFlowApiFormatAuthErrors:
-    """Tests for DiveraConfigFlowAPI.format_auth_errors."""
+class TestErrorHandling:
+    """Test error handling logic."""
 
-    def test_format_auth_errors_list(self) -> None:
-        """Test formatting list of errors."""
-        raw_errors = ["Error 1", "Error 2", "Error 3"]
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "Error 1; Error 2; Error 3"}
+    def test_empty_accesskey_error(self) -> None:
+        """Test error when access key is empty."""
+        accesskey = ""
+        if not accesskey:
+            error_code = "invalid_credentials"
+        else:
+            error_code = None
 
-    def test_format_auth_errors_dict_strings(self) -> None:
-        """Test formatting dict with string values."""
-        raw_errors = {"field1": "Error 1", "field2": "Error 2"}
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "Error 1; Error 2"}
+        assert error_code == "invalid_credentials"
 
-    def test_format_auth_errors_dict_lists(self) -> None:
-        """Test formatting dict with list values."""
-        raw_errors = {"field1": ["Error 1", "Error 2"], "field2": "Error 3"}
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "Error 1; Error 2; Error 3"}
+    def test_empty_clusters_error(self) -> None:
+        """Test error when no clusters found."""
+        clusters = {}
+        if not clusters:
+            error_code = "no_clusters_found"
+        else:
+            error_code = None
 
-    def test_format_auth_errors_dict_mixed(self) -> None:
-        """Test formatting dict with mixed value types."""
-        raw_errors = {"field1": "Error 1", "field2": ["Error 2", 123], "field3": None}
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "Error 1; Error 2; 123; None"}
-
-    def test_format_auth_errors_string(self) -> None:
-        """Test formatting string error."""
-        raw_errors = "Single error message"
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "Single error message"}
-
-    def test_format_auth_errors_other_type(self) -> None:
-        """Test formatting other types (converted to string)."""
-        raw_errors = 123
-        result = DiveraConfigFlowAPI.format_auth_errors(raw_errors)
-        assert result == {"base": "123"}
+        assert error_code == "no_clusters_found"

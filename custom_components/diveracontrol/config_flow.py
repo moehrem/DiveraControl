@@ -1,7 +1,7 @@
-"""Config flow for myDivera integration."""
+"""Config flow for DiveraControl integration."""
 
 import logging
-from typing import Any
+from typing import Any, Dict, List, Optional, Set
 
 import voluptuous as vol
 
@@ -24,6 +24,16 @@ from .schemas import (
     get_multi_cluster_form_schema,
 )
 
+# Abort reasons
+ABORT_REASON_NO_HUBS = "no_new_hubs_found"
+ABORT_REASON_ALREADY_CONFIGURED = "already_configured"
+ABORT_REASON_MERGE_SUCCESS = "merge_successful"
+ABORT_REASON_UNKNOWN_STEP = "unknown_step"
+
+# Error codes
+ERROR_API_KEY = "api_key_error"
+ERROR_LOGIN = "login_error"
+
 _LOGGER = logging.getLogger(__name__)
 STEP_USER = "user"
 STEP_LOGIN = "login"
@@ -34,11 +44,19 @@ STEP_MULTI_CLUSTER = "multi_cluster"
 class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for DiveraControl integration."""
 
+    # Form handlers mapping (class-level constant)
+    FORM_HANDLERS: Dict[str, Any] = {
+        STEP_USER: "_show_login_form",
+        STEP_LOGIN: "_show_login_form",
+        STEP_API_KEY: "_show_api_key_form",
+        STEP_MULTI_CLUSTER: "_show_multi_cluster_form",
+    }
+
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self.final_entry: dict[str, Any] | None = None
-        self.possible_entries: dict[str, dict[str, Any]] = {}
-        self.errors: dict[str, str] = {}
+        self.final_entry: Optional[Dict[str, Any]] = None
+        self.possible_entries: Dict[str, Dict[str, Any]] = {}
+        self.errors: Dict[str, str] = {}
 
     @staticmethod
     @callback
@@ -200,9 +218,20 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         handler = form_handlers.get(cur_step_id, self._show_login_form)
         return handler()
 
-    def _get_existing_ucr_ids(self, entry: ConfigEntry) -> set[str]:
-        """Extract all UCR IDs from an existing config entry."""
-        existing_relations = entry.data.get(D_RELATIONS_KEY, {})
+    def _get_existing_ucr_ids(self, entry: ConfigEntry) -> Set[str]:
+        """Extract all UCR IDs from an existing config entry.
+
+        Args:
+            entry: The config entry to extract UCR IDs from.
+
+        Returns:
+            Set[str]: A set of UCR IDs found in the entry's relations.
+                   Returns an empty set if no valid relations are found.
+        """
+        if not entry.data:
+            return set()
+
+        existing_relations = entry.data.get(D_RELATIONS_KEY)
         if not isinstance(existing_relations, dict):
             return set()
 
@@ -219,95 +248,121 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         }
 
     def _handle_duplicates(self) -> None:
-        """Handle duplicate clusters and users."""
-        clusters_to_remove: list[str] = []
+        """Remove duplicate user relations from possible_entries.
+
+        This method checks for existing user relations in configured clusters
+        and removes duplicates from the current possible_entries. Empty clusters
+        are removed entirely.
+        """
+        clusters_to_remove: List[str] = []
 
         for cluster_id, cluster_data in self.possible_entries.items():
             new_relations = cluster_data.get(D_RELATIONS_KEY, {})
+            existing_entry = self._find_existing_cluster_entry(cluster_id)
 
-            # Find existing entry for this cluster
-            existing_config_entry = self._find_existing_cluster_entry(cluster_id)
-
-            # Cluster is not configured yet: keep all new users
-            if existing_config_entry is None:
+            if not existing_entry:
                 continue
 
-            # Get existing UCR IDs
-            existing_ucr_ids = self._get_existing_ucr_ids(existing_config_entry)
+            existing_ucr_ids = self._get_existing_ucr_ids(existing_entry)
             if not existing_ucr_ids:
                 continue
 
-            # Find and remove duplicates
-            duplicate_ucr_ids = self._find_duplicate_ucr_ids(
-                new_relations, existing_ucr_ids
-            )
+            # Find duplicate UCR IDs
+            duplicate_ucr_ids = {
+                ucr_id for ucr_id in new_relations if ucr_id in existing_ucr_ids
+            }
 
             if duplicate_ucr_ids:
                 _LOGGER.debug(
-                    "Skipping duplicate users for cluster '%s': %s",
+                    "Removing %d duplicate users for cluster '%s': %s",
+                    len(duplicate_ucr_ids),
                     cluster_id,
                     ", ".join(sorted(duplicate_ucr_ids)),
                 )
+                # Remove duplicates using dict comprehension
+                cluster_data[D_RELATIONS_KEY] = {
+                    ucr_id: relation_data
+                    for ucr_id, relation_data in new_relations.items()
+                    if ucr_id not in duplicate_ucr_ids
+                }
 
-            for ucr_id in duplicate_ucr_ids:
-                new_relations.pop(ucr_id, None)
-
-            # Remove empty clusters
-            if not new_relations:
+            # Mark empty clusters for removal
+            if not cluster_data.get(D_RELATIONS_KEY):
                 clusters_to_remove.append(cluster_id)
 
-        # Clean up empty clusters
+        # Remove empty clusters
         for cluster_id in clusters_to_remove:
             self.possible_entries.pop(cluster_id, None)
 
-    def _find_existing_cluster_entry(self, cluster_id: str) -> ConfigEntry | None:
-        """Return existing config entry for a cluster id, if configured."""
+    def _find_existing_cluster_entry(self, cluster_id: str) -> Optional[ConfigEntry]:
+        """Return existing config entry for a cluster id, if configured.
+
+        Args:
+            cluster_id: The cluster ID to search for.
+
+        Returns:
+            Optional[ConfigEntry]: The existing config entry if found, None otherwise.
+        """
+        if not cluster_id:
+            return None
+
+        cluster_id_str = str(cluster_id)
         return next(
             (
                 entry
                 for entry in self._async_current_entries()
-                if str(entry.data.get(D_CLUSTER_ID, "")) == str(cluster_id)
+                if str(entry.data.get(D_CLUSTER_ID, "")) == cluster_id_str
             ),
             None,
         )
 
     async def _upsert_cluster(self) -> ConfigFlowResult:
-        """Create a new cluster entry or merge missing user relations."""
+        """Create a new cluster entry or merge missing user relations.
+
+        This method handles both creating new cluster entries and updating
+        existing ones by merging new user relations. It ensures no duplicates
+        are created and handles edge cases like empty relations.
+
+        Returns:
+            ConfigFlowResult: Aborts with a reason or creates/updates an entry.
+        """
         if self.final_entry is None:
-            return self.async_abort(reason="no_new_hubs_found")
+            return self.async_abort(reason=ABORT_REASON_NO_HUBS)
 
         selected_cluster_id = str(self.final_entry.get(D_CLUSTER_ID, ""))
         if not selected_cluster_id:
-            return self.async_abort(reason="no_new_hubs_found")
+            return self.async_abort(reason=ABORT_REASON_NO_HUBS)
 
         existing_config_entry = self._find_existing_cluster_entry(selected_cluster_id)
+        new_relations = self.final_entry.get(D_RELATIONS_KEY, {})
+
+        # Case 1: Create new cluster entry
         if existing_config_entry is None:
             return await self._create_cluster()
 
-        new_relations = self.final_entry.get(D_RELATIONS_KEY, {})
+        # Case 2: No new relations to add
         if not new_relations:
-            return self.async_abort(reason="already_configured")
+            return self.async_abort(reason=ABORT_REASON_ALREADY_CONFIGURED)
 
+        # Case 3: Merge new relations with existing ones
         existing_relations = existing_config_entry.data.get(D_RELATIONS_KEY, {})
         if not isinstance(existing_relations, dict):
             existing_relations = {}
 
-        merged_relations = {
-            str(ucr_id): relation_data
-            for ucr_id, relation_data in existing_relations.items()
-        }
-
+        # Create a deep copy of existing relations to avoid mutation
+        merged_relations = {**existing_relations}
         added_relations = 0
+
         for ucr_id, relation_data in new_relations.items():
-            if ucr_id in merged_relations:
-                continue
+            if ucr_id not in merged_relations:
+                merged_relations[ucr_id] = relation_data
+                added_relations += 1
 
-            merged_relations[ucr_id] = relation_data
-            added_relations += 1
-
+        # No new relations were added
         if added_relations == 0:
-            return self.async_abort(reason="already_configured")
+            return self.async_abort(reason=ABORT_REASON_ALREADY_CONFIGURED)
 
+        # Update the config entry with merged relations
         self.hass.config_entries.async_update_entry(
             existing_config_entry,
             data={
@@ -317,13 +372,13 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         _LOGGER.debug(
-            "Adding %s user relation(s) to existing cluster '%s'",
+            "Added %d new user relation(s) to existing cluster '%s'",
             added_relations,
             selected_cluster_id,
         )
 
         self.hass.config_entries.async_schedule_reload(existing_config_entry.entry_id)
-        return self.async_abort(reason="merge_successful")
+        return self.async_abort(reason=ABORT_REASON_MERGE_SUCCESS)
 
     async def _create_cluster(self) -> ConfigFlowResult:
         """Process device creation."""

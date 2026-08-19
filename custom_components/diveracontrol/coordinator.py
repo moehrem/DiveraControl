@@ -1,4 +1,4 @@
-"""Coordinator for myDivera integration."""
+"""Coordinator for DiveraControl integration."""
 
 from datetime import timedelta
 import logging
@@ -133,6 +133,13 @@ class DiveraCoordinator(DataUpdateCoordinator):
             dict[str, Any]: Updated data fetched from the API.
 
         """
+
+        if self.api is None:
+            await self._async_setup()
+            if self.api is None:
+                raise UpdateFailed(
+                    f"API client is not initialized for cluster '{self.cluster_name}' and user '{self.user_name}'"
+                )
 
         try:
             raw_ucr_data = await self.api.get_pull_all()
