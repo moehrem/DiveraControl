@@ -622,9 +622,9 @@ class DiveraAPIClient:
             if not is_valid:
                 return entry_errors, {}
 
-        except ClientError, TimeoutError, ConfigEntryAuthFailed:
+        except [ClientError, TimeoutError, ConfigEntryAuthFailed]:
             validation_errors["base"] = ConfigFlowErrorCode.CANNOT_CONNECT.value
-        except TypeError, AttributeError:
+        except [TypeError, AttributeError]:
             validation_errors["base"] = ConfigFlowErrorCode.NO_DATA.value
         except Exception as ex:
             _LOGGER.exception(

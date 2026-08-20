@@ -278,7 +278,7 @@ post_alarm:
 
 put_alarm:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     alarm_id:
