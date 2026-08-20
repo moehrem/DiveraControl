@@ -696,10 +696,10 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 "Migration: clearing old registry entries for config entry %s due to breaking changes",
                 config_entry.entry_id,
             )
+            _remove_old_entity_entries(hass, config_entry)
+
             dr.async_get(hass).async_clear_config_entry(config_entry.entry_id)
             er.async_get(hass).async_clear_config_entry(config_entry.entry_id)
-
-            _remove_old_entity_entries(hass, config_entry)
 
         hass.config_entries.async_update_entry(
             config_entry,
