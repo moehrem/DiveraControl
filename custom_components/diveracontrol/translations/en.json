@@ -740,8 +740,8 @@
           "name": "Alarm ID",
           "description": "(Required) ID of the alarm to be confirmed. Only exactly one ID allowed"
         },
-        "status_id": {
-          "name": "Status ID",
+        "id": {
+          "name": "User Status",
           "description": "(Required) Status ID for confirmation."
         },
         "note": {

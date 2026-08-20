@@ -94,10 +94,10 @@ POST_CONFIRM_ALARM_VALIDATION_RULES = {
         "condition": lambda data: not data.get("alarm_id"),
         "error_key": "no_alarm_id",
     },
-    "status_id": {
-        "condition": lambda data: not data.get("status_id"),
+    "id": {
+        "condition": lambda data: not data.get("id"),
         "error_key": "no_status_id",
-    }
+    },
 }
 
 POST_MESSAGE_VALIDATION_RULES = {
@@ -513,7 +513,7 @@ async def handle_post_close_alarm(
     # call api function and handle entity
     alarm_id: Any = data.get("alarm_id")
     try:
-        await api.post_close_alarm(payload, alarm_id)
+        await api.post_close_alarm(alarm_id, payload)
         await coordinator.async_request_refresh()
 
     except HomeAssistantError as err:
@@ -548,7 +548,7 @@ async def handle_post_confirm_alarm(
     )
 
     # create payload
-    status_data: dict[str, Any] = {"id": data.get("status_id")}
+    status_data: dict[str, Any] = {"id": data.get("id")}
     if data.get("note") is not None:
         status_data["note"] = data.get("note")
     payload = {"Status": status_data}

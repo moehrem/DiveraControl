@@ -406,6 +406,7 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
             .get(status_id, {})
             .get("name", "Unknown")
         )
+        self._attr_device_class = "diveracontrol__availability"
 
         # static entity attributes
         self._attr_has_entity_name = False

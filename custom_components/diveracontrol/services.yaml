@@ -1,17 +1,12 @@
 request_refresh:
-  fields:
+  target:
     device:
-      required: false
-      selector:
-        device:
-          integration: diveracontrol
-          multiple: false
+      integration: diveracontrol
 
 post_vehicle_status:
   target:
-    entity:
+    device:
       integration: diveracontrol
-      domain: sensor
   fields:
     vehicle:
       required: true
@@ -59,7 +54,7 @@ post_vehicle_status:
 
 post_alarm:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     title:
@@ -283,12 +278,12 @@ post_alarm:
 
 put_alarm:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     alarm_id:
       required: true
-      example: 12345678
+      example: "12345678"
       selector:
         entity:
           integration: diveracontrol
@@ -297,7 +292,7 @@ put_alarm:
           device_class: diveracontrol__alarm
     title:
       required: true
-      example: FEU
+      example: "FEU"
       selector:
         text:
           multiline: false
@@ -516,7 +511,7 @@ put_alarm:
 
 post_close_alarm:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     alarm_id:
@@ -542,15 +537,19 @@ post_close_alarm:
 
 post_confirm_alarm:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     alarm_id:
       required: true
-      example: 54321
+      example: 12345678
       selector:
-        number:
-    status_id:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__alarm
+    id:
       required: true
       example: 1
       selector:
@@ -564,7 +563,7 @@ post_confirm_alarm:
 
 post_message:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     message_channel_id:
@@ -590,7 +589,7 @@ post_message:
 
 post_using_vehicle_property:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     vehicle:
@@ -613,7 +612,7 @@ post_using_vehicle_property:
 
 post_using_vehicle_crew:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     vehicle:
@@ -645,7 +644,7 @@ post_using_vehicle_crew:
 
 post_news:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     title:
@@ -798,16 +797,18 @@ post_news:
 
 post_user_status:
   target:
-    entity:
+    device:
       integration: diveracontrol
   fields:
     id:
       required: false
       example: 67890
       selector:
-        number:
-          min: 1
-          max: 10
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: sensor
+          device_class: diveracontrol__availability
     vehicle:
       required: false
       example: 123456
@@ -834,6 +835,7 @@ post_user_status:
       selector:
         number:
           min: 0
+          max: 999999
           mode: box
 
     alarm_skip:
@@ -851,3 +853,4 @@ post_user_status:
       example: true
       selector:
         boolean:
+

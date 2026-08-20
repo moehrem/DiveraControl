@@ -37,6 +37,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "post_alarm",
     "put_alarm",
     "post_close_alarm",
+    "post_confirm_alarm",
     "post_message",
     "post_using_vehicle_property",
     "post_using_vehicle_crew",
@@ -206,6 +207,7 @@ async def async_get_actions(
                 "post_alarm",
                 "put_alarm",
                 "post_close_alarm",
+                "post_confirm_alarm",
                 "post_message",
                 "post_using_vehicle_property",
                 "post_using_vehicle_crew",
@@ -227,7 +229,9 @@ async def async_get_actions(
             pass
         try:
             permissions.check(PERM_ALARM)
-            action_types.extend(["post_alarm", "put_alarm", "post_close_alarm"])
+            action_types.extend(
+                ["post_alarm", "put_alarm", "post_close_alarm", "post_confirm_alarm"]
+            )
         except HomeAssistantError:
             pass
         try:
@@ -515,6 +519,37 @@ async def async_get_action_capabilities(
                     vol.Optional("notification_filter_access"): bool,
                     vol.Optional("ts_publish"): selector.DateTimeSelector(),
                     vol.Optional("ts_close"): selector.DateTimeSelector(),
+                }
+            )
+        }
+
+    if action_type == "post_confirm_alarm":
+        alarm_options = await _get_selector_options(
+            hass, device_id, "alarm.items", "{title} ({id})"
+        )
+        user_status_options = await _get_selector_options(
+            hass, device_id, "cluster.status", "{name}"
+        )
+
+        return {
+            "extra_fields": vol.Schema(
+                {
+                    vol.Required("alarm_id"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=alarm_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                    if alarm_options
+                    else vol.Coerce(int),
+                    vol.Required("id"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=user_status_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                    if user_status_options
+                    else vol.Coerce(int),
                 }
             )
         }

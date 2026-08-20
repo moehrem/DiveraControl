@@ -341,7 +341,7 @@ class TestHandlePostCloseAlarm:
 
         mock_api_instance.post_close_alarm.assert_called_once()
         call_args = mock_api_instance.post_close_alarm.call_args
-        assert call_args[0][1] == 789  # alarm_id as second argument
+        assert call_args[0][0] == 789  # alarm_id as second argument
 
 
 class TestHandlePostMessage:
@@ -395,7 +395,11 @@ class TestHandlePostMessage:
         mock_coordinator.async_request_refresh = AsyncMock()
         # _prepare_data calls get_ucr_data_from_device twice (for coordinator and api)
         # and handle_post_message calls it once more for data
-        mock_get_coordinator.side_effect = [mock_coordinator, mock_api_instance, mock_coord_data]
+        mock_get_coordinator.side_effect = [
+            mock_coordinator,
+            mock_api_instance,
+            mock_coord_data,
+        ]
 
         await handle_post_message(mock_hass, mock_service_call)
 
