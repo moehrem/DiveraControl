@@ -21,6 +21,15 @@ from custom_components.diveracontrol.config_flow import (
 )
 
 
+@pytest.fixture
+def mock_user_input_login() -> dict:
+    """Return valid user input for login."""
+    return {
+        CONF_USERNAME: "test@example.com",
+        CONF_PASSWORD: "test_password",
+    }
+
+
 class TestConfigFlowInitialization:
     """Test config flow initialization."""
 

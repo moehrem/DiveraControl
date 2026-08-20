@@ -169,11 +169,9 @@ class TestHandlePostVehicleStatus:
     """Test handle_post_vehicle_status handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -187,7 +185,6 @@ class TestHandlePostVehicleStatus:
             "fmsstatus": 2,
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_vehicle_status(mock_hass, mock_service_call)
 
@@ -195,10 +192,9 @@ class TestHandlePostVehicleStatus:
         mock_api_instance.post_vehicle_status.assert_called_once_with(
             123, {"vehicle": [123], "fmsstatus": 2}
         )
-        mock_handle_entity.assert_called_once()
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     @patch("custom_components.diveracontrol.service.get_translation")
     async def test_api_error(
         self,
@@ -239,7 +235,7 @@ class TestHandlePostAlarm:
     """Test handle_post_alarm handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success(
         self,
         mock_get_coordinator,
@@ -264,7 +260,7 @@ class TestHandlePostAlarm:
         assert call_args["Alarm"]["title"] == "Fire Alert"
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     @patch("custom_components.diveracontrol.service.get_translation")
     async def test_api_error(
         self,
@@ -295,11 +291,9 @@ class TestHandlePutAlarm:
     """Test handle_put_alarm handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -314,7 +308,6 @@ class TestHandlePutAlarm:
             "notification_type": 3,
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_put_alarm(mock_hass, mock_service_call)
 
@@ -328,11 +321,9 @@ class TestHandlePostCloseAlarm:
     """Test handle_post_close_alarm handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -345,7 +336,6 @@ class TestHandlePostCloseAlarm:
             "alarm_id": 789,
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_close_alarm(mock_hass, mock_service_call)
 
@@ -358,7 +348,7 @@ class TestHandlePostMessage:
     """Test handle_post_message handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success_with_message_channel_id(
         self,
         mock_get_coordinator,
@@ -383,7 +373,7 @@ class TestHandlePostMessage:
         assert call_args["Message"]["message_channel_id"] == 456
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success_with_alarm_id(
         self,
         mock_get_coordinator,
@@ -400,7 +390,12 @@ class TestHandlePostMessage:
         }
         mock_coord_data = MagicMock()
         mock_coord_data.get.return_value = {"items": {789: {"message_channel_id": 999}}}
-        mock_get_coordinator.side_effect = [mock_coord_data, mock_api_instance]
+        # Create a mock coordinator with async_request_refresh
+        mock_coordinator = AsyncMock()
+        mock_coordinator.async_request_refresh = AsyncMock()
+        # _prepare_data calls get_ucr_data_from_device twice (for coordinator and api)
+        # and handle_post_message calls it once more for data
+        mock_get_coordinator.side_effect = [mock_coordinator, mock_api_instance, mock_coord_data]
 
         await handle_post_message(mock_hass, mock_service_call)
 
@@ -409,7 +404,7 @@ class TestHandlePostMessage:
         assert call_args["Message"]["message_channel_id"] == 999
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_no_message_channel_found(
         self,
         mock_get_coordinator,
@@ -437,11 +432,9 @@ class TestHandlePostUsingVehicleProperty:
     """Test handle_post_using_vehicle_property handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -455,7 +448,6 @@ class TestHandlePostUsingVehicleProperty:
             "property1": "value1",
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_using_vehicle_property(mock_hass, mock_service_call)
 
@@ -468,11 +460,9 @@ class TestHandlePostUsingVehicleCrew:
     """Test handle_post_using_vehicle_crew handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_add_crew(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -487,7 +477,6 @@ class TestHandlePostUsingVehicleCrew:
             "crew": [456, 789],
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_using_vehicle_crew(mock_hass, mock_service_call)
 
@@ -498,11 +487,9 @@ class TestHandlePostUsingVehicleCrew:
         assert call_args[0][2]["Crew"]["add"] == [456, 789]
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_remove_crew(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -517,7 +504,6 @@ class TestHandlePostUsingVehicleCrew:
             "crew": [456],
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_using_vehicle_crew(mock_hass, mock_service_call)
 
@@ -525,11 +511,9 @@ class TestHandlePostUsingVehicleCrew:
         assert call_args[0][2]["Crew"]["remove"] == [456]
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
-    @patch("custom_components.diveracontrol.service.handle_entity")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_reset_crew(
         self,
-        mock_handle_entity,
         mock_get_coordinator,
         mock_normalize,
         mock_hass,
@@ -543,7 +527,6 @@ class TestHandlePostUsingVehicleCrew:
             "mode": "reset",
         }
         mock_get_coordinator.return_value = mock_api_instance
-        mock_handle_entity.return_value = None
 
         await handle_post_using_vehicle_crew(mock_hass, mock_service_call)
 
@@ -551,7 +534,7 @@ class TestHandlePostUsingVehicleCrew:
         assert call_args[0][2] == {}  # Empty payload for reset
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_invalid_mode(
         self,
         mock_get_coordinator,
@@ -578,7 +561,7 @@ class TestHandlePostNews:
     """Test handle_post_news handler."""
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success_without_survey(
         self,
         mock_get_coordinator,
@@ -605,7 +588,7 @@ class TestHandlePostNews:
         assert call_args["News"]["title"] == "Important News"
 
     @patch("custom_components.diveracontrol.service.normalize_service_call_data")
-    @patch("custom_components.diveracontrol.service.get_coordinator_key_from_device")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
     async def test_success_with_survey(
         self,
         mock_get_coordinator,
@@ -646,22 +629,25 @@ class TestAsyncRegisterServices:
 
         async_register_services(mock_hass, DOMAIN)
 
-        # Verify all 8 services were registered
-        assert mock_hass.services.async_register.call_count == 8
+        # Verify all 11 services were registered
+        assert mock_hass.services.async_register.call_count == 11
 
         # Verify service names
         registered_services = [
             call[0][1] for call in mock_hass.services.async_register.call_args_list
         ]
         expected_services = [
+            "request_refresh",
             "post_vehicle_status",
             "post_alarm",
             "put_alarm",
             "post_close_alarm",
+            "post_confirm_alarm",
             "post_message",
             "post_using_vehicle_property",
             "post_using_vehicle_crew",
             "post_news",
+            "post_user_status",
         ]
         for service in expected_services:
             assert service in registered_services
