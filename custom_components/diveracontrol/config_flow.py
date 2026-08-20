@@ -15,6 +15,9 @@ from .const import (
     D_CLUSTER_NAME,
     D_RELATIONS_KEY,
     DOMAIN,
+    VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
 )
 from .divera_api import DiveraAPIClient
 from .options_flow import DiveraControlOptionsFlow
@@ -43,6 +46,9 @@ STEP_MULTI_CLUSTER = "multi_cluster"
 
 class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for DiveraControl integration."""
+
+    VERSION = VERSION
+    MINOR_VERSION = MINOR_VERSION
 
     # Form handlers mapping (class-level constant)
     FORM_HANDLERS: Dict[str, Any] = {
