@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aiohttp import ClientError, ClientResponseError
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady, HomeAssistantError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 
 from custom_components.diveracontrol.const import (
     API_ACCESS_KEY,
@@ -101,7 +105,9 @@ class TestMapToClusters:
         # Simulate the mapping logic
         data_ucr = data_pull_all.get(D_DATA, {}).get(D_UCR, {})
         data_user = data_pull_all.get(D_DATA, {}).get(D_USER, {})
-        user_name = f"{data_user.get('firstname', '')} {data_user.get('lastname', '')}".strip()
+        user_name = (
+            f"{data_user.get('firstname', '')} {data_user.get('lastname', '')}".strip()
+        )
 
         clusters = {}
         for ucr, data in data_ucr.items():
@@ -185,8 +191,10 @@ class TestMapToClustersFull:
     def test_map_to_clusters_multiple_clusters(self) -> None:
         """Test mapping data with multiple clusters."""
         client = MagicMock(spec=DiveraAPIClient)
-        client._map_to_clusters = DiveraAPIClient._map_to_clusters.__get__(client, DiveraAPIClient)
-        
+        client._map_to_clusters = DiveraAPIClient._map_to_clusters.__get__(
+            client, DiveraAPIClient
+        )
+
         data_pull_all = {
             D_DATA: {
                 D_UCR: {
@@ -196,7 +204,7 @@ class TestMapToClustersFull:
                 D_USER: {"firstname": "John", "lastname": "Doe"},
             }
         }
-        
+
         clusters = client._map_to_clusters(
             data_pull_all,
             "test_accesskey",
@@ -204,7 +212,7 @@ class TestMapToClustersFull:
             60,
             30,
         )
-        
+
         assert len(clusters) == 2
         assert "cluster1" in clusters
         assert "cluster2" in clusters
@@ -214,8 +222,10 @@ class TestMapToClustersFull:
     def test_map_to_clusters_missing_data(self) -> None:
         """Test mapping with missing data keys."""
         client = MagicMock(spec=DiveraAPIClient)
-        client._map_to_clusters = DiveraAPIClient._map_to_clusters.__get__(client, DiveraAPIClient)
-        
+        client._map_to_clusters = DiveraAPIClient._map_to_clusters.__get__(
+            client, DiveraAPIClient
+        )
+
         data_pull_all = {}  # Empty data
         clusters = client._map_to_clusters(
             data_pull_all,
@@ -224,7 +234,7 @@ class TestMapToClustersFull:
             60,
             30,
         )
-        
+
         assert clusters == {}
 
 
@@ -234,8 +244,10 @@ class TestFormatAuthErrorsFull:
     def test_format_auth_errors_list(self) -> None:
         """Test formatting auth errors from list."""
         client = MagicMock(spec=DiveraAPIClient)
-        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(client, DiveraAPIClient)
-        
+        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(
+            client, DiveraAPIClient
+        )
+
         errors = ["Error 1", "Error 2", "Error 3"]
         result = client._format_auth_errors(errors)
         assert result == {"base": "Error 1; Error 2; Error 3"}
@@ -243,8 +255,10 @@ class TestFormatAuthErrorsFull:
     def test_format_auth_errors_dict(self) -> None:
         """Test formatting auth errors from dict."""
         client = MagicMock(spec=DiveraAPIClient)
-        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(client, DiveraAPIClient)
-        
+        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(
+            client, DiveraAPIClient
+        )
+
         errors = {"field1": "Error 1", "field2": "Error 2"}
         result = client._format_auth_errors(errors)
         assert result == {"base": "Error 1; Error 2"}
@@ -252,8 +266,10 @@ class TestFormatAuthErrorsFull:
     def test_format_auth_errors_dict_with_lists(self) -> None:
         """Test formatting auth errors from dict with list values."""
         client = MagicMock(spec=DiveraAPIClient)
-        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(client, DiveraAPIClient)
-        
+        client._format_auth_errors = DiveraAPIClient._format_auth_errors.__get__(
+            client, DiveraAPIClient
+        )
+
         errors = {"field1": ["Error 1", "Error 2"], "field2": "Error 3"}
         result = client._format_auth_errors(errors)
         assert result == {"base": "Error 1; Error 2; Error 3"}
@@ -265,10 +281,13 @@ class TestDiveraAPIAsync:
     @pytest.mark.asyncio
     async def test_request_access_empty_accesskey(self, hass: HomeAssistant) -> None:
         """Test request_access with empty accesskey."""
-        with patch("custom_components.diveracontrol.divera_api.async_get_clientsession", return_value=MagicMock()):
+        with patch(
+            "custom_components.diveracontrol.divera_api.async_get_clientsession",
+            return_value=MagicMock(),
+        ):
             client = DiveraAPIClient(hass, BASE_API_URL)
             user_input = {D_ACCESSKEY: "   "}  # Whitespace only
             errors, clusters = await client.request_access(user_input)
 
-            assert errors["base"] == ConfigFlowErrorCode.INVALID_CREDENTIALS.value
+            assert errors["base"] == ConfigFlowErrorCode.INVALID_ACCESSKEY.value
             assert clusters == {}

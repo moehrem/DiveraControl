@@ -107,6 +107,7 @@ class ConfigFlowErrorCode(str, Enum):
     INVALID_ACCESSKEY_TYPE = "invalid_accesskey_type"
     INVALID_USERNAME_TYPE = "invalid_username_type"
     EMPTY_RELATIONS = "empty_relations"
+    INVALID_ACCESSKEY = "invalid_accesskey"
 
 
 # ========== Base API Client ==========
@@ -621,9 +622,9 @@ class DiveraAPIClient:
             if not is_valid:
                 return entry_errors, {}
 
-        except (ClientError, TimeoutError, ConfigEntryAuthFailed):
+        except ClientError, TimeoutError, ConfigEntryAuthFailed:
             validation_errors["base"] = ConfigFlowErrorCode.CANNOT_CONNECT.value
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             validation_errors["base"] = ConfigFlowErrorCode.NO_DATA.value
         except Exception as ex:
             _LOGGER.exception(
@@ -680,7 +681,7 @@ class DiveraAPIClient:
                 return {"base": ConfigFlowErrorCode.INVALID_CREDENTIALS.value}, clusters
 
         if not accesskey:
-            return {"base": ConfigFlowErrorCode.INVALID_CREDENTIALS.value}, clusters
+            return {"base": ConfigFlowErrorCode.INVALID_ACCESSKEY.value}, clusters
 
         # Step 2: Fetch and validate clusters
         validation_errors, clusters = await self._fetch_and_validate_clusters(

@@ -179,7 +179,7 @@ async def async_setup_entry(
     refresh_tasks = []
     task_to_coordinator = {}  # Map tasks to their coordinators
     coordinator_to_ucr = {coord: (uid, uname) for uid, uname, coord in ucr_info}
-    
+
     for coordinator in coordinators.values():
         # Start refresh immediately as a background task
         task = asyncio.create_task(coordinator.async_config_entry_first_refresh())
@@ -194,27 +194,33 @@ async def async_setup_entry(
                 timeout=10.0,
                 return_when=asyncio.ALL_COMPLETED,
             )
-            
+
             # Cancel pending tasks to avoid hanging
             for task in pending:
                 task.cancel()
-            
+
             # Process results from completed tasks
             for task in done:
                 try:
                     result = await task
-                    coordinator = task_to_coordinator.get(task)  # Get coordinator from task
+                    coordinator = task_to_coordinator.get(
+                        task
+                    )  # Get coordinator from task
                     if coordinator is None:
                         _LOGGER.warning("Could not find coordinator for task %s", task)
                         continue
-                    
+
                     # Find the user_name and ucr_id for this coordinator
-                    ucr_id, user_name = coordinator_to_ucr.get(coordinator, (None, "unknown"))
-                    
+                    ucr_id, user_name = coordinator_to_ucr.get(
+                        coordinator, (None, "unknown")
+                    )
+
                     if ucr_id is None:
-                        _LOGGER.warning("Could not find UCR ID for coordinator %s", coordinator)
+                        _LOGGER.warning(
+                            "Could not find UCR ID for coordinator %s", coordinator
+                        )
                         continue
-                    
+
                     if isinstance(result, Exception):
                         # Handle errors from async_config_entry_first_refresh
                         if isinstance(result, ConfigEntryNotReady):
@@ -257,7 +263,9 @@ async def async_setup_entry(
                 except asyncio.CancelledError:
                     pass  # Task was cancelled, ignore
                 except Exception as err:
-                    _LOGGER.exception("Unexpected error while processing refresh task: %s", err)
+                    _LOGGER.exception(
+                        "Unexpected error while processing refresh task: %s", err
+                    )
         except asyncio.TimeoutError:
             _LOGGER.warning("Timeout while waiting for refresh tasks to complete")
             # Cancel all tasks on timeout
@@ -533,7 +541,7 @@ async def _migrate_to_v2_0_0(
     _LOGGER.info("Migrating config entry to integration version 2.0.0")
 
     user_input = {
-        D_ACCESSKEY: config_entry.data.get(D_ACCESSKEY, ""),
+        D_ACCESSKEY: config_entry.data.get("api_key", ""),
     }
     base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
 
