@@ -432,10 +432,12 @@ def _remove_old_entity_entries(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
 ) -> None:
-    """Remove ALL old DiveraControl entities with old unique_id patterns."""
+    """Remove ALL old DiveraControl entities AND devices with old patterns."""
     try:
         ent_reg = er.async_get(hass)
+        dev_reg = dr.async_get(hass)
 
+        # === ENTITY REGISTRY BEREINIGEN ===
         # 1. Alle Entitäten des aktuellen config_entry_id
         entries = [
             e
@@ -453,7 +455,7 @@ def _remove_old_entity_entries(
             and e.platform == "diveracontrol"
         ]
 
-        # 3. Zusammenführen UND Duplikate vermeiden (basierend auf entity_id)
+        # 3. Zusammenführen und Duplikate vermeiden
         all_entries_to_remove = []
         seen_entity_ids = set()
         for entry in entries + old_pattern_entries:
@@ -461,7 +463,7 @@ def _remove_old_entity_entries(
                 all_entries_to_remove.append(entry)
                 seen_entity_ids.add(entry.entity_id)
 
-        # 4. Löschen
+        # 4. Entitäten löschen
         for entry in all_entries_to_remove:
             _LOGGER.info(
                 "Migration: removing old entity %s (unique_id=%s, config_entry_id=%s)",
@@ -471,8 +473,48 @@ def _remove_old_entity_entries(
             )
             ent_reg.async_remove(entry.entity_id)
 
+        # === DEVICE REGISTRY BEREINIGEN ===
+        # 1. Alle Devices des aktuellen config_entry_id
+        devices = [
+            d
+            for d in dev_reg.devices.values()
+            if d.config_entry_id == config_entry.entry_id
+        ]
+
+        # 2. Alle Devices mit alten Identifier-Mustern (z.B. aus v1.4.1)
+        # In v1.4.1: identifiers = [["diveracontrol", "<cluster_id>"]]
+        # In v2.0.0: identifiers = [["diveracontrol", "<ucr_id>"]]
+        old_pattern_devices = [
+            d
+            for d in dev_reg.devices.values()
+            if any(
+                identifier[0] == DOMAIN
+                and identifier[1] in config_entry.data.get(D_RELATIONS_KEY, {})
+                for identifier in d.identifiers
+            )
+            or d.config_entry_id is None  # Orphaned devices
+        ]
+
+        # 3. Zusammenführen und Duplikate vermeiden
+        all_devices_to_remove = []
+        seen_device_ids = set()
+        for device in devices + old_pattern_devices:
+            if device.id not in seen_device_ids:
+                all_devices_to_remove.append(device)
+                seen_device_ids.add(device.id)
+
+        # 4. Devices löschen
+        for device in all_devices_to_remove:
+            _LOGGER.info(
+                "Migration: removing old device %s (name=%s, config_entry_id=%s)",
+                device.id,
+                device.name_by_user or device.name,
+                device.config_entry_id,
+            )
+            dev_reg.async_remove_device(device.id)
+
     except Exception:
-        _LOGGER.exception("Failed to remove old entity registry entries")
+        _LOGGER.exception("Failed to remove old registry entries")
 
 
 def _migrate_to_v1_2_0(
