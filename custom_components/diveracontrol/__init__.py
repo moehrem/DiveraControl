@@ -436,14 +436,14 @@ def _remove_old_entity_entries(
     try:
         ent_reg = er.async_get(hass)
 
-        # 1. remove all entries with the current config_entry_id
+        # 1. Alle Entitäten des aktuellen config_entry_id
         entries = [
             e
             for e in ent_reg.entities.values()
             if e.config_entry_id == config_entry.entry_id
         ]
 
-        # 2. remove all entries with old unique_id patterns (even orphaned)
+        # 2. Alle Entitäten mit alten unique_id-Mustern (auch orphaned!)
         old_pattern_entries = [
             e
             for e in ent_reg.entities.values()
@@ -453,9 +453,15 @@ def _remove_old_entity_entries(
             and e.platform == "diveracontrol"
         ]
 
-        # Combine and remove duplicates
-        all_entries_to_remove = list(set(entries + old_pattern_entries))
+        # 3. Zusammenführen UND Duplikate vermeiden (basierend auf entity_id)
+        all_entries_to_remove = []
+        seen_entity_ids = set()
+        for entry in entries + old_pattern_entries:
+            if entry.entity_id not in seen_entity_ids:
+                all_entries_to_remove.append(entry)
+                seen_entity_ids.add(entry.entity_id)
 
+        # 4. Löschen
         for entry in all_entries_to_remove:
             _LOGGER.info(
                 "Migration: removing old entity %s (unique_id=%s, config_entry_id=%s)",
