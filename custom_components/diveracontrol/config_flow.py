@@ -4,7 +4,6 @@ import logging
 from typing import Any, Dict, List, Optional, Set
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.core import callback
 
@@ -15,9 +14,8 @@ from .const import (
     D_CLUSTER_NAME,
     D_RELATIONS_KEY,
     DOMAIN,
-    VERSION,
     MINOR_VERSION,
-    PATCH_VERSION,
+    VERSION,
 )
 from .divera_api import DiveraAPIClient
 from .options_flow import DiveraControlOptionsFlow
