@@ -432,27 +432,41 @@ def _remove_old_entity_entries(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
 ) -> None:
-    """Remove all existing entity registry entries for a config entry during migration."""
+    """Remove ALL old DiveraControl entities with old unique_id patterns."""
     try:
         ent_reg = er.async_get(hass)
+
+        # 1. remove all entries with the current config_entry_id
         entries = [
             e
             for e in ent_reg.entities.values()
             if e.config_entry_id == config_entry.entry_id
         ]
 
-        for entry in entries:
+        # 2. remove all entries with old unique_id patterns (even orphaned)
+        old_pattern_entries = [
+            e
+            for e in ent_reg.entities.values()
+            if e.unique_id.endswith(
+                ("_cluster_address", "_cluster", "_user_cluster_relation")
+            )
+            and e.platform == "diveracontrol"
+        ]
+
+        # Combine and remove duplicates
+        all_entries_to_remove = list(set(entries + old_pattern_entries))
+
+        for entry in all_entries_to_remove:
             _LOGGER.info(
-                "Migration: removing old entity registry entry %s (unique_id=%s)",
+                "Migration: removing old entity %s (unique_id=%s, config_entry_id=%s)",
                 entry.entity_id,
                 entry.unique_id,
+                entry.config_entry_id,
             )
             ent_reg.async_remove(entry.entity_id)
 
     except Exception:
-        _LOGGER.exception(
-            "Failed to remove old entity registry entries during migration"
-        )
+        _LOGGER.exception("Failed to remove old entity registry entries")
 
 
 def _migrate_to_v1_2_0(
