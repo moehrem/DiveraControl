@@ -386,7 +386,13 @@
   "services": {
     "request_refresh": {
       "name": "Request data refresh",
-      "description": "Triggers an immediate refresh of all Divera data for the selected user device."
+      "description": "Triggers an immediate refresh of all Divera data for the selected user device.",
+      "fields": {
+        "device": {
+          "name": "Device",
+          "description": "(Required) Device ID of the DiveraControl device to refresh."
+        }
+      }
     },
     "post_vehicle_status": {
       "name": "Change vehicle status and data",

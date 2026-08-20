@@ -382,7 +382,13 @@
   "services": {
     "request_refresh": {
       "name": "Datenaktualisierung anfordern",
-      "description": "Löst für das ausgewählte Gerät (Nutzer) eine sofortige Aktualisierung aller Divera-Daten aus."
+      "description": "Löst für das ausgewählte Gerät (Nutzer) eine sofortige Aktualisierung aller Divera-Daten aus.",
+      "fields": {
+        "device": {
+          "name": "Gerät",
+          "description": "(Erforderlich) Geräte-ID des DiveraControl-Geräts, für das die Daten aktualisiert werden sollen."
+        }
+      }
     },
     "post_vehicle_status": {
       "name": "Fahrzeugstatus und -daten ändern",

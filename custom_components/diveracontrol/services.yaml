@@ -1,11 +1,11 @@
 request_refresh:
   target:
-    device:
+    entity:
       integration: diveracontrol
 
 post_vehicle_status:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     vehicle:
@@ -54,7 +54,7 @@ post_vehicle_status:
 
 post_alarm:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     title:
@@ -511,7 +511,7 @@ put_alarm:
 
 post_close_alarm:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     alarm_id:
@@ -537,7 +537,7 @@ post_close_alarm:
 
 post_confirm_alarm:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     alarm_id:
@@ -563,7 +563,7 @@ post_confirm_alarm:
 
 post_message:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     message_channel_id:
@@ -589,7 +589,7 @@ post_message:
 
 post_using_vehicle_property:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     vehicle:
@@ -612,7 +612,7 @@ post_using_vehicle_property:
 
 post_using_vehicle_crew:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     vehicle:
@@ -644,7 +644,7 @@ post_using_vehicle_crew:
 
 post_news:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     title:
@@ -797,7 +797,7 @@ post_news:
 
 post_user_status:
   target:
-    device:
+    entity:
       integration: diveracontrol
   fields:
     id:
