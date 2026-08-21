@@ -22,7 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 100
 
       - name: Set up Python
         uses: ./.github/actions/setup-python
@@ -36,8 +38,8 @@ jobs:
             ruff==0.4.4 \
             black==24.3.0
 
-      - name: Autoformat with Black (Check Mode)
-        run: black . --line-length=88 --fast --check || echo "::warning::Code needs formatting (run 'black . --line-length=88 --fast')"
+      - name: Autoformat with Black
+        run: black . --line-length=88 --fast
 
       - name: Run ruff
         run: ruff check custom_components/diveracontrol --output-file=ruff-results.txt || true
@@ -55,8 +57,12 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Code (Full History)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ✅ Token explizit übermitteln
 
       - name: Set up Python
         uses: ./.github/actions/setup-python
@@ -98,13 +104,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code (Full History)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.1
         with:
-          fetch-depth: 0  # Vollständiger Git-History für TruffleHog
+          fetch-depth: 100
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: TruffleHog OSS
         uses: trufflesecurity/trufflehog@v3.88.6
         with:
           head: HEAD
-          extra_args: "--only-verified --json --fail"
-          filter: "entropy,file"  # Reduziert False-Positives
+          extra_args: "--only-verified --json --fail --filter=entropy,file"
