@@ -194,6 +194,7 @@ class DiveraAlarmSensor(BaseDiveraEntity):
         self._attr_name = f"Alarm {self.alarm_id}"
         self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
         self.entity_id = f"sensor.{self.ucr_id}_alarm_{self.alarm_id}"
+        self._attr_device_class = "diveracontrol__alarm"
 
     def _get_alarm_data(self) -> dict[str, Any] | None:
         """Get alarm data safely, return None if alarm doesn't exist."""
@@ -249,6 +250,7 @@ class DiveraVehicleSensor(BaseDiveraEntity):
         self._attr_unique_id = f"{self.ucr_id}_vehicle_{self.vehicle_id}"
         # self._attr_icon = I_VEHICLE
         self.entity_id = f"sensor.{self.ucr_id}_vehicle_{self.vehicle_id}"
+        self._attr_device_class = "diveracontrol__vehicle"
 
     def _get_vehicle_data(self) -> dict[str, Any] | None:
         """Get vehicle data safely, return None if vehicle doesn't exist."""
@@ -310,6 +312,7 @@ class DiveraUnitSensor(BaseDiveraEntity):
         cluster_data = coordinator.data.get(D_CLUSTER, {})
         self.cluster_shortname = cluster_data.get("shortname", "Unknown")
         self.cluster_address = cluster_data.get("address", {"error": "no address data"})
+        self._attr_device_class = "diveracontrol__unit"
 
         # static entity attributes
         self._attr_has_entity_name = False
@@ -344,6 +347,7 @@ class DiveraUserSensor(BaseDiveraEntity):
         cluster_data = coordinator.data.get(D_CLUSTER, {})
         self.cluster_shortname = cluster_data.get("shortname", "Unknown")
         self.cluster_address = cluster_data.get("address", {"error": "no address data"})
+        self._attr_device_class = "diveracontrol__user"
 
         # static entity attributes
         self._attr_has_entity_name = False
@@ -402,6 +406,7 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
             .get(status_id, {})
             .get("name", "Unknown")
         )
+        self._attr_device_class = "diveracontrol__availability"
 
         # static entity attributes
         self._attr_has_entity_name = False

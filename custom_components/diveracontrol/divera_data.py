@@ -1,6 +1,7 @@
 """Updates and processes data from Divera API."""
 
 import logging
+import asyncio
 from typing import Any
 
 from homeassistant.exceptions import HomeAssistantError
@@ -8,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import (
     D_ALARM,
     D_CLUSTER,
+    D_DATA,
     D_DM,
     D_EVENTS,
     D_LOCALMONITOR,
@@ -18,11 +20,11 @@ from .const import (
     D_STATUS,
     D_STATUSPLAN,
     D_TS,
+    D_UCR,
     D_UCR_ACTIVE,
     D_UCR_DEFAULT,
     D_USER,
     D_VEHICLE,
-    D_DATA,
     D_OPEN_ALARMS,
 )
 from .divera_api import D_UCR, DiveraAPI
@@ -105,13 +107,6 @@ async def update_data(
             D_STATUSPLAN: {},
         }
 
-    if not raw_ucr_data.get("success", False):
-        _LOGGER.error(
-            "Unexpected data format or API request failed: %s",
-            raw_ucr_data,
-        )
-        return cluster_data
-
     # set local data
     raw_cluster: dict[str, Any] = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
 
@@ -146,13 +141,33 @@ async def update_data(
 
     # adding properties to vehicle
     try:
-        for key in raw_cluster.get(D_VEHICLE, {}):
-            try:
-                raw_vehicle_property = await api.get_vehicle_property(key)
-            except HomeAssistantError:
-                continue
+        vehicle_ids = list(raw_cluster.get(D_VEHICLE, {}).keys())
+        if vehicle_ids:
+            # Fetch all vehicle properties in parallel
+            vehicle_tasks = []
+            for key in vehicle_ids:
+                try:
+                    vehicle_tasks.append(api.get_vehicle_property(key))
+                except HomeAssistantError:
+                    continue
 
-            if raw_vehicle_property:
+            # Wait for all vehicle tasks to complete with a timeout
+            try:
+                vehicle_responses = await asyncio.gather(
+                    *vehicle_tasks, return_exceptions=True
+                )
+            except asyncio.TimeoutError:
+                _LOGGER.warning("Timeout while fetching vehicle properties")
+                vehicle_responses = []
+
+            # Process vehicle responses
+            for key, raw_vehicle_property in zip(vehicle_ids, vehicle_responses):
+                if (
+                    isinstance(raw_vehicle_property, Exception)
+                    or not raw_vehicle_property
+                ):
+                    continue
+
                 vehicle_property = raw_vehicle_property.get(D_DATA, {})
                 if isinstance(vehicle_property, dict):
                     if (

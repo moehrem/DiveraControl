@@ -15,11 +15,11 @@
           "use_webhooks": "Enable webhooks"
         }
       },
-      "api_key": {
+      "accesskey": {
         "title": "Enter API key",
         "description": "If the login fails or a system user should be logged in, the user's API key can be entered here as an alternative.",
         "data": {
-          "api_key": "API key",
+          "accesskey": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
           "base_api_url": "Base API URL",
@@ -37,7 +37,7 @@
         "title": "Change configuration for DiveraControl",
         "description": "By changing the API key, a different user can be assigned to the unit. Additionally, both intervals can be reconfigured.",
         "data": {
-          "api_key": "API key",
+          "accesskey": "API key",
           "update_interval_data": "Query interval outside of alarms (seconds)",
           "update_interval_alarm": "Query interval during open alarms (seconds)",
           "base_api_url": "Base API URL",
@@ -46,10 +46,10 @@
       }
     },
     "error": {
-      "cannot_auth": "Invalid username or password.",
+      "invalid_credentials": "Invalid username or password.",
       "cannot_connect": "Unable to connect to Divera. Correct base URL? Is Divera reachable in the browser?",
       "no_external_url": "No external URL configured.",
-      "no_ucr": "No connected units found.",
+      "no_data": "No data received, please check the logs for details.",
       "unknown": "Unknown error"
     },
     "abort": {
@@ -63,6 +63,44 @@
       "reconfigure_successful": "Reconfiguration successful.",
       "unknown_step": "Unknown configuration step, setup aborted.",
       "merge_successful": "Reauthentication successful."
+    }
+  },
+  "options": {
+    "abort": {
+      "no_ucr": "No users are available for this unit."
+    },
+    "step": {
+      "init": {
+        "title": "Reconfigure unit",
+        "description": "Select what to reconfigure for {cluster_name}.",
+        "menu_options": {
+          "cluster_settings": "Unit settings",
+          "user_select": "User settings"
+        }
+      },
+      "cluster_settings": {
+        "title": "Unit settings for {cluster_name}",
+        "description": "The settings below can be adjusted. Changes are applied immediately after saving, and the integration will be reloaded.",
+        "data": {
+          "update_interval_data": "Query interval outside of alarms (seconds)",
+          "update_interval_alarm": "Query interval during open alarms (seconds)",
+          "base_api_url": "Base API URL"
+        }
+      },
+      "user_select": {
+        "title": "User settings for {cluster_name}",
+        "description": "Select the user whose settings should be updated.",
+        "data": {
+          "ucr_id": "User"
+        }
+      },
+      "user_api_key": {
+        "title": "Update API key for {username}",
+        "description": "Set a new API key for user {username} in {cluster_name}.",
+        "data": {
+          "accesskey": "API key"
+        }
+      }
     }
   },
   "issues": {
@@ -99,20 +137,11 @@
       }
     }
   },
-  "common": {
-    "usergroup_message": "The unit {cluster_name} (ID {ucr_id}) was successfully created.",
-    "usergroup_4": "The logged-in user is a standard user. Access permissions depend on Divera permissions, so some data may not be available.",
-    "usergroup_5": "The logged-in user is a monitor user. Access permissions depend on Divera permissions, so some data may not be available.",
-    "usergroup_8": "The logged-in user is a user with admin rights and has access to all data.",
-    "usergroup_14": "The logged-in user is the default API user. Access is therefore not possible to:\n- Alarm data\n- News\n- Appointments\n- Dashboards",
-    "usergroup_19": "The logged-in user is a system user and will therefore not have access to:\n- Alarm data\n- News\n- Appointments",
-    "usergroup_unknown": "A user from an unknown user group {usergroup_id} was logged in. Depending on granted permissions, not all data may be available."
-  },
   "selector": {
     "entry_method_options": {
       "options": {
         "login": "User login",
-        "api_key": "API-Key"
+        "accesskey": "API-Key"
       }
     },
     "notification_type_options": {
@@ -149,6 +178,7 @@
       "post_alarm": "Create alarm",
       "put_alarm": "Change alarm",
       "post_close_alarm": "Open/close alarm",
+      "post_confirm_alarm": "Confirm alarm",
       "post_message": "Send message",
       "post_using_vehicle_property": "Change vehicle properties",
       "post_using_vehicle_crew": "Change vehicle crew",
@@ -247,11 +277,17 @@
     "no_alarm_id": {
       "message": "No alarm ID provided"
     },
+    "no_status_id": {
+      "message": "No status ID provided"
+    },
     "api_put_alarm_failed": {
       "message": "Updating alarm {alarm_id} failed. Error: {err}"
     },
     "api_post_close_alarm_failed": {
       "message": "Opening/closing alarm {alarm_id} failed"
+    },
+    "api_post_confirm_alarm_failed": {
+      "message": "Confirming alarm {alarm_id} failed. Error: {err}"
     },
     "both_message_channel_and_alarm_id": {
       "message": "Either message channel ID or alarm ID must be provided, not both"
@@ -350,15 +386,21 @@
   "services": {
     "request_refresh": {
       "name": "Request data refresh",
-      "description": "Triggers an immediate refresh of all Divera data for the selected user device."
+      "description": "Triggers an immediate refresh of all Divera data for the selected user device.",
+      "fields": {
+        "device": {
+          "name": "Device",
+          "description": "(Required) Device ID of the DiveraControl device to refresh."
+        }
+      }
     },
     "post_vehicle_status": {
       "name": "Change vehicle status and data",
       "description": "Updates vehicle status and data in Divera 24/7.",
       "fields": {
         "vehicle": {
-          "name": "Vehicle ID",
-          "description": "(Required) ID of the target vehicle"
+          "name": "Vehicle",
+          "description": "(Required) Sensors of the target vehicle(s)."
         },
         "status": {
           "name": "Status",
@@ -533,8 +575,8 @@
       "description": "Changes an existing alarm in Divera 24/7.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Required) Alarm ID of the alarm to change"
+          "name": "Alarm",
+          "description": "(Required) Sensor of the alarm to change"
         },
         "title": {
           "name": "Keyword",
@@ -683,8 +725,8 @@
       "description": "Opens or closes an existing alarm and optionally submits a report.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Required) ID of the alarm to be opened or closed. Only exactly one ID allowed"
+          "name": "Alarm",
+          "description": "(Required) Sensor of the alarm to be opened or closed."
         },
         "closed": {
           "name": "Closed",
@@ -696,17 +738,35 @@
         }
       }
     },
+    "post_confirm_alarm": {
+      "name": "Confirm alarm",
+      "description": "Confirms an existing alarm with a status ID and optional notes.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm ID",
+          "description": "(Required) ID of the alarm to be confirmed. Only exactly one ID allowed"
+        },
+        "id": {
+          "name": "User Status",
+          "description": "(Required) Status ID for confirmation."
+        },
+        "note": {
+          "name": "Note",
+          "description": "(Optional) Note for confirming the alarm."
+        }
+      }
+    },
     "post_message": {
       "name": "Send message",
-      "description": "Sends a message to a channel or the channel assigned to the alarm.",
+      "description": "Sends a message to a free channel or the channel assigned to the alarm.",
       "fields": {
         "message_channel_id": {
           "name": "Message channel ID",
           "description": "(Either) ID of the channel where the message will be sent"
         },
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Or) Alarm ID whose message channel should be used"
+          "name": "Alarm",
+          "description": "(Or) Sensor of the alarm whose message channel should be used"
         },
         "text": {
           "name": "Message",
@@ -871,6 +931,44 @@
           "description": "(Optional) List with comma-separated sorting definition"
         }
       }
+    },
+    "post_user_status": {
+      "name": "Set user status",
+      "description": "Sets the user status for a specific user.",
+      "fields": {
+        "id": {
+          "name": "User ID",
+          "description": "(Required) ID of the user whose status is being changed"
+        },
+        "vehicle": {
+          "name": "Vehicle",
+          "description": "(Optional) Vehicle to assign the user to - assignment expires on the next status change."
+        },
+        "note": {
+          "name": "Note",
+          "description": "(Optional) Free text for the status message - expires on the next status change."
+        },
+        "reset_date": {
+          "name": "Reset date",
+          "description": "(Optional) Date and time when the status should be reset."
+        },
+        "reset_to": {
+          "name": "Reset to status",
+          "description": "(Optional) Status to reset to."
+        },
+        "alarm_skip": {
+          "name": "Ignore status change during open alarm",
+          "description": "(Optional) Ignores all status changes when an alarm is active."
+        },
+        "status_skip_statusplan": {
+          "name": "Ignore status plan",
+          "description": "(Optional) Ignores all planned status changes for the user until the specified reset time."
+        },
+        "status_skip_geofence": {
+          "name": "Ignore geofence",
+          "description": "(Optional) Ignores geofences for the user until the specified reset time."
+        }
+      }
     }
   },
   "config_subentries": {
@@ -894,7 +992,7 @@
           "description": "Change the API key to update credentials. You can also adjust the query intervals.",
           "data": {
             "username": "Username",
-            "api_key": "API key",
+            "accesskey": "API key",
             "update_interval_data": "Query interval outside of alarms (seconds)",
             "update_interval_alarm": "Query interval during open alarms (seconds)",
             "base_api_url": "Base API URL"

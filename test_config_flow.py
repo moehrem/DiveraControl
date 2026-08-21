@@ -1,8 +1,9 @@
 """Tests for DiveraControl config flow."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
 from custom_components.diveracontrol.config_flow import (
@@ -18,6 +19,15 @@ from custom_components.diveracontrol.config_flow import (
     STEP_MULTI_CLUSTER,
     STEP_USER,
 )
+
+
+@pytest.fixture
+def mock_user_input_login() -> dict:
+    """Return valid user input for login."""
+    return {
+        CONF_USERNAME: "test@example.com",
+        CONF_PASSWORD: "test_password",
+    }
 
 
 class TestConfigFlowInitialization:
@@ -41,7 +51,9 @@ class TestConfigFlowStepUser:
     """Test async_step_user method."""
 
     @pytest.mark.asyncio
-    async def test_async_step_user_forwards_to_login(self, hass: HomeAssistant) -> None:
+    async def test_async_step_user_forwards_to_login(
+        self, hass: HomeAssistant
+    ) -> None:
         """Test that step_user forwards to step_login."""
         flow = DiveraControlConfigFlow()
         flow.hass = hass

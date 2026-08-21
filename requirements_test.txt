@@ -5,7 +5,9 @@
 #   - pytest-cov
 #   - syrupy
 #   - Home Assistant test utilities
-pytest-homeassistant-custom-component>=0.13.300
-pytest-timeout==2.4.0
+pytest-homeassistant-custom-component>=0.13.0,<0.14.0
+pytest-timeout==2.1.0
 aiodns==3.5.0
+ruff
+pip-audit
 pycares>=4.6.0,<5.0.0

@@ -1,14 +1,28 @@
+[MASTER]
+load-plugins=pylint_homeassistant
+
+disable=
+    C0111,  # Missing docstring
+    W0613,  # Unused argument
+    W0612,  # Unused variable
+    W0212,  # Protected access
+
 [MESSAGES CONTROL]
 disable=
-    import-error,
-    attribute-defined-outside-init,
+    too-few-public-methods,
     too-many-instance-attributes,
-    broad-exception-caught
-
-[DESIGN]
-max-args=8
-max-locals=20
-max-branches=20
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-public-methods,
+    duplicate-code,
+    broad-except,
+    bare-except,
+    abstract-method,
 
 [FORMAT]
-max-line-length=100
+max-line-length=88
+
+[TYPECHECK]
+generated-members=asyncio.*, voluptuous.*

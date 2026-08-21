@@ -1,6 +1,5 @@
 """Contain several helper methods for DiveraControl integration."""
 
-from datetime import timedelta
 import logging
 from typing import Any
 
@@ -9,16 +8,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.translation import async_get_translations
 
-from .const import (
-    D_ALARM,
-    D_CLUSTER_ID,
-    D_CLUSTER_NAME,
-    D_COORDINATOR,
-    D_OPEN_ALARMS,
-    D_UPDATE_INTERVAL_ALARM,
-    D_UPDATE_INTERVAL_DATA,
-    DOMAIN,
-)
+from .const import D_CLUSTER_ID, D_COORDINATOR, D_RELATIONS_KEY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,42 +84,6 @@ def get_ucr_data_from_device(
     return getattr(coordinator, key)
 
 
-def set_update_interval(
-    cluster_data: dict[str, Any],
-    interval_data: dict[str, Any],
-    old_interval: timedelta | None,
-) -> timedelta:
-    """Set update interval based on open alarms.
-
-    Args:
-        cluster_data: Cluster data of coordinator.
-        interval_data: Dictionary containing update interval settings.
-        old_interval: Previous update interval.
-
-    Returns:
-        New update interval.
-    """
-    open_alarms = cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
-
-    # Determine new interval
-    new_interval = (
-        interval_data[D_UPDATE_INTERVAL_ALARM]
-        if open_alarms > 0
-        else interval_data[D_UPDATE_INTERVAL_DATA]
-    )
-
-    # Log only if interval changed
-    if old_interval != new_interval:
-        _LOGGER.debug(
-            "Update interval changed to %s for unit '%s' (open alarms: %d)",
-            new_interval,
-            cluster_data.get(D_CLUSTER_NAME, "Unknown"),
-            open_alarms,
-        )
-
-    return new_interval
-
-
 async def get_translation(
     hass: HomeAssistant,
     category: str,
@@ -165,3 +119,24 @@ async def get_translation(
             )
 
     return translation_str
+
+
+def get_cluster_coordinators_ucrs_from_config_hass(
+    config_data: dict[str, Any], hass: HomeAssistant
+) -> tuple[str, dict[str, Any], list[Any]]:
+    """Get cluster_id, coordinators and UCR data from config entry.
+
+    Args:
+        config_data: Config entry data.
+        hass: Home Assistant instance.
+
+    Returns:
+        Tuple containing cluster_id, coordinators dict and list of DiveraCoordinators.
+
+    """
+
+    cluster_id = config_data.get(D_CLUSTER_ID)
+    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
+    ucrs = config_data.get(D_RELATIONS_KEY)
+
+    return cluster_id, coordinators, ucrs

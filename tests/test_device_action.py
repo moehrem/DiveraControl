@@ -118,14 +118,17 @@ class TestActionTypes:
     def test_action_types_defined(self):
         """Test that all expected action types are defined."""
         expected_types = (
+            "request_refresh",
             "post_vehicle_status",
             "post_alarm",
             "put_alarm",
             "post_close_alarm",
+            "post_confirm_alarm",
             "post_message",
             "post_using_vehicle_property",
             "post_using_vehicle_crew",
             "post_news",
+            "post_user_status",
         )
         assert ACTION_TYPES == expected_types
 
@@ -243,9 +246,7 @@ class TestGetSelectorOptions:
         assert options[1] == {"value": "1", "label": "Option 1"}
         assert options[2] == {"value": "2", "label": "Option 2"}
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_from_coordinator(self, mock_get_coordinator, hass):
         """Test dynamic options retrieved from coordinator data."""
         # Mock coordinator data
@@ -271,9 +272,7 @@ class TestGetSelectorOptions:
         assert options[0] == {"value": "1", "label": "Vehicle 1 / V1"}
         assert options[1] == {"value": "2", "label": "Vehicle 2 / V2"}
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_empty_device_id(self, mock_get_coordinator, hass):
         """Test dynamic options with empty device_id."""
         mock_get_coordinator.return_value = {}
@@ -285,9 +284,7 @@ class TestGetSelectorOptions:
         assert options == []
         mock_get_coordinator.assert_called_once_with(hass, "", "data")
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_no_data(self, mock_get_coordinator, hass):
         """Test dynamic options when no data is available."""
         mock_get_coordinator.return_value = {}
@@ -298,9 +295,7 @@ class TestGetSelectorOptions:
 
         assert options == []
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_no_items(self, mock_get_coordinator, hass):
         """Test dynamic options when data has no items wrapper."""
         mock_coordinator_data = {
@@ -316,9 +311,7 @@ class TestGetSelectorOptions:
 
         assert options == []
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_default_label_format(
         self, mock_get_coordinator, hass
     ):
@@ -349,9 +342,7 @@ class TestGetSelectorOptions:
 class TestAsyncGetActions:
     """Test async_get_actions function."""
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_get_actions_with_management_permission(
         self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
@@ -364,13 +355,11 @@ class TestAsyncGetActions:
 
         actions = await async_get_actions(hass, mock_device.id)
 
-        assert len(actions) == 8
+        assert len(actions) == 11
         assert all(action["domain"] == DOMAIN for action in actions)
         assert all(action["device_id"] == mock_device.id for action in actions)
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_get_actions_with_specific_permissions(
         self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
@@ -398,9 +387,7 @@ class TestAsyncGetActions:
         assert "post_alarm" in action_types
         assert "post_message" not in action_types  # No PERM_MESSAGES
 
-    @patch(
-        "custom_components.diveracontrol.device_action.get_coordinator_key_from_device"
-    )
+    @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_get_actions_no_permissions(
         self, mock_get_coordinator, hass, mock_device, mock_config_entry
     ):
@@ -413,7 +400,8 @@ class TestAsyncGetActions:
 
         actions = await async_get_actions(hass, mock_device.id)
 
-        assert len(actions) == 0
+        # request_refresh is always available regardless of permissions
+        assert len(actions) == 1
 
     async def test_get_actions_invalid_device(self, hass):
         """Test getting actions for invalid device."""

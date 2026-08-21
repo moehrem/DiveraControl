@@ -1,0 +1,82 @@
+name: ✅ HomeAssistant CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  schedule:
+    - cron: "0 3 * * 1" # Jeden Montag um 03:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: "🔍 Linting & Static Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Wichtig für pylint!
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Linting Tools
+        run: |
+          pip install \
+            pylint==3.0.3 \
+            flake8==6.1.0 \
+            mypy==1.8.0 \
+            black==24.3.0 \
+            ruff==0.4.4 \
+            safety==2.3.5
+
+      - name: Run Black (Autoformat)
+        run: black . --line-length=88 --fast
+
+      - name: Run ruff
+        run: ruff check custom_components/diveracontrol
+
+      - name: Run pylint (HomeAssistant Rules)
+        run: pylint custom_components/diveracontrol --rcfile=.pylintrc
+
+      - name: Run flake8
+        run: flake8 custom_components/diveracontrol
+
+      - name: Run mypy (Type Checking)
+        run: mypy custom_components/diveracontrol
+
+      - name: Run Safety (Dependency Security)
+        run: safety check --full-report
+
+  hassfest:
+    name: "🏠 HomeAssistant Validation (hassfest)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run hassfest
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: "🎯 HACS Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run HACS Validation
+        uses: hacs/action@main
+        with:
+          category: "integration"

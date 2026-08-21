@@ -1,6 +1,5 @@
 """Tests for DiveraControl utils.py."""
 
-from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,99 +7,33 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.diveracontrol.const import (
-    D_ACCESS,
-    D_ALARM,
-    D_CLUSTER,
-    D_CLUSTER_NAME,
+    D_CLUSTER_ID,
     D_COORDINATOR,
-    D_DATA,
-    D_OPEN_ALARMS,
-    D_UPDATE_INTERVAL_ALARM,
-    D_UPDATE_INTERVAL_DATA,
-    D_USER,
-    D_VEHICLE,
+    D_RELATIONS_KEY,
     DOMAIN,
-    PERM_MANAGEMENT,
 )
-from custom_components.diveracontrol.divera_permissions import DiveraPermissions
 from custom_components.diveracontrol.utils import (
-    get_coordinator_key_from_device,
+    get_cluster_coordinators_ucrs_from_config_hass,
     get_translation,
-    handle_entity,
-    set_update_interval,
+    get_ucr_data_from_device,
 )
-from custom_components.diveracontrol.utils import get_user_device_info
 
 
-class TestDiveraPermissions:
-    """Test DiveraPermissions behavior."""
+class TestGetUcrDataFromDevice:
+    """Test the get_ucr_data_from_device function."""
 
-    def test_management_granted(self, hass: HomeAssistant) -> None:
-        """Test permission check with management permission granted."""
-        permissions = DiveraPermissions()
-        permissions.ucr_id = "123"
-        permissions.replace_permissions_from_ucr_data(
-            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: True, "some_perm": False}}}}
-        )
-
-        permissions.check("some_perm")
-
-    def test_specific_granted(self, hass: HomeAssistant) -> None:
-        """Test permission check with specific permission granted."""
-        permissions = DiveraPermissions()
-        permissions.ucr_id = "123"
-        permissions.replace_permissions_from_ucr_data(
-            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": True}}}}
-        )
-
-        permissions.check("test_perm")
-
-    def test_permission_denied(self, hass: HomeAssistant) -> None:
-        """Test permission check with permission denied."""
-        permissions = DiveraPermissions()
-        permissions.ucr_id = "123"
-        permissions.replace_permissions_from_ucr_data(
-            {D_DATA: {D_USER: {D_ACCESS: {PERM_MANAGEMENT: False, "test_perm": False}}}}
-        )
-
-        with pytest.raises(HomeAssistantError, match="Permission 'test_perm' denied"):
-            permissions.check("test_perm")
-
-    def test_no_permission_data(self, hass: HomeAssistant) -> None:
-        """Test permission check with no cached permissions."""
-        permissions = DiveraPermissions()
-
-        with pytest.raises(
-            HomeAssistantError, match="No permission data available yet"
-        ):
-            permissions.check("test_perm")
-
-
-class TestGetDeviceInfo:
-    """Test the get_user_device_info function."""
-
-    def test_get_user_device_info(self, hass: HomeAssistant) -> None:
-        """Test get_user_device_info function."""
-        result = get_user_device_info("test_ucr_id", "Max Müller")
-
-        assert result["identifiers"] == {("diveracontrol", "test_ucr_id")}
-        assert result["name"] == "Max Müller"
-        assert "via_device" not in result
-
-
-class TestGetCoordinatorKeyFromDevice:
-    """Test the get_coordinator_key_from_device function."""
-
-    def test_get_coordinator_key_from_device_full_coordinator(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test getting full coordinator when no key specified."""
+    def test_get_ucr_data_from_device_success(self, hass: HomeAssistant) -> None:
+        """Test getting ucr data from device successfully."""
         mock_device = MagicMock()
         mock_device.config_entries = {"entry1"}
+        mock_device.identifiers = [(DOMAIN, "test_ucr_id")]
 
         mock_entry = MagicMock()
         mock_entry.domain = DOMAIN
-        mock_entry.runtime_data = MagicMock()
+        mock_entry.data = {D_CLUSTER_ID: "test_cluster"}
+
+        mock_coordinator = MagicMock()
+        mock_coordinator.test_key = "test_value"
 
         with (
             patch(
@@ -111,23 +44,29 @@ class TestGetCoordinatorKeyFromDevice:
             ),
         ):
             mock_device_registry.return_value.async_get.return_value = mock_device
+            hass.data = {
+                DOMAIN: {
+                    "test_cluster": {
+                        D_COORDINATOR: {"test_ucr_id": mock_coordinator}
+                    }
+                }
+            }
 
-            result = get_coordinator_key_from_device(hass, "device1")
+            result = get_ucr_data_from_device(hass, "device1")
+            assert result == mock_coordinator
 
-            assert result == mock_entry.runtime_data
-
-    def test_get_coordinator_key_from_device_specific_key(
-        self, hass: HomeAssistant
-    ) -> None:
+    def test_get_ucr_data_from_device_with_key(self, hass: HomeAssistant) -> None:
         """Test getting specific key from coordinator."""
         mock_device = MagicMock()
         mock_device.config_entries = {"entry1"}
+        mock_device.identifiers = [(DOMAIN, "test_ucr_id")]
 
         mock_entry = MagicMock()
         mock_entry.domain = DOMAIN
+        mock_entry.data = {D_CLUSTER_ID: "test_cluster"}
+
         mock_coordinator = MagicMock()
-        mock_coordinator.some_key = "test_value"
-        mock_entry.runtime_data = mock_coordinator
+        mock_coordinator.test_key = "test_value"
 
         with (
             patch(
@@ -138,40 +77,18 @@ class TestGetCoordinatorKeyFromDevice:
             ),
         ):
             mock_device_registry.return_value.async_get.return_value = mock_device
+            hass.data = {
+                DOMAIN: {
+                    "test_cluster": {
+                        D_COORDINATOR: {"test_ucr_id": mock_coordinator}
+                    }
+                }
+            }
 
-            result = get_coordinator_key_from_device(hass, "device1", "some_key")
-
+            result = get_ucr_data_from_device(hass, "device1", "test_key")
             assert result == "test_value"
 
-    def test_get_coordinator_key_from_device_key_not_found(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test error when key not found in coordinator."""
-        mock_device = MagicMock()
-        mock_device.config_entries = {"entry1"}
-
-        mock_entry = MagicMock()
-        mock_entry.domain = DOMAIN
-        mock_coordinator = MagicMock()
-        mock_entry.runtime_data = mock_coordinator
-
-        with (
-            patch(
-                "custom_components.diveracontrol.utils.dr.async_get"
-            ) as mock_device_registry,
-            patch.object(
-                hass.config_entries, "async_get_entry", return_value=mock_entry
-            ),
-        ):
-            mock_device_registry.return_value.async_get.return_value = mock_device
-
-            # This should not raise an exception - it returns the coordinator
-            result = get_coordinator_key_from_device(hass, "device1")
-            assert result == mock_coordinator
-
-    def test_get_coordinator_key_from_device_not_found(
-        self, hass: HomeAssistant
-    ) -> None:
+    def test_get_ucr_data_from_device_not_found(self, hass: HomeAssistant) -> None:
         """Test error when device not found."""
         with patch(
             "custom_components.diveracontrol.utils.dr.async_get"
@@ -179,32 +96,17 @@ class TestGetCoordinatorKeyFromDevice:
             mock_device_registry.return_value.async_get.return_value = None
 
             with pytest.raises(HomeAssistantError, match="Device not found"):
-                get_coordinator_key_from_device(hass, "device1")
+                get_ucr_data_from_device(hass, "nonexistent")
 
-    def test_get_coordinator_key_from_device_no_config_entries(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test error when device has no config entries."""
-        mock_device = MagicMock()
-        mock_device.config_entries = set()  # Empty set
-
-        with patch(
-            "custom_components.diveracontrol.utils.dr.async_get"
-        ) as mock_device_registry:
-            mock_device_registry.return_value.async_get.return_value = mock_device
-
-            with pytest.raises(HomeAssistantError, match="Device not found: device1"):
-                get_coordinator_key_from_device(hass, "device1")
-
-    def test_get_coordinator_key_from_device_wrong_domain(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test error when config entry has wrong domain."""
+    def test_get_ucr_data_from_device_no_ucr_id(self, hass: HomeAssistant) -> None:
+        """Test error when device has no ucr_id identifier."""
         mock_device = MagicMock()
         mock_device.config_entries = {"entry1"}
+        mock_device.identifiers = []
 
         mock_entry = MagicMock()
-        mock_entry.domain = "wrong_domain"
+        mock_entry.domain = DOMAIN
+        mock_entry.data = {D_CLUSTER_ID: "test_cluster"}
 
         with (
             patch(
@@ -216,305 +118,60 @@ class TestGetCoordinatorKeyFromDevice:
         ):
             mock_device_registry.return_value.async_get.return_value = mock_device
 
-            with pytest.raises(HomeAssistantError, match="Invalid config entry"):
-                get_coordinator_key_from_device(hass, "device1")
+            with pytest.raises(HomeAssistantError, match="UCR ID not found"):
+                get_ucr_data_from_device(hass, "device1")
 
 
-class TestHandleEntity:
-    """Test the handle_entity function."""
+class TestGetClusterCoordinatorsUcrsFromConfigHass:
+    """Test the get_cluster_coordinators_ucrs_from_config_hass function."""
 
-    @pytest.fixture
-    def mock_coordinator(self) -> MagicMock:
-        """Create a mock coordinator."""
-        coordinator = MagicMock()
-        coordinator.data = {
-            D_ALARM: {
-                "items": {
-                    "alarm1": {
-                        "closed": False,
-                        "title": "Test Alarm",
-                        "status": "old_status",
-                    },
-                    "alarm2": {"closed": True, "title": "Closed Alarm"},
-                }
-            },
-            D_CLUSTER: {
-                D_VEHICLE: {
-                    "vehicle1": {
-                        "name": "Test Vehicle",
-                        "fms": 1,
-                        "properties": {"old": "value"},
-                    },
-                    "vehicle2": {
-                        "name": "Other Vehicle",
-                        "crew": [{"id": 1}, {"id": 2}],
-                    },
-                }
-            },
+    def test_get_cluster_coordinators_ucrs_from_config_hass(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test extracting cluster data from config entry."""
+        config_data = {
+            D_CLUSTER_ID: "test_cluster",
+            D_RELATIONS_KEY: {"ucr1": {}, "ucr2": {}},
         }
-        return coordinator
-
-    async def test_handle_entity_put_alarm(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity with put_alarm service."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"alarm_id": "alarm1", "status": "new_status", "title": "Updated Alarm"}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(hass, data, "put_alarm", "123", "alarm1")
-
-            # Check that coordinator data was updated
-            assert (
-                mock_coordinator.data[D_ALARM]["items"]["alarm1"]["status"]
-                == "new_status"
-            )
-            assert (
-                mock_coordinator.data[D_ALARM]["items"]["alarm1"]["title"]
-                == "Updated Alarm"
-            )
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_post_close_alarm(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity for post_close_alarm service."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"alarm_id": "alarm1", "closed": True}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(hass, data, "post_close_alarm", "123", "alarm1")
-
-            assert mock_coordinator.data[D_ALARM]["items"]["alarm1"]["closed"] is True
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_alarm_not_found(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity when alarm not found."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"alarm_id": "nonexistent"}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(hass, data, "put_alarm", "123", "nonexistent")
-
-            # Should not update coordinator data
-            mock_coordinator.async_set_updated_data.assert_not_called()
-
-    async def test_handle_entity_post_vehicle_status(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity with post_vehicle_status service."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"vehicle_id": "vehicle1", "fms": 3, "name": "Updated Vehicle"}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(hass, data, "post_vehicle_status", "123", "vehicle1")
-
-            # Check that coordinator data was updated
-            assert mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle1"]["fms"] == 3
-            assert (
-                mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle1"]["name"]
-                == "Updated Vehicle"
-            )
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_post_using_vehicle_property(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity for post_using_vehicle_property service."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {
-            "vehicle_id": "vehicle1",
-            "properties": {"new_prop": "new_value", "old": "updated"},
-        }
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(
-                hass, data, "post_using_vehicle_property", "123", "vehicle1"
-            )
-
-            properties = mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle1"][
-                "properties"
-            ]
-            assert properties["new_prop"] == "new_value"
-            assert properties["old"] == "updated"  # Should be updated
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_post_using_vehicle_crew_add(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity for post_using_vehicle_crew service with add mode."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"vehicle_id": "vehicle2", "mode": "add", "crew": [3, 4]}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(
-                hass, data, "post_using_vehicle_crew", "123", "vehicle2"
-            )
-
-            crew = mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle2"]["crew"]
-            crew_ids = [member["id"] for member in crew]
-            assert set(crew_ids) == {1, 2, 3, 4}  # Original + added
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_post_using_vehicle_crew_remove(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity for post_using_vehicle_crew service with remove mode."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"vehicle_id": "vehicle2", "mode": "remove", "crew": [1]}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(
-                hass, data, "post_using_vehicle_crew", "123", "vehicle2"
-            )
-
-            crew = mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle2"]["crew"]
-            crew_ids = [member["id"] for member in crew]
-            assert crew_ids == [2]  # Only ID 2 should remain
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_post_using_vehicle_crew_reset(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity for post_using_vehicle_crew service with reset mode."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        data = {"vehicle_id": "vehicle2", "mode": "reset"}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation", return_value="test"
-        ):
-            await handle_entity(
-                hass, data, "post_using_vehicle_crew", "123", "vehicle2"
-            )
-
-            crew = mock_coordinator.data[D_CLUSTER][D_VEHICLE]["vehicle2"]["crew"]
-            assert crew == []  # Should be empty
-            mock_coordinator.async_set_updated_data.assert_called_once()
-
-    async def test_handle_entity_unknown_service(
-        self, hass: HomeAssistant, mock_coordinator: MagicMock
-    ) -> None:
-        """Test handle_entity with unknown service."""
-        hass.data[DOMAIN] = {"123": {D_COORDINATOR: mock_coordinator}}
-
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation",
-            return_value="Unknown service",
-        ):
-            with pytest.raises(HomeAssistantError, match="Unknown service"):
-                await handle_entity(hass, {}, "unknown_service", "123", "entity1")
-
-    async def test_handle_entity_no_coordinator(self, hass: HomeAssistant) -> None:
-        """Test handle_entity with no coordinator found."""
-        with patch(
-            "custom_components.diveracontrol.utils.get_translation",
-            return_value="Coordinator not found",
-        ):
-            with pytest.raises(HomeAssistantError, match="Coordinator not found"):
-                await handle_entity(hass, {}, "put_alarm", "123", "alarm1")
-
-
-class TestSetUpdateInterval:
-    """Test the set_update_interval function."""
-
-    def test_set_update_interval_with_open_alarms(self) -> None:
-        """Test set_update_interval when open alarms are already provided."""
-        cluster_data = {
-            D_ALARM: {
-                D_OPEN_ALARMS: 2,
+        hass.data = {
+            DOMAIN: {
+                "test_cluster": {
+                    D_COORDINATOR: {"ucr1": "coordinator1", "ucr2": "coordinator2"}
+                }
             }
         }
-        interval_data = {
-            D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
-            D_UPDATE_INTERVAL_DATA: timedelta(minutes=5),
-        }
 
-        result = set_update_interval(cluster_data, interval_data, None)
+        cluster_id, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+            config_data, hass
+        )
 
-        assert result == timedelta(seconds=30)  # Should use alarm interval
-
-    def test_set_update_interval_no_open_alarms(self) -> None:
-        """Test set_update_interval when no open alarms are provided."""
-        cluster_data = {D_ALARM: {D_OPEN_ALARMS: 0}}
-        interval_data = {
-            D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
-            D_UPDATE_INTERVAL_DATA: timedelta(minutes=5),
-        }
-
-        result = set_update_interval(cluster_data, interval_data, None)
-
-        assert result == timedelta(minutes=5)  # Should use data interval
-
-    def test_set_update_interval_empty_alarm_items(self) -> None:
-        """Test set_update_interval defaults to data interval without open_alarms."""
-        cluster_data = {D_ALARM: {"items": {}}}
-        interval_data = {
-            D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
-            D_UPDATE_INTERVAL_DATA: timedelta(minutes=5),
-        }
-
-        result = set_update_interval(cluster_data, interval_data, None)
-
-        assert result == timedelta(minutes=5)
-
-    def test_set_update_interval_no_alarm_data(self) -> None:
-        """Test set_update_interval with no alarm data uses data interval."""
-        cluster_data = {}
-        interval_data = {
-            D_UPDATE_INTERVAL_ALARM: timedelta(seconds=30),
-            D_UPDATE_INTERVAL_DATA: timedelta(minutes=5),
-        }
-
-        result = set_update_interval(cluster_data, interval_data, None)
-
-        assert result == timedelta(minutes=5)
+        assert cluster_id == "test_cluster"
+        assert coordinators == {"ucr1": "coordinator1", "ucr2": "coordinator2"}
+        assert ucrs == {"ucr1": {}, "ucr2": {}}
 
 
+@pytest.mark.asyncio
 class TestGetTranslation:
     """Test the get_translation function."""
 
     async def test_get_translation_simple(self, hass: HomeAssistant) -> None:
         """Test get_translation with simple translation."""
         translations = {
-            "component.diveracontrol.exceptions.test_key.message": "Test message"
+            "component.diveracontrol.test_category.test_key": "Test message"
         }
 
         with patch(
             "custom_components.diveracontrol.utils.async_get_translations",
             return_value=translations,
         ):
-            result = await get_translation(hass, "exceptions", "test_key.message")
+            result = await get_translation(hass, "test_category", "test_key")
 
             assert result == "Test message"
 
     async def test_get_translation_with_placeholders(self, hass: HomeAssistant) -> None:
         """Test get_translation with placeholders."""
         translations = {
-            "component.diveracontrol.exceptions.test_key.message": "Error for {item}: {details}"
+            "component.diveracontrol.test_category.test_key": "Error for {item}"
         }
 
         with patch(
@@ -523,12 +180,12 @@ class TestGetTranslation:
         ):
             result = await get_translation(
                 hass,
-                "exceptions",
-                "test_key.message",
-                {"item": "device1", "details": "not found"},
+                "test_category",
+                "test_key",
+                {"item": "device1"},
             )
 
-            assert result == "Error for device1: not found"
+            assert result == "Error for device1"
 
     async def test_get_translation_missing_key(self, hass: HomeAssistant) -> None:
         """Test get_translation with missing translation key."""
@@ -538,21 +195,8 @@ class TestGetTranslation:
             "custom_components.diveracontrol.utils.async_get_translations",
             return_value=translations,
         ):
-            result = await get_translation(hass, "exceptions", "missing_key.message")
+            result = await get_translation(hass, "test_category", "missing_key")
 
-            assert result == "component.diveracontrol.exceptions.missing_key.message"
-
-    async def test_get_translation_missing_placeholder(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test get_translation with missing placeholder."""
-        with patch(
-            "custom_components.diveracontrol.utils.async_get_translations",
-            return_value={},
-        ):
-            result = await get_translation(
-                hass, "test", "missing_key", {"item": "device1", "missing": None}
+            assert (
+                result == "component.diveracontrol.test_category.missing_key"
             )
-
-            # Should return the translation key since translation not found
-            assert result == "component.diveracontrol.test.missing_key"

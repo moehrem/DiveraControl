@@ -78,11 +78,14 @@ async def async_attach_trigger(
     """Attach a trigger."""
     trigger_type = config[CONF_TYPE]
 
-    if trigger_type == TRIGGER_TYPE_NEW_ALARM:
+    if (
+        trigger_type == TRIGGER_TYPE_NEW_ALARM
+    ):  # TRIGGER_TYPE_NEW_ALARM to fire when the number of open alarms raises
         numeric_state_config = {
             CONF_PLATFORM: "numeric_state",
             CONF_ENTITY_ID: config[CONF_ENTITY_ID],
             CONF_ABOVE: 0,
+            "from": "any",
         }
     else:  # TRIGGER_TYPE_ALL_ALARMS_CLOSED
         numeric_state_config = {
