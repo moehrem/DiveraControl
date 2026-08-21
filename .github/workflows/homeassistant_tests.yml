@@ -67,6 +67,7 @@ jobs:
         run: |
           mkdir -p ~/.homeassistant/custom_components/diveracontrol
           cp -r custom_components/diveracontrol/* ~/.homeassistant/custom_components/diveracontrol/
+          echo "default_config:\nlogger:\n  default: info" > ~/.homeassistant/configuration.yaml
 
       - name: Run Integration Tests
         run: |
