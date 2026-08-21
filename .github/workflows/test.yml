@@ -29,13 +29,11 @@ jobs:
           cache-dependencies: "true"
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt  # oder -e . für pyproject.toml
-          pip install pytest pytest-cov
+        run: pip install pytest pytest-cov pytest-homeassistant-custom-component homeassistant aiohttp
 
       - name: Run tests with coverage
         run: |
-          pytest tests/ \
+          PYTHONPATH=. pytest tests/ \
             --cov=custom_components.diveracontrol \
             --cov-report=xml \
             --cov-report=term-missing
