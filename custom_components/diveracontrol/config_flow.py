@@ -1,7 +1,9 @@
 """Config flow for DiveraControl integration."""
 
 import logging
-from typing import Any, Dict, List, Optional, Set
+
+# from typing import Any, dict, List, Optional, Set
+from typing import Any, Optional
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
@@ -49,7 +51,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     MINOR_VERSION = MINOR_VERSION
 
     # Form handlers mapping (class-level constant)
-    FORM_HANDLERS: Dict[str, Any] = {
+    FORM_HANDLERS: dict[str, Any] = {
         STEP_USER: "_show_login_form",
         STEP_LOGIN: "_show_login_form",
         STEP_API_KEY: "_show_api_key_form",
@@ -58,9 +60,9 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self.final_entry: Optional[Dict[str, Any]] = None
-        self.possible_entries: Dict[str, Dict[str, Any]] = {}
-        self.errors: Dict[str, str] = {}
+        self.final_entry: Optional[dict[str, Any]] = None
+        self.possible_entries: dict[str, dict[str, Any]] = {}
+        self.errors: dict[str, str] = {}
 
     @staticmethod
     @callback
@@ -222,7 +224,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         handler = form_handlers.get(cur_step_id, self._show_login_form)
         return handler()
 
-    def _get_existing_ucr_ids(self, entry: ConfigEntry) -> Set[str]:
+    def _get_existing_ucr_ids(self, entry: ConfigEntry) -> set[str]:
         """Extract all UCR IDs from an existing config entry.
 
         Args:
@@ -258,7 +260,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         and removes duplicates from the current possible_entries. Empty clusters
         are removed entirely.
         """
-        clusters_to_remove: List[str] = []
+        clusters_to_remove: list[str] = []
 
         for cluster_id, cluster_data in self.possible_entries.items():
             new_relations = cluster_data.get(D_RELATIONS_KEY, {})

@@ -9,15 +9,15 @@ The module implements:
 - Comprehensive type hints and validation
 """
 
-from __future__ import annotations
-
+# from __future__ import annotations
 import asyncio
-import logging
 from enum import Enum
+import logging
 from typing import Any, Literal, TypedDict
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from aiohttp import ClientError, ClientResponseError, ClientTimeout
+
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -171,8 +171,6 @@ class DiveraAPIClient:
 
         if not url:
             return url
-
-        from urllib.parse import parse_qs, urlparse, urlunparse
 
         parsed = urlparse(url)
         query_params = parse_qs(parsed.query, keep_blank_values=True)
