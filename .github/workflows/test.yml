@@ -17,7 +17,7 @@ jobs:
   test:
     name: Run tests (Python 3.12)
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,6 +27,11 @@ jobs:
         with:
           python-version: "3.12"
           cache-dependencies: "true"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt  # oder -e . für pyproject.toml
+          pip install pytest pytest-cov
 
       - name: Run tests with coverage
         run: |

@@ -28,7 +28,7 @@ jobs:
           cache-dependencies: "true"
 
       - name: Install ruff
-        run: pip install ruff
+        run: pip install ruff black
 
       - name: Autoformat with Black
         run: black . --line-length=88 --fast
