@@ -1,0 +1,77 @@
+name: 🧪 HomeAssistant Tests
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.ref_name || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  unit_tests:
+    name: "🧪 Unit Tests (Python 3.12)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-homeassistant-custom-component
+
+      - name: Run Unit Tests
+        run: |
+          pytest tests/ \
+            --cov=custom_components.diveracontrol \
+            --cov-report=xml \
+            --cov-report=term-missing
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  integration_tests:
+    name: "🔄 Integration Tests (HomeAssistant)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install HomeAssistant
+        run: pip install homeassistant==2024.8.0
+
+      - name: Install Integration
+        run: |
+          mkdir -p ~/.homeassistant/custom_components/diveracontrol
+          cp -r custom_components/diveracontrol/* ~/.homeassistant/custom_components/diveracontrol/
+
+      - name: Run Integration Tests
+        run: |
+          cd ~/.homeassistant
+          hass --script ensure_config
+          pytest custom_components/diveracontrol/tests/ \
+            --custom-components \
+            -v
