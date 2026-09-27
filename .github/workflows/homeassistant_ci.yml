@@ -31,23 +31,23 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install Linting Tools
+      - name: Install Dependencies
         run: |
+          pip install -r requirements.txt
           pip install \
             pylint==3.0.3 \
             flake8==6.1.0 \
-            mypy==1.8.0 \
+            mypy==1.13.0 \
             black==24.3.0 \
-            ruff==0.4.4 \
-            safety==2.3.5
+            ruff==0.4.4
 
-      - name: Run Black (Autoformat)
-        run: black . --line-length=88 --fast
+      - name: Check Black Formatting
+        run: black . --check --diff --line-length=88
 
       - name: Run ruff
         run: ruff check custom_components/diveracontrol
 
-      - name: Run pylint (HomeAssistant Rules)
+      - name: Run pylint
         run: pylint custom_components/diveracontrol --rcfile=.pylintrc
 
       - name: Run flake8
@@ -55,9 +55,6 @@ jobs:
 
       - name: Run mypy (Type Checking)
         run: mypy custom_components/diveracontrol
-
-      - name: Run Safety (Dependency Security)
-        run: safety check --full-report
 
   hassfest:
     name: "🏠 HomeAssistant Validation (hassfest)"

@@ -14,7 +14,6 @@ from .const import (
     D_BASE_API_URL,
     D_CLUSTER_ID,
     D_CLUSTER_NAME,
-    D_OPEN_ALARMS,
     D_RELATIONS_KEY,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
@@ -39,23 +38,29 @@ class DiveraCoordinator(DataUpdateCoordinator):
     ) -> None:
         """Initialize DiveraControl coordinator.
 
-        Each coordinator instance is associated with one user cluster relation (ucr) and handles data fetching and updates for that relation.
-        The coordinator uses the access key from the relation data to authenticate with the Divera API and fetch relevant data.
+        Each coordinator instance is associated with one user cluster relation (ucr) and
+        handles data fetching and updates for that relation.
+        The coordinator uses the access key from the relation data to authenticate with
+        the Divera API and fetch relevant data.
 
-        Relevant data is always fetched based on the ucr_id. But update intervals and base url are shared on cluster level, so they are stored in the main config entry and
-        not in the relation data. This means that if you have multiple ucrs for the same cluster, they will share the same update intervals and base url.
+        Relevant data is always fetched based on the ucr_id. But update intervals and
+        base url are shared on cluster level, so they are stored in the main config
+        entry and
+        not in the relation data. This means that if you have multiple ucrs for the same
+        cluster, they will share the same update intervals and base url.
 
         Args:
             hass (HomeAssistant): Home Assistant instance.
             config_entry (ConfigEntry): Configuration entry for the integration.
-            ucr_id (str): User cluster relation ID - basically the Divera user identification number.
+            ucr_id (str): User cluster relation ID - basically the Divera user
+            identification number.
 
         Returns:
             None
 
         """
 
-        self.api = None
+        self.api: DiveraAPI | None = None
 
         self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
@@ -90,25 +95,30 @@ class DiveraCoordinator(DataUpdateCoordinator):
     async def _async_setup(self) -> None:
         """Perform initial setup tasks for the coordinator.
 
-        This method is called during the coordinator's initialization phase and is responsible for
+        This method is called during the coordinator's initialization phase and is
+        responsible for
         performing any necessary setup tasks.
 
         Returns:
             None
 
         Raises:
-            UpdateFailed: If there is an error during setup, an UpdateFailed exception will be raised with a descriptive error message.
+            UpdateFailed: If there is an error during setup, an UpdateFailed exception
+            will be raised with a descriptive error message.
 
         """
 
         _accesskey = self.ucr_data.get(D_ACCESSKEY)
-        _base_url = self.config_entry.data.get(
-            D_BASE_API_URL
-        )  # no fallback to BASE_API_URL, url should be present. If not for whatever reason: enforce error in next step.
+        # No fallback to BASE_API_URL, url should be present.
+        # If not for whatever reason: enforce error in next step.
+        config_entry = self.config_entry
+        assert config_entry is not None
+        _base_url = config_entry.data.get(D_BASE_API_URL)
 
         if not _accesskey or not _base_url:
             raise UpdateFailed(
-                f"Missing relation data for user {self.user_name} (ucr_id {self.ucr_id}) in config entry data"
+                f"Missing relation data for user {self.user_name} (ucr_id "
+                f"{self.ucr_id}) in config entry data"
             )
 
         try:
@@ -123,7 +133,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
 
         if self.api is None:
             raise UpdateFailed(
-                f"API client could not be initialized for cluster '{self.cluster_name}' and user '{self.user_name}'"
+                f"API client could not be initialized for cluster "
+                f"'{self.cluster_name}' and user '{self.user_name}'"
             )
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -138,7 +149,8 @@ class DiveraCoordinator(DataUpdateCoordinator):
             await self._async_setup()
             if self.api is None:
                 raise UpdateFailed(
-                    f"API client is not initialized for cluster '{self.cluster_name}' and user '{self.user_name}'"
+                    f"API client is not initialized for cluster '{self.cluster_name}' "
+                    f"and user '{self.user_name}'"
                 )
 
         try:

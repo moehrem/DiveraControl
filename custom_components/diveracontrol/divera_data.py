@@ -27,7 +27,7 @@ from .const import (
     D_VEHICLE,
     D_OPEN_ALARMS,
 )
-from .divera_api import D_UCR, DiveraAPI
+from .divera_api import DiveraAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def _convert_empty_lists_to_dicts(data: dict[str, Any]) -> dict[str, Any]:
         Dictionary with empty lists converted to empty dicts
 
     """
-    result = {}
+    result: dict[str, Any] = {}
     for key, value in data.items():
         if value == []:
             # Convert empty list to empty dict
@@ -82,7 +82,8 @@ async def update_data(
         Sets alarm and vehicle data to empty if any issues occur while updating.
 
     Returns:
-        dict: The updated ``cluster_data`` dictionary with the latest Divera information.
+        dict: The updated ``cluster_data`` dictionary with the latest Divera
+        information.
 
     """
 
@@ -145,9 +146,9 @@ async def update_data(
         if vehicle_ids:
             # Fetch all vehicle properties in parallel
             vehicle_tasks = []
-            for key in vehicle_ids:
+            for vehicle_id in vehicle_ids:
                 try:
-                    vehicle_tasks.append(api.get_vehicle_property(key))
+                    vehicle_tasks.append(api.get_vehicle_property(vehicle_id))
                 except HomeAssistantError:
                     continue
 
@@ -163,7 +164,7 @@ async def update_data(
             # Process vehicle responses
             for key, raw_vehicle_property in zip(vehicle_ids, vehicle_responses):
                 if (
-                    isinstance(raw_vehicle_property, Exception)
+                    isinstance(raw_vehicle_property, BaseException)
                     or not raw_vehicle_property
                 ):
                     continue

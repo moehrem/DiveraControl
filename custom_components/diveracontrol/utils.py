@@ -1,6 +1,7 @@
 """Contain several helper methods for DiveraControl integration."""
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -122,8 +123,8 @@ async def get_translation(
 
 
 def get_cluster_coordinators_ucrs_from_config_hass(
-    config_data: dict[str, Any], hass: HomeAssistant
-) -> tuple[str, dict[str, Any], list[Any]]:
+    config_data: Mapping[str, Any], hass: HomeAssistant
+) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """Get cluster_id, coordinators and UCR data from config entry.
 
     Args:
@@ -135,8 +136,10 @@ def get_cluster_coordinators_ucrs_from_config_hass(
 
     """
 
-    cluster_id = config_data.get(D_CLUSTER_ID)
-    coordinators = hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR)
-    ucrs = config_data.get(D_RELATIONS_KEY)
+    cluster_id: str = config_data.get(D_CLUSTER_ID, "")
+    coordinators: dict[str, Any] = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
+    )
+    ucrs: dict[str, Any] = config_data.get(D_RELATIONS_KEY, {})
 
     return cluster_id, coordinators, ucrs

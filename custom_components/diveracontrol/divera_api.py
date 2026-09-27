@@ -13,7 +13,8 @@ The module implements:
 import asyncio
 from enum import Enum
 import logging
-from typing import Any, Literal, TypedDict
+from collections.abc import Mapping
+from typing import Any, Literal, TypeAlias, TypedDict
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from aiohttp import ClientError, ClientResponseError, ClientTimeout
@@ -67,23 +68,12 @@ _LOGGER = logging.getLogger(__name__)
 # ========== Type Definitions ==========
 
 
-class DiveraAPIResponse(TypedDict, total=False):
-    """TypedDict for Divera API responses."""
-
-    success: bool
-    message: str
-    data: dict[str, Any]
+DiveraAPIResponse: TypeAlias = dict[str, Any]  # pylint: disable=invalid-name
+"""Type alias for Divera API responses."""
 
 
-class ClusterEntry(TypedDict):
-    """TypedDict for a cluster entry in config flow."""
-
-    cluster_id: str
-    cluster_name: str | None
-    base_api_url: str
-    update_interval_data: int
-    update_interval_alarm: int
-    user_cluster_relations: dict[str, dict[str, str]]
+ClusterEntry: TypeAlias = dict[str, Any]
+"""Type alias for a cluster entry in config flow."""
 
 
 class AuthPayload(TypedDict):
@@ -161,7 +151,8 @@ class DiveraAPIClient:
 
         Args:
             url: URL to redact.
-            sensitive_keys: Set of parameter names to redact. Defaults to API_ACCESS_KEY.
+            sensitive_keys: Set of parameter names to redact. Defaults to
+            API_ACCESS_KEY.
 
         Returns:
             URL with sensitive data replaced by asterisks.
@@ -187,7 +178,7 @@ class DiveraAPIClient:
         endpoint: str,
         method: str = "GET",
         params: dict[str, str] | None = None,
-        payload: dict[str, Any] | None = None,
+        payload: Mapping[str, Any] | None = None,
         timeout: float | None = None,
         retry_count: int = 0,
     ) -> DiveraAPIResponse:
@@ -242,10 +233,13 @@ class DiveraAPIClient:
                 response_data = await response.json()
 
                 # Check for Divera-specific success flag
-                # IMPORTANT: Divera API may return HTTP 200 even for application-level errors, so we must check the 'success' field in the response
+                # IMPORTANT: Divera API may return HTTP 200 even for
+                # application-level errors, so check the 'success' field in
+                # the response
                 if response.status == 200 and response_data.get("success") is not True:
                     raise HomeAssistantError(
-                        f"Divera API error: {response_data.get('message', 'Unknown error')}"
+                        f"Divera API error: "
+                        f"{response_data.get('message', 'Unknown error')}"
                     )
 
                 response.raise_for_status()
@@ -620,9 +614,9 @@ class DiveraAPIClient:
             if not is_valid:
                 return entry_errors, {}
 
-        except [ClientError, TimeoutError, ConfigEntryAuthFailed]:
+        except (ClientError, TimeoutError, ConfigEntryAuthFailed):
             validation_errors["base"] = ConfigFlowErrorCode.CANNOT_CONNECT.value
-        except [TypeError, AttributeError]:
+        except (TypeError, AttributeError):
             validation_errors["base"] = ConfigFlowErrorCode.NO_DATA.value
         except Exception as ex:
             _LOGGER.exception(
@@ -743,7 +737,7 @@ class DiveraAPI(DiveraAPIClient):
         self,
         endpoint: str,
         method: str = "GET",
-        payload: dict[str, Any] | None = None,
+        payload: Mapping[str, Any] | None = None,
         additional_params: dict[str, str] | None = None,
     ) -> DiveraAPIResponse:
         """Request data from Divera API at the given endpoint.
@@ -837,7 +831,7 @@ class DiveraAPI(DiveraAPIClient):
 
     async def post_confirm_alarm(
         self,
-        payload: dict[str, str],
+        payload: dict[str, Any],
         alarm_id: int,
     ) -> None:
         """POST to confirm an existing alarm to Divera API.
@@ -883,7 +877,7 @@ class DiveraAPI(DiveraAPIClient):
             payload=payload,
         )
 
-    async def get_vehicle_property(self, vehicle_id: int) -> DiveraAPIResponse:
+    async def get_vehicle_property(self, vehicle_id: int | str) -> DiveraAPIResponse:
         """GET individual vehicle properties for vehicle from Divera API.
 
         Args:
@@ -945,7 +939,8 @@ class DiveraAPI(DiveraAPIClient):
             payload: Dictionary of data to send to Divera-API.
 
         Raises:
-            HomeAssistantError: If mode is invalid or user lacks PERM_STATUS_VEHICLE permission.
+            HomeAssistantError: If mode is invalid or user lacks PERM_STATUS_VEHICLE
+            permission.
         """
         self.permissions.check(PERM_STATUS_VEHICLE)
         _LOGGER.debug(
@@ -963,7 +958,8 @@ class DiveraAPI(DiveraAPIClient):
             method = "DELETE"
         else:
             raise HomeAssistantError(
-                f"Invalid mode '{mode}' for crew management, must be 'add', 'remove', or 'reset'"
+                f"Invalid mode '{mode}' for crew management, must be 'add', 'remove', "
+                f"or 'reset'"
             )
 
         await self._api_request(endpoint, method, payload=payload)

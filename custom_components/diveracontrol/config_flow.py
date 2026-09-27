@@ -3,6 +3,7 @@
 import logging
 
 # from typing import Any, dict, List, Optional, Set
+from collections.abc import Callable
 from typing import Any, Optional
 
 import voluptuous as vol
@@ -211,10 +212,12 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if error_number != 0:
             return self._show_api_key_form()
 
-        cur_step_id = self.cur_step.get("step_id", STEP_USER)
+        cur_step = self.cur_step
+        assert cur_step is not None
+        cur_step_id = cur_step.get("step_id", STEP_USER)
 
         # Mapping: step_id -> form_handler
-        form_handlers = {
+        form_handlers: dict[str, Callable[[], ConfigFlowResult]] = {
             STEP_USER: self._show_login_form,
             STEP_LOGIN: self._show_login_form,
             STEP_API_KEY: self._show_api_key_form,

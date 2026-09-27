@@ -3,12 +3,14 @@
 import asyncio
 import logging
 
-# IMPORTANT: import log_handler BEFORE any other module that uses logging to ensure the handler is registered in time
+# IMPORTANT: import log_handler BEFORE any other module that uses logging
+# to ensure the handler is registered in time
 from .log_handler import (
     async_remove_diveracontrol_log_handler,
     async_setup_diveracontrol_log_handler,
 )
 
+# pylint: disable=wrong-import-order
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -85,7 +87,8 @@ async def async_setup_entry(
 
     # Create coordinator instances per user relation.
     # every ucr has its own access key
-    # update intervals and base-urls are shared on cluster level, so they are stored in the main config entry and not in the relation data
+    # update intervals and base-urls are shared on cluster level, so they are
+    # stored in the main config entry and not in the relation data
     coordinators: dict[str, DiveraCoordinator] = {}
 
     # First initialize all coordinators (setup API clients)
@@ -122,7 +125,8 @@ async def async_setup_entry(
             setup_tasks.append(coordinator._async_setup())
         except Exception as err:
             _LOGGER.exception(
-                "Unexpected error creating coordinator for cluster %s, user %s (ID: %s): %s",
+                "Unexpected error creating coordinator for cluster %s, user %s (ID: "
+                "%s): %s",
                 cluster_name,
                 user_name,
                 ucr_id,
@@ -160,7 +164,8 @@ async def async_setup_entry(
                     )
                 else:
                     _LOGGER.exception(
-                        "Unexpected error during setup for cluster %s, user %s (ID: %s): %s",
+                        "Unexpected error during setup for cluster %s, user %s (ID: "
+                        "%s): %s",
                         cluster_name,
                         user_name,
                         ucr_id,
@@ -202,22 +207,25 @@ async def async_setup_entry(
             # Process results from completed tasks
             for task in done:
                 try:
-                    result = await task
-                    coordinator = task_to_coordinator.get(
+                    result = await task  # type: ignore[func-returns-value]
+                    task_coordinator = task_to_coordinator.get(
                         task
-                    )  # Get coordinator from task
-                    if coordinator is None:
-                        _LOGGER.warning("Could not find coordinator for task %s", task)
+                    )  # Get task_coordinator from task
+                    if task_coordinator is None:
+                        _LOGGER.warning(
+                            "Could not find task_coordinator for task %s", task
+                        )
                         continue
 
-                    # Find the user_name and ucr_id for this coordinator
-                    ucr_id, user_name = coordinator_to_ucr.get(
-                        coordinator, (None, "unknown")
+                    # Find the task_user_name and task_ucr_id for this task_coordinator
+                    task_ucr_id, task_user_name = coordinator_to_ucr.get(
+                        task_coordinator, (None, "unknown")
                     )
 
-                    if ucr_id is None:
+                    if task_ucr_id is None:
                         _LOGGER.warning(
-                            "Could not find UCR ID for coordinator %s", coordinator
+                            "Could not find UCR ID for task_coordinator %s",
+                            task_coordinator,
                         )
                         continue
 
@@ -227,38 +235,43 @@ async def async_setup_entry(
                             _LOGGER.error(
                                 "Config entry not ready for cluster %s, user %s: %s",
                                 cluster_name,
-                                user_name,
+                                task_user_name,
                                 result,
                             )
-                            coordinators.pop(ucr_id, None)  # Remove failed coordinator
+                            coordinators.pop(
+                                task_ucr_id, None
+                            )  # Remove failed task_coordinator
                         elif isinstance(result, ConfigEntryAuthFailed):
                             _LOGGER.error(
                                 "Authentication failed for cluster %s, user %s: %s",
                                 cluster_name,
-                                user_name,
+                                task_user_name,
                                 result,
                             )
-                            coordinators.pop(ucr_id, None)  # Remove failed coordinator
+                            coordinators.pop(
+                                task_ucr_id, None
+                            )  # Remove failed task_coordinator
                         elif isinstance(result, (TimeoutError, ConnectionError)):
                             _LOGGER.error(
                                 "Connection failed for cluster %s, user %s: %s",
                                 cluster_name,
-                                user_name,
+                                task_user_name,
                                 result,
                             )
                         else:
                             _LOGGER.exception(
-                                "Unexpected error during refresh for cluster %s, user %s (ID: %s): %s",
+                                "Unexpected error during refresh for cluster %s, user "
+                                "%s (ID: %s): %s",
                                 cluster_name,
-                                user_name,
-                                ucr_id,
+                                task_user_name,
+                                task_ucr_id,
                                 result,
                             )
                     else:
                         _LOGGER.debug(
                             "Successfully refreshed data for user %s (ID: %s)",
-                            user_name,
-                            ucr_id,
+                            task_user_name,
+                            task_ucr_id,
                         )
                 except asyncio.CancelledError:
                     pass  # Task was cancelled, ignore
@@ -272,7 +285,8 @@ async def async_setup_entry(
             for task in refresh_tasks:
                 task.cancel()
 
-    # Execute all refresh tasks in parallel (only for successfully initialized coordinators)
+    # Execute all refresh tasks in parallel
+    # (only for successfully initialized coordinators)
     if refresh_tasks:
         results = await asyncio.gather(*refresh_tasks, return_exceptions=True)
 
@@ -308,7 +322,8 @@ async def async_setup_entry(
                     )
                 else:
                     _LOGGER.exception(
-                        "Unexpected error during refresh for cluster %s, user %s (ID: %s): %s",
+                        "Unexpected error during refresh for cluster %s, user %s (ID: "
+                        "%s): %s",
                         cluster_name,
                         user_name,
                         ucr_id,
@@ -478,7 +493,7 @@ def _remove_old_entity_entries(
         devices = [
             d
             for d in dev_reg.devices.values()
-            if d.config_entry_id == config_entry.entry_id
+            if config_entry.entry_id in d.config_entries
         ]
 
         # 2. Alle Devices mit alten Identifier-Mustern (z.B. aus v1.4.1)
@@ -492,7 +507,7 @@ def _remove_old_entity_entries(
                 and identifier[1] in config_entry.data.get(D_RELATIONS_KEY, {})
                 for identifier in d.identifiers
             )
-            or d.config_entry_id is None  # Orphaned devices
+            or not d.config_entries  # Orphaned devices
         ]
 
         # 3. Zusammenführen und Duplikate vermeiden
@@ -509,7 +524,7 @@ def _remove_old_entity_entries(
                 "Migration: removing old device %s (name=%s, config_entry_id=%s)",
                 device.id,
                 device.name_by_user or device.name,
-                device.config_entry_id,
+                device.config_entries,
             )
             dev_reg.async_remove_device(device.id)
 
@@ -598,7 +613,8 @@ async def _migrate_to_v2_0_0(
 ) -> tuple[dict, int, int, bool] | None:
     """Migrate to v2.0.0: Restructure config to support multiple users per cluster.
 
-    Returns None if migration fails, otherwise returns (updated_data, current_version, current_minor_version, migrated).
+    Returns None if migration fails, otherwise returns (updated_data, current_version,
+    current_minor_version, migrated).
     """
     _LOGGER.info("Migrating config entry to integration version 2.0.0")
 
@@ -708,7 +724,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     current_minor_version: int = config_entry.minor_version
     current_patch_version: str = (
         config_entry.data.get(D_INTEGRATION_VERSION, "0.0.0").split(".")[2]
-        or PATCH_VERSION
+        or str(PATCH_VERSION)
         or "0"
     )
 
@@ -749,13 +765,18 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         updated_data, current_version, current_minor_version, migrated = (
             migration_result
         )
-        clear_registry_entries = True  # to ensure all old entities are removed, as the config structure changed significantly and old entities would not be cleaned up properly due to missing UCR_ID in their unique_ids
+        # to ensure all old entities are removed, as the config structure
+        # changed significantly and old entities would not be cleaned up
+        # properly due to missing UCR_ID in their unique_ids
+        clear_registry_entries = True
 
-    # Finalize migration by updating config entry version if any migration step was performed
+    # Finalize migration by updating config entry version
+    # if any migration step was performed
     if migrated or current_version != VERSION or current_minor_version != MINOR_VERSION:
         if clear_registry_entries:
             _LOGGER.info(
-                "Migration: clearing old registry entries for config entry %s due to breaking changes",
+                "Migration: clearing old registry entries for config entry %s due to "
+                "breaking changes",
                 config_entry.entry_id,
             )
             _remove_old_entity_entries(hass, config_entry)

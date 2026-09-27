@@ -121,12 +121,13 @@ class DiveraSensorManager:
             _LOGGER.debug("Added %d %s sensors", len(new_ids), self._label)
 
 
-# --------------------------------------------------------------------------------------------------
-# Convenience constructors for specific sensor types, plus the actual entity classes for those types
-# --------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
+# Convenience constructors for specific sensor types, plus the actual
+# entity classes for those types
+# -------------------------------------------------------------------------------------
 
 
-def DiveraAlarmSensorManager(
+def DiveraAlarmSensorManager(  # pylint: disable=invalid-name
     coordinator: DiveraCoordinator,
     async_add_entities: AddEntitiesCallback,
 ) -> DiveraSensorManager:
@@ -141,7 +142,7 @@ def DiveraAlarmSensorManager(
     )
 
 
-def DiveraVehicleSensorManager(
+def DiveraVehicleSensorManager(  # pylint: disable=invalid-name
     coordinator: DiveraCoordinator,
     async_add_entities: AddEntitiesCallback,
 ) -> DiveraSensorManager:
@@ -158,7 +159,7 @@ def DiveraVehicleSensorManager(
     )
 
 
-def DiveraAvailabilitySensorManager(
+def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
     coordinator: DiveraCoordinator,
     async_add_entities: AddEntitiesCallback,
 ) -> DiveraSensorManager:
@@ -229,9 +230,7 @@ class DiveraAlarmSensor(BaseDiveraEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM
-                if _priority
-                else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
 
@@ -504,8 +503,6 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM
-                if _priority
-                else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO

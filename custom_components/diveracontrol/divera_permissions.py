@@ -57,7 +57,8 @@ class DiveraPermissions:
 
         if not self.permissions:
             _LOGGER.debug(
-                "No permission data available yet for cluster %s, permission '%s' denied",
+                "No permission data available yet for cluster %s, permission '%s' "
+                "denied",
                 self.ucr_id,
                 perm_key,
             )
@@ -67,7 +68,8 @@ class DiveraPermissions:
 
         if self.permissions.get(PERM_MANAGEMENT):
             _LOGGER.debug(
-                "Management permission granted for cluster %s, bypassing specific permission check for '%s'",
+                "Management permission granted for cluster %s, bypassing specific "
+                "permission check for '%s'",
                 self.ucr_id,
                 perm_key,
             )

@@ -1,6 +1,6 @@
 """Support for Divera Control calendar events."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 import logging
 from typing import Any
 

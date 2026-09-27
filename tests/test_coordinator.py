@@ -93,7 +93,7 @@ class TestCoordinatorProperties:
         """Test coordinator has required attributes."""
         # DataUpdateCoordinator does not have unique_id, skip this test
         # The coordinator has name instead
-        assert hasattr(coordinator, 'name')
+        assert hasattr(coordinator, "name")
 
     def test_data_property(self, coordinator) -> None:
         """Test coordinator data property."""
@@ -136,6 +136,7 @@ class TestCoordinatorApiProperty:
     def test_api_property_creates_instance(self, mock_api_class, coordinator) -> None:
         """Test that api is initialized in _async_setup."""
         import asyncio
+
         mock_api_instance = MagicMock()
         mock_api_class.return_value = mock_api_instance
 
@@ -185,7 +186,9 @@ class TestCoordinatorUpdate:
         # Don't call it directly as it requires proper API setup
 
     @pytest.mark.asyncio
-    async def test_async_update_handles_success_false(self, coordinator, mock_hass) -> None:
+    async def test_async_update_handles_success_false(
+        self, coordinator, mock_hass
+    ) -> None:
         """Test _async_update_data method signature."""
         # Verify method exists
         assert hasattr(coordinator, "_async_update_data")

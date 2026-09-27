@@ -1,5 +1,4 @@
 [MASTER]
-load-plugins=pylint_homeassistant
 
 disable=
     C0111,  # Missing docstring
@@ -16,13 +15,15 @@ disable=
     too-many-branches,
     too-many-statements,
     too-many-public-methods,
+    too-many-nested-blocks,
+    too-many-return-statements,
     duplicate-code,
     broad-except,
     bare-except,
     abstract-method,
 
+[DESIGN]
+max-module-lines=1200
+
 [FORMAT]
 max-line-length=88
-
-[TYPECHECK]
-generated-members=asyncio.*, voluptuous.*

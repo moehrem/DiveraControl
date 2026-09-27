@@ -458,9 +458,9 @@ class TestAsyncUnloadEntry:
 
             result = await async_unload_entry(mock_hass_unload, mock_config_entry)
             assert result is True
-            assert cluster_id not in mock_hass_unload.data.get(DOMAIN, {}), (
-                f"Expected {cluster_id} not in {mock_hass_unload.data.get(DOMAIN, {})}"
-            )
+            assert cluster_id not in mock_hass_unload.data.get(
+                DOMAIN, {}
+            ), f"Expected {cluster_id} not in {mock_hass_unload.data.get(DOMAIN, {})}"
             mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
 
     @pytest.mark.asyncio
@@ -486,9 +486,9 @@ class TestAsyncUnloadEntry:
 
             result = await async_unload_entry(mock_hass_unload, mock_config_entry)
             assert result is False
-            assert cluster_id in mock_hass_unload.data.get(DOMAIN, {}), (
-                f"Expected {cluster_id} in {mock_hass_unload.data.get(DOMAIN, {})}"
-            )
+            assert cluster_id in mock_hass_unload.data.get(
+                DOMAIN, {}
+            ), f"Expected {cluster_id} in {mock_hass_unload.data.get(DOMAIN, {})}"
 
     @pytest.mark.asyncio
     async def test_async_unload_entry_last_cluster(
@@ -518,9 +518,9 @@ class TestAsyncUnloadEntry:
 
             result = await async_unload_entry(mock_hass_unload, mock_config_entry)
             assert result is True
-            assert DOMAIN not in mock_hass_unload.data, (
-                f"Expected DOMAIN not in {mock_hass_unload.data}"
-            )
+            assert (
+                DOMAIN not in mock_hass_unload.data
+            ), f"Expected DOMAIN not in {mock_hass_unload.data}"
             mock_remove_log_handler.assert_called_once_with(mock_hass_unload)
 
 

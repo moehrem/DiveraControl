@@ -298,11 +298,7 @@ class TestGetSelectorOptions:
     @patch("custom_components.diveracontrol.device_action.get_ucr_data_from_device")
     async def test_dynamic_options_no_items(self, mock_get_coordinator, hass):
         """Test dynamic options when data has no items wrapper."""
-        mock_coordinator_data = {
-            "cluster": {
-                "vehicle": {}  # No items wrapper
-            }
-        }
+        mock_coordinator_data = {"cluster": {"vehicle": {}}}  # No items wrapper
         mock_get_coordinator.return_value = mock_coordinator_data
 
         from custom_components.diveracontrol.device_action import _get_selector_options

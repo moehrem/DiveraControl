@@ -29,7 +29,7 @@ class TestDiveraCalendar:
         """Test calendar entity initialization."""
         coordinator = _create_coordinator(hass)
         entity = DiveraCalendar(coordinator)
-        
+
         assert entity.ucr_id == "123456"
         assert entity.unique_id == "123456_calendar"
         assert entity.entity_id == "calendar.123456_calendar"

@@ -22,7 +22,6 @@ from .const import (
     D_USERNAME,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
-    BASE_API_URL as DEFAULT_BASE_API_URL,
 )
 from .schemas import get_options_form_schema, get_reconfigure_cluster_form_schema
 
@@ -46,7 +45,9 @@ class DiveraControlOptionsFlow(OptionsFlow):
             return {}
 
         # Normalize keys to strings
-        return {str(ucr_id): relation_data for ucr_id, relation_data in relations.items()}
+        return {
+            str(ucr_id): relation_data for ucr_id, relation_data in relations.items()
+        }
 
     @staticmethod
     def _user_api_key_schema(selected_relation: dict[str, Any]) -> vol.Schema:

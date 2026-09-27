@@ -6,6 +6,7 @@ import voluptuous as vol
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -192,7 +193,7 @@ def get_reconfigure_cluster_form_schema(
 
     """
 
-    options: list[dict[str, str]] = []
+    options: list[SelectOptionDict] = []
     for ucr_id, ucr in current_ucrs.items():
         username = str(ucr.get(D_USERNAME, "")).strip() or str(ucr_id)
         options.append({"value": str(ucr_id), "label": username})

@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit_tests:
-    name: "🧪 Unit Tests (Python 3.12)"
+  tests:
+    name: "🧪 Unit & Integration Tests (Python 3.12)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -28,11 +28,9 @@ jobs:
           cache: "pip"
 
       - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-homeassistant-custom-component
+        run: pip install -r requirements.txt
 
-      - name: Run Unit Tests
+      - name: Run Tests
         run: |
           pytest tests/ \
             --cov=custom_components.diveracontrol \
@@ -46,33 +44,3 @@ jobs:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-
-  integration_tests:
-    name: "🔄 Integration Tests (HomeAssistant)"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install HomeAssistant
-        run: pip install homeassistant==2024.8.0
-
-      - name: Install Integration
-        run: |
-          mkdir -p ~/.homeassistant/custom_components/diveracontrol
-          cp -r custom_components/diveracontrol/* ~/.homeassistant/custom_components/diveracontrol/
-          echo "default_config:\nlogger:\n  default: info" > ~/.homeassistant/configuration.yaml
-
-      - name: Run Integration Tests
-        run: |
-          cd ~/.homeassistant
-          hass --script ensure_config
-          pytest custom_components/diveracontrol/tests/ \
-            --custom-components \
-            -v

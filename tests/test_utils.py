@@ -46,9 +46,7 @@ class TestGetUcrDataFromDevice:
             mock_device_registry.return_value.async_get.return_value = mock_device
             hass.data = {
                 DOMAIN: {
-                    "test_cluster": {
-                        D_COORDINATOR: {"test_ucr_id": mock_coordinator}
-                    }
+                    "test_cluster": {D_COORDINATOR: {"test_ucr_id": mock_coordinator}}
                 }
             }
 
@@ -79,9 +77,7 @@ class TestGetUcrDataFromDevice:
             mock_device_registry.return_value.async_get.return_value = mock_device
             hass.data = {
                 DOMAIN: {
-                    "test_cluster": {
-                        D_COORDINATOR: {"test_ucr_id": mock_coordinator}
-                    }
+                    "test_cluster": {D_COORDINATOR: {"test_ucr_id": mock_coordinator}}
                 }
             }
 
@@ -197,6 +193,4 @@ class TestGetTranslation:
         ):
             result = await get_translation(hass, "test_category", "missing_key")
 
-            assert (
-                result == "component.diveracontrol.test_category.missing_key"
-            )
+            assert result == "component.diveracontrol.test_category.missing_key"

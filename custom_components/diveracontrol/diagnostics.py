@@ -15,7 +15,8 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
 ) -> dict[str, object]:
-    """Return cluster and user data integration including config_entry and coordinator data.
+    """Return cluster and user data integration including config_entry
+    and coordinator data.
 
     Attention: Only accesskeys are redacted. Any further personal data, i.e. names,
     telephone numbers, qualifications are shown and must be handled carefully!

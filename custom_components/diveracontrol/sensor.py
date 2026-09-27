@@ -25,7 +25,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Divera sensors."""
 
-    _, coordinators, ucrs = get_cluster_coordinators_ucrs_from_config_hass(
+    _, coordinators, _ = get_cluster_coordinators_ucrs_from_config_hass(
         config_entry.data, hass
     )
     ucrs: list[DiveraCoordinator] = list(coordinators.values())
