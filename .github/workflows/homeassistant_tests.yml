@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   tests:
-    name: "🧪 Unit & Integration Tests (Python 3.12)"
+    name: "🧪 Unit & Integration Tests (Python 3.14)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: "pip"
 
       - name: Install Dependencies
