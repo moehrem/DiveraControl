@@ -3,5 +3,5 @@
 # release and all required pytest plugins (pytest, pytest-asyncio,
 # pytest-cov, pytest-timeout, ...). The two versions must stay in sync:
 # every plugin release pins exactly one Home Assistant release.
-homeassistant==2024.12.5
+homeassistant==2026.7.0
 pytest-homeassistant-custom-component==0.13.195
