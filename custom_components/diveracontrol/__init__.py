@@ -490,18 +490,14 @@ def _remove_old_entity_entries(
 
         # === DEVICE REGISTRY BEREINIGEN ===
         # 1. Alle Devices des aktuellen config_entry_id
-        devices = [
-            d
-            for d in dev_reg.devices.values()
-            if config_entry.entry_id in d.config_entries
-        ]
+        devices = dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
 
         # 2. Alle Devices mit alten Identifier-Mustern (z.B. aus v1.4.1)
         # In v1.4.1: identifiers = [["diveracontrol", "<cluster_id>"]]
         # In v2.0.0: identifiers = [["diveracontrol", "<ucr_id>"]]
         old_pattern_devices = [
             d
-            for d in dev_reg.devices.values()
+            for d in dev_reg.devices
             if any(
                 identifier[0] == DOMAIN
                 and identifier[1] in config_entry.data.get(D_RELATIONS_KEY, {})
