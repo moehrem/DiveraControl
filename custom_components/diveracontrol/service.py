@@ -28,6 +28,7 @@ from .utils import get_translation, get_ucr_data_from_device
 
 _LOGGER = logging.getLogger(__name__)
 
+# post vehicle status validation rules
 POST_VEHICLE_VALIDATION_RULES = {
     "vehicle": {
         "condition": lambda data: not data.get("vehicle"),
@@ -86,6 +87,17 @@ POST_CLOSE_ALARM_VALIDATION_RULES = {
         "condition": lambda data: not data.get("alarm_id"),
         "error_key": "no_alarm_id",
     }
+}
+
+POST_CONFIRM_ALARM_VALIDATION_RULES = {
+    "alarm_id": {
+        "condition": lambda data: not data.get("alarm_id"),
+        "error_key": "no_alarm_id",
+    },
+    "id": {
+        "condition": lambda data: not data.get("id"),
+        "error_key": "no_status_id",
+    },
 }
 
 POST_MESSAGE_VALIDATION_RULES = {
@@ -501,7 +513,7 @@ async def handle_post_close_alarm(
     # call api function and handle entity
     alarm_id: Any = data.get("alarm_id")
     try:
-        await api.post_close_alarm(payload, alarm_id)
+        await api.post_close_alarm(alarm_id, payload)
         await coordinator.async_request_refresh()
 
     except HomeAssistantError as err:
@@ -509,6 +521,49 @@ async def handle_post_close_alarm(
             hass,
             "exceptions",
             "api_post_close_alarm_failed.message",
+            {"alarm_id": alarm_id, "err": str(err)},
+        )
+        _LOGGER.error(error_msg)
+        raise
+
+
+async def handle_post_confirm_alarm(
+    hass: HomeAssistant,
+    call: ServiceCall,
+):
+    """POST confirm an existing alarm.
+
+    Args:
+        hass (HomeAssistant): Home Assistant instance.
+        call (dict): Service call data.
+
+    Returns:
+        None
+
+    """
+
+    # prepare data
+    data, coordinator, api = _prepare_data(
+        hass, call.data, POST_CONFIRM_ALARM_VALIDATION_RULES
+    )
+
+    # create payload
+    status_data: dict[str, Any] = {"id": data.get("id")}
+    if data.get("note") is not None:
+        status_data["note"] = data.get("note")
+    payload = {"Status": status_data}
+
+    # call api function and handle entity
+    alarm_id: Any = data.get("alarm_id")
+    try:
+        await api.post_confirm_alarm(payload, alarm_id)
+        await coordinator.async_request_refresh()
+
+    except HomeAssistantError as err:
+        error_msg = await get_translation(
+            hass,
+            "exceptions",
+            "api_post_confirm_alarm_failed.message",
             {"alarm_id": alarm_id, "err": str(err)},
         )
         _LOGGER.error(error_msg)
@@ -816,6 +871,7 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         "post_alarm": handle_post_alarm,
         "put_alarm": handle_put_alarm,
         "post_close_alarm": handle_post_close_alarm,
+        "post_confirm_alarm": handle_post_confirm_alarm,
         "post_message": handle_post_message,
         "post_using_vehicle_property": handle_post_using_vehicle_property,
         "post_using_vehicle_crew": handle_post_using_vehicle_crew,

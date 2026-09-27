@@ -1,14 +1,29 @@
+[MASTER]
+
+disable=
+    C0111,  # Missing docstring
+    W0613,  # Unused argument
+    W0612,  # Unused variable
+    W0212,  # Protected access
+
 [MESSAGES CONTROL]
 disable=
-    import-error,
-    attribute-defined-outside-init,
+    too-few-public-methods,
     too-many-instance-attributes,
-    broad-exception-caught
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-public-methods,
+    too-many-nested-blocks,
+    too-many-return-statements,
+    duplicate-code,
+    broad-except,
+    bare-except,
+    abstract-method,
 
 [DESIGN]
-max-args=8
-max-locals=20
-max-branches=20
+max-module-lines=1200
 
 [FORMAT]
-max-line-length=100
+max-line-length=88

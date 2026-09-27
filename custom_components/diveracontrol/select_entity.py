@@ -99,8 +99,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         self._selected_status_id = status_id
         self.async_write_ha_state()
 
-        await self.coordinator.async_request_refresh()
-
     def select_option(self, option: str) -> None:
         """Select option fallback for sync context.
 

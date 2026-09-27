@@ -1,6 +1,7 @@
 """Service data normalizers for handling inconsistent frontend formats.
 
-This is needed as different action calls from frontend, developer tools or automations may send data
+This is needed as different action calls from frontend, developer tools or automations
+may send data
 with different format. This is to ensure a consistent format for further processing.
 
 """
@@ -422,7 +423,7 @@ class ServiceDataNormalizer:
             # Integer list fields
             "group": IntListNormalizer("group"),
             "user_cluster_relation": IntListNormalizer("user_cluster_relation"),
-            "vehicle": IntListNormalizer("vehicle"),
+            "vehicle": VehicleIdNormalizer("vehicle"),
             "crew": IntListNormalizer("crew"),
             "answers": IntListNormalizer("answers"),
             "sorting": IntListNormalizer("sorting"),
@@ -473,7 +474,8 @@ _normalizer = ServiceDataNormalizer()
 def normalize_service_call_data(data: dict[str, Any]) -> dict[str, Any]:
     """Normalize service call data from various sources.
 
-    This is needed as device_actions, frontend actions and developer tools have different formats.
+    This is needed as device_actions, frontend actions and developer tools have
+    different formats.
 
     Handles inconsistencies between:
     - Developer Tools (lists for targets)
