@@ -17,7 +17,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "user_status"
     _attr_icon = I_AVAILABILITY
-    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: DiveraCoordinator) -> None:
         """Initialize user status select entity."""
@@ -99,9 +98,9 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         self._selected_status_id = status_id
         self.async_write_ha_state()
 
-    def select_option(self, option: str) -> None:
-        """Select option fallback for sync context.
+    # def select_option(self, option: str) -> None:
+    #     """Select option fallback for sync context.
 
-        Home Assistant should call `async_select_option` for this entity.
-        """
-        raise NotImplementedError
+    #     Home Assistant should call `async_select_option` for this entity.
+    #     """
+    #     raise NotImplementedError
