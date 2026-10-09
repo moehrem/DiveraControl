@@ -295,3 +295,9 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 > **Vorteil:** Keine regelmäßigen Abfragen mehr nötig – Updates erfolgen **on-demand**.
 
 > **Hinweis:** Es handelt sich **nicht um ein eigenes Webhook-Feature der Integration**, sondern um den generischen Webhook-Trigger von Home Assistant in Kombination mit der Aktion *"Datenaktualisierung anfordern"*.
+
+---
+
+## 🤖 Hinweis zur Erstellung
+
+Teile dieses Projekts (Code, Tests, Dokumentation) wurden mit KI-Unterstützung erstellt und manuell geprüft. Fehler sind nicht ausgeschlossen – melde sie gerne als [Issue](https://github.com/moehrem/DiveraControl/issues).

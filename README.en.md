@@ -313,3 +313,9 @@ The integration **dynamically creates entities** per unit:
 > **Advantage:** No more regular polling required – updates occur **on-demand**.
 
 > **Note:** This is **not a dedicated webhook feature of the integration**, but the generic Home Assistant webhook trigger combined with the *"Request data update"* action.
+
+---
+
+## 🤖 Note on Development
+
+Parts of this project (code, tests, documentation) were created with AI assistance and manually reviewed. Errors cannot be ruled out – please report them as an [Issue](https://github.com/moehrem/DiveraControl/issues).
