@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant
 
 from custom_components.diveracontrol.const import (
@@ -75,7 +76,9 @@ def test_vehicle_sensor_state_name_and_attributes(hass: HomeAssistant) -> None:
     entity = DiveraVehicleSensor(coordinator, "v1")
 
     assert entity.available is True
-    assert entity.state == 2
+    assert entity.state == "2"
+    assert entity.device_class == SensorDeviceClass.ENUM
+    assert entity.options == [str(i) for i in range(1, 10)]
     assert entity.name == "LF / 16-1"
     assert entity.extra_state_attributes["vehicle_id"] == "v1"
 
