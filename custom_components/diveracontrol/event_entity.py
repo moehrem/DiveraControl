@@ -17,7 +17,7 @@ from .entity import BaseDiveraEntity
 class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
     """Event entity to represent a single alarm."""
 
-    _attr_event_types = ["triggered", "updated", "closed"]
+    _attr_event_types = ["opened", "updated", "closed"]
 
     _attr_has_entity_name = True
     _attr_translation_key = "alarm"
@@ -64,14 +64,16 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
 
     def _handle_coordinator_update(self) -> None:
         """Fire events on alarm lifecycle transitions.
 
-        - "triggered": once, when the alarm first appears
+        - "opened": once, when the alarm first appears
         - "closed": once, when the alarm changes from open to closed
         """
         alarm_data = self._get_alarm_data()
@@ -81,7 +83,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
 
         if not self._fired_initial_event:
             self._fired_initial_event = True
-            self._trigger_event("triggered", alarm_data)
+            self._trigger_event("opened", alarm_data)
         elif not self._fired_closed_event and alarm_data.get("closed", False):
             self._fired_closed_event = True
             self._trigger_event("closed", alarm_data)

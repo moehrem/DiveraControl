@@ -138,7 +138,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "triggered": "Ausgelöst",
+              "opened": "Geöffnet",
               "updated": "Aktualisiert",
               "closed": "Geschlossen"
             }
