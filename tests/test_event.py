@@ -136,3 +136,38 @@ def test_alarm_event_manager_removes_closed_alarms(hass: HomeAssistant) -> None:
 
     mock_registry.async_remove.assert_called_once_with("event.to_remove")
     assert manager._known_ids == set()
+
+
+async def test_alarm_event_fires_triggered_on_add(hass: HomeAssistant) -> None:
+    """Test that a newly created alarm event fires triggered immediately."""
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {"a1": {"title": "Alarm Title", "closed": False}}}},
+    )
+    alarm = DiveraAlarmEvent(coordinator, "a1")
+
+    with patch.object(DiveraAlarmEvent, "async_get_last_state", return_value=None):
+        await alarm.async_added_to_hass()
+
+    assert alarm.state is not None
+    assert alarm.state_attributes["event_type"] == "triggered"
+    assert alarm.state_attributes["title"] == "Alarm Title"
+
+
+async def test_alarm_event_does_not_refire_triggered_after_restart(
+    hass: HomeAssistant,
+) -> None:
+    """Test that a restored alarm event does not fire triggered again."""
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {"a1": {"title": "Alarm Title", "closed": False}}}},
+    )
+    alarm = DiveraAlarmEvent(coordinator, "a1")
+
+    with patch.object(
+        DiveraAlarmEvent, "async_get_last_state", return_value=MagicMock()
+    ):
+        await alarm.async_added_to_hass()
+
+    assert alarm.state is None
+    assert alarm._fired_initial_event is True

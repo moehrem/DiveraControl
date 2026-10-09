@@ -32,7 +32,6 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         self.alarm_id = alarm_id
 
         # static entity attributes
-        self._attr_has_entity_name = True
         self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
         self.entity_id = f"event.{self.ucr_id}_alarm_{self.alarm_id}"
 
@@ -69,6 +68,25 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
                 else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
+
+    async def async_added_to_hass(self) -> None:
+        """Fire the initial event when the entity is added.
+
+        A newly created alarm entity has no restored state and fires its
+        "triggered" event immediately, so it never shows up as unknown.
+        After a restart the restored state exists and no "triggered" event
+        is fired again for already known alarms.
+        """
+        await super().async_added_to_hass()
+        alarm_data = self._get_alarm_data()
+        if alarm_data is None:
+            return
+        self._fired_initial_event = True
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            self._trigger_event("triggered", alarm_data)
+        elif alarm_data.get("closed", False):
+            self._fired_closed_event = True
 
     def _handle_coordinator_update(self) -> None:
         """Fire events on alarm lifecycle transitions.
