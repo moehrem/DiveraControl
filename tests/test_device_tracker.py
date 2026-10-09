@@ -73,6 +73,40 @@ def test_alarm_tracker_icon_fallbacks(hass: HomeAssistant) -> None:
     assert missing_entity.available is False
 
 
+def test_alarm_tracker_no_position(hass: HomeAssistant) -> None:
+    """Test alarm tracker returns None coordinates when Divera reports 0/0."""
+    coordinator = _mock_coordinator(
+        hass,
+        {
+            D_ALARM: {
+                "items": {
+                    "a1": {
+                        "lat": 0,
+                        "lng": 0,
+                        "closed": False,
+                        "priority": True,
+                    }
+                }
+            }
+        },
+    )
+    entity = DiveraAlarmTracker(coordinator, "a1")
+    assert entity.available is True
+    assert entity.latitude is None
+    assert entity.longitude is None
+
+
+def test_alarm_tracker_missing_coordinates(hass: HomeAssistant) -> None:
+    """Test alarm tracker returns None coordinates when lat/lng are absent."""
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {"a1": {"closed": False, "priority": True}}}},
+    )
+    entity = DiveraAlarmTracker(coordinator, "a1")
+    assert entity.latitude is None
+    assert entity.longitude is None
+
+
 def test_vehicle_tracker_properties(hass: HomeAssistant) -> None:
     """Test vehicle tracker naming, icon and extra attributes."""
     coordinator = _mock_coordinator(
@@ -101,6 +135,53 @@ def test_vehicle_tracker_properties(hass: HomeAssistant) -> None:
     assert entity.longitude == 8.0
     assert entity.icon == "mdi:numeric-3-box-outline"
     assert entity.extra_state_attributes == {"icon_color": "#00FF00"}
+
+
+def test_vehicle_tracker_no_position(hass: HomeAssistant) -> None:
+    """Test vehicle tracker returns None coordinates when Divera reports 0/0."""
+    coordinator = _mock_coordinator(
+        hass,
+        {
+            D_CLUSTER: {
+                D_VEHICLE: {
+                    "v1": {
+                        "shortname": "LF",
+                        "name": "16-1",
+                        "lat": 0,
+                        "lng": 0,
+                        "fmsstatus_id": 3,
+                    }
+                },
+                D_FMS_STATUS: {"items": {"3": {"color_hex": "#00FF00"}}},
+            }
+        },
+    )
+    entity = DiveraVehicleTracker(coordinator, "v1")
+    assert entity.available is True
+    assert entity.latitude is None
+    assert entity.longitude is None
+
+
+def test_vehicle_tracker_missing_coordinates(hass: HomeAssistant) -> None:
+    """Test vehicle tracker returns None coordinates when lat/lng are absent."""
+    coordinator = _mock_coordinator(
+        hass,
+        {
+            D_CLUSTER: {
+                D_VEHICLE: {
+                    "v1": {
+                        "shortname": "LF",
+                        "name": "16-1",
+                        "fmsstatus_id": 3,
+                    }
+                },
+                D_FMS_STATUS: {"items": {"3": {"color_hex": "#00FF00"}}},
+            }
+        },
+    )
+    entity = DiveraVehicleTracker(coordinator, "v1")
+    assert entity.latitude is None
+    assert entity.longitude is None
 
 
 def test_alarm_tracker_manager_adds_and_removes_entities(hass: HomeAssistant) -> None:

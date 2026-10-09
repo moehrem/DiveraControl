@@ -161,6 +161,20 @@ class DiveraVehicleTrackerManager:
 # === Individual Tracker Classes (update existing classes) ===
 
 
+def _get_position(data: dict[str, Any]) -> tuple[float | None, float | None]:
+    """Return lat/lng from data, treating 0/0 as no position.
+
+    Divera247 reports 0/0 when no position is available. Returning None
+    instead prevents the tracker from being pinned to 0/0 on the map.
+    """
+    lat = data.get("lat")
+    lng = data.get("lng")
+    if lat == 0 and lng == 0:
+        return None, None
+    return lat, lng
+
+
+
 class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
     """A device tracker for alarms."""
 
@@ -193,14 +207,14 @@ class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
     def latitude(self) -> float | None:
         """Return latitude of the alarm location."""
         if alarm_data := self._get_alarm_data():
-            return alarm_data.get("lat", 0)
+            return _get_position(alarm_data)[0]
         return None
 
     @property
     def longitude(self) -> float | None:
         """Return longitude of the alarm location."""
         if alarm_data := self._get_alarm_data():
-            return alarm_data.get("lng", 0)
+            return _get_position(alarm_data)[1]
         return None
 
     @property
@@ -259,14 +273,14 @@ class DiveraVehicleTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[mis
     def latitude(self) -> float | None:
         """Return the latitude of the vehicle position."""
         if vehicle_data := self._get_vehicle_data():
-            return vehicle_data.get("lat", 0)
+            return _get_position(vehicle_data)[0]
         return None
 
     @property
     def longitude(self) -> float | None:
         """Return the longitude of the vehicle position."""
         if vehicle_data := self._get_vehicle_data():
-            return vehicle_data.get("lng", 0)
+            return _get_position(vehicle_data)[1]
         return None
 
     @property
