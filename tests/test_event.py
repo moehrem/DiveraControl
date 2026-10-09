@@ -45,7 +45,7 @@ def test_alarm_event_name_attributes_icon(hass: HomeAssistant) -> None:
     missing_alarm = DiveraAlarmEvent(coordinator, "unknown")
 
     assert alarm.entity_id == "event.123456_alarm_a1"
-    assert alarm.has_entity_name is True
+    assert alarm.name == "Alarm Title"
     assert alarm.translation_key == "alarm"
     assert alarm.event_types == ["triggered", "updated", "closed"]
     assert alarm.extra_state_attributes["alarm_id"] == "a1"
