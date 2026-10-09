@@ -19,7 +19,6 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
 
     _attr_event_types = ["opened", "updated", "closed"]
 
-    _attr_has_entity_name = True
     _attr_translation_key = "alarm"
 
     _fired_initial_event: bool = False
@@ -32,6 +31,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         self.alarm_id = alarm_id
 
         # static entity attributes
+        self._attr_has_entity_name = False
         self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
         self.entity_id = f"event.{self.ucr_id}_alarm_{self.alarm_id}"
 
@@ -39,6 +39,13 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         """Get alarm data safely, return None if alarm doesn't exist."""
         alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
         return alarm_items.get(self.alarm_id)
+
+    @property
+    def name(self) -> str:
+        """Return name of the alarm (the alarm title)."""
+        if alarm_data := self._get_alarm_data():
+            return str(alarm_data.get("title", "Unknown"))
+        return "Unknown Alarm"
 
     @property
     def available(self) -> bool:
