@@ -126,11 +126,6 @@
         "name": "Last alarm"
       }
     },
-    "select": {
-      "user_status": {
-        "name": "User status"
-      }
-    },
     "calendar": {
       "calendar": {
         "name": "Calendar event"
