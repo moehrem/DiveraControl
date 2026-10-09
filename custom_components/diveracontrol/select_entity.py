@@ -22,7 +22,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     """Select entity to set the user status."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "user_status"
     _attr_icon = I_AVAILABILITY
 
     def __init__(self, coordinator: DiveraCoordinator) -> None:

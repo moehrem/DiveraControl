@@ -122,11 +122,6 @@
         "name": "Letzter Alarm"
       }
     },
-    "select": {
-      "user_status": {
-        "name": "Nutzerstatus"
-      }
-    },
     "calendar": {
       "calendar": {
         "name": "Kalenderereignis"
