@@ -80,8 +80,8 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         """Fire the initial event when the entity is added.
 
         A newly created alarm entity has no restored state and fires its
-        "triggered" event immediately, so it never shows up as unknown.
-        After a restart the restored state exists and no "triggered" event
+        "opened" event immediately, so it never shows up as unknown.
+        After a restart the restored state exists and no "opened" event
         is fired again for already known alarms.
         """
         await super().async_added_to_hass()
@@ -91,7 +91,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         self._fired_initial_event = True
         last_state = await self.async_get_last_state()
         if last_state is None:
-            self._trigger_event("triggered", alarm_data)
+            self._trigger_event("opened", alarm_data)
         elif alarm_data.get("closed", False):
             self._fired_closed_event = True
 
