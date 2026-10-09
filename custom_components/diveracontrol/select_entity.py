@@ -6,7 +6,14 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import D_CLUSTER, D_STATUS, DOMAIN, I_AVAILABILITY
+from .const import (
+    D_CLUSTER,
+    D_STATUS,
+    D_VEHICLE,
+    DOMAIN,
+    I_AVAILABILITY,
+    I_VEHICLE,
+)
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
 
@@ -104,3 +111,95 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     #     Home Assistant should call `async_select_option` for this entity.
     #     """
     #     raise NotImplementedError
+
+
+class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
+    """Select entity to set the FMS status of a single vehicle.
+
+    Provides dynamic, vehicle-specific selection of the FMS status in the
+    GUI and allows two-way communication by pushing status changes back to
+    Divera via the ``post_vehicle_status`` service.
+    """
+
+    def __init__(self, coordinator: DiveraCoordinator, vehicle_id: str) -> None:
+        """Initialize vehicle status select entity."""
+        super().__init__(coordinator)
+
+        self.vehicle_id = vehicle_id
+
+        # static entity attributes
+        self._attr_has_entity_name = False
+        self._attr_unique_id = f"{self.ucr_id}_vehicle_status_{self.vehicle_id}"
+        self.entity_id = f"select.{self.ucr_id}_vehicle_status_{self.vehicle_id}"
+        self._attr_icon = I_VEHICLE
+
+    def _get_vehicle_data(self) -> dict[str, Any] | None:
+        """Get vehicle data safely, return None if vehicle doesn't exist."""
+        vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+        return vehicle_items.get(self.vehicle_id)
+
+    def _get_device_id(self) -> str | None:
+        """Resolve the Home Assistant device_id for this entity."""
+        registry = er.async_get(self.hass)
+        entity_entry = registry.async_get(self.entity_id)
+        if entity_entry is None:
+            return None
+        return entity_entry.device_id
+
+    @property
+    def name(self) -> str:
+        """Return name of the vehicle."""
+        if vehicle_data := self._get_vehicle_data():
+            _shortname = vehicle_data.get("shortname", "Unknown")
+            _veh_name = vehicle_data.get("name", "Unknown")
+            return f"{_shortname} / {_veh_name}"
+        return "Unknown Vehicle"
+
+    @property
+    def available(self) -> bool:
+        """Return availability of the vehicle."""
+        if super().available and self._get_vehicle_data() is not None:
+            return True
+        return False
+
+    @property
+    def options(self) -> list[str]:
+        """Return the selectable FMS status options."""
+        return [str(status_id) for status_id in range(1, 10)]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the currently selected FMS status option."""
+        if vehicle_data := self._get_vehicle_data():
+            status_id = vehicle_data.get("fmsstatus_id")
+            if status_id is None:
+                return None
+            return str(status_id)
+        return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Push a newly selected FMS status to Divera."""
+        device_id = self._get_device_id()
+        if not device_id:
+            raise HomeAssistantError(
+                "Could not resolve device_id for vehicle status select"
+            )
+        try:
+            status_id = int(option)
+        except ValueError as err:
+            raise HomeAssistantError(
+                f"Unknown vehicle status option selected: {option}"
+            ) from err
+
+        await self.hass.services.async_call(
+            DOMAIN,
+            "post_vehicle_status",
+            {
+                "device_id": device_id,
+                "vehicle": self.vehicle_id,
+                "status_id": status_id,
+            },
+            blocking=True,
+        )
+        await self.coordinator.async_request_refresh()
+        self.async_write_ha_state()

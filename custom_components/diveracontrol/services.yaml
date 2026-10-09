@@ -16,7 +16,7 @@ post_vehicle_status:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     status:
       required: false
       example: 123456
@@ -111,7 +111,7 @@ post_alarm:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     notification_filter_status:
       required: false
       example: false
@@ -289,7 +289,6 @@ put_alarm:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__alarm
     title:
       required: true
       example: "FEU"
@@ -344,7 +343,7 @@ put_alarm:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     notification_filter_status:
       required: false
       example: false
@@ -522,7 +521,6 @@ post_close_alarm:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__alarm
     closed:
       required: true
       example: true
@@ -548,7 +546,6 @@ post_confirm_alarm:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__alarm
     id:
       required: true
       example: 1
@@ -579,7 +576,6 @@ post_message:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__alarm
     text:
       required: false
       example: "Dies ist eine Testnachricht."
@@ -600,7 +596,7 @@ post_using_vehicle_property:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     properties:
       required: false
       example: |
@@ -623,7 +619,7 @@ post_using_vehicle_crew:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     mode:
       required: true
       example: add
@@ -808,7 +804,6 @@ post_user_status:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__availability
     vehicle:
       required: false
       example: 123456
@@ -817,7 +812,7 @@ post_user_status:
           integration: diveracontrol
           multiple: true
           domain: sensor
-          device_class: diveracontrol__vehicle
+          device_class: enum
     note:
       required: false
       example: "Komme mit dem Fahrrad"
