@@ -131,6 +131,20 @@
       "calendar": {
         "name": "Kalenderereignis"
       }
+    },
+    "event": {
+      "alarm": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "triggered": "Ausgelöst",
+              "updated": "Aktualisiert",
+              "closed": "Geschlossen"
+            }
+          }
+        }
+      }
     }
   },
   "selector": {

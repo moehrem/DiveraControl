@@ -135,6 +135,20 @@
       "calendar": {
         "name": "Calendar event"
       }
+    },
+    "event": {
+      "alarm": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "triggered": "Triggered",
+              "updated": "Updated",
+              "closed": "Closed"
+            }
+          }
+        }
+      }
     }
   },
   "selector": {

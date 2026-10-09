@@ -19,6 +19,9 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
 
     _attr_event_types = ["triggered", "updated", "closed"]
 
+    _attr_has_entity_name = True
+    _attr_translation_key = "alarm"
+
     _fired_initial_event: bool = False
     _fired_closed_event: bool = False
 
@@ -29,7 +32,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         self.alarm_id = alarm_id
 
         # static entity attributes
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
         self.entity_id = f"event.{self.ucr_id}_alarm_{self.alarm_id}"
 
@@ -44,13 +47,6 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         if super().available and self._get_alarm_data() is not None:
             return True
         return False
-
-    @property
-    def name(self) -> str:
-        """Return name of the alarm."""
-        if alarm_data := self._get_alarm_data():
-            return str(alarm_data.get("title", "Unknown"))
-        return "Unknown Alarm"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
