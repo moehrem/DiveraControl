@@ -346,6 +346,9 @@
     "service_wrong_devices_count": {
       "message": "The service only supports specifying exactly one device ID. {num_devices} were provided"
     },
+    "service_wrong_alarms_count": {
+      "message": "Exactly one alarm must be selected, but {num_alarms} were selected."
+    },
     "invalid_id_list_format": {
       "message": "Invalid format for {field}, must be a list of integers"
     },
@@ -357,6 +360,9 @@
     },
     "invalid_vehicle_id_format": {
       "message": "Invalid format for vehicle ID {vehicle}, must be an integer or comma-separated list of integers"
+    },
+    "invalid_alarm_id_format": {
+      "message": "Invalid format for alarm ID {alarm_id}, must be an integer or comma-separated list of integers"
     },
     "no_vehicles_selected": {
       "message": "Recipient selection vehicles, but no vehicles selected. Please select at least one vehicle"

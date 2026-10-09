@@ -11,7 +11,6 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    D_ALARM,
     D_CLUSTER,
     D_MONITOR,
     D_OPEN_ALARMS,
@@ -128,21 +127,6 @@ class DiveraSensorManager:
 # -------------------------------------------------------------------------------------
 
 
-def DiveraAlarmSensorManager(  # pylint: disable=invalid-name
-    coordinator: DiveraCoordinator,
-    async_add_entities: AddEntitiesCallback,
-) -> DiveraSensorManager:
-    """Create a DiveraSensorManager pre-configured for alarm sensors."""
-    return DiveraSensorManager(
-        coordinator=coordinator,
-        async_add_entities=async_add_entities,
-        get_current_ids=lambda data: set(data.get(D_ALARM, {}).get("items", {}).keys()),
-        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_alarm_{item_id}",
-        entity_factory=DiveraAlarmSensor,
-        label="alarm",
-    )
-
-
 def DiveraVehicleSensorManager(  # pylint: disable=invalid-name
     coordinator: DiveraCoordinator,
     async_add_entities: AddEntitiesCallback,
@@ -180,59 +164,6 @@ def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
 # -------------------------
 # Individual Sensor Classes
 # -------------------------
-
-
-class DiveraAlarmSensor(BaseDiveraEntity):
-    """Sensor to represent a single alarm."""
-
-    def __init__(self, coordinator: DiveraCoordinator, alarm_id: str) -> None:
-        """Init class DiveraAlarmSensor."""
-        super().__init__(coordinator)
-
-        self.alarm_id = alarm_id
-
-        # static entity attributes
-        self._attr_has_entity_name = False
-        self._attr_name = f"Alarm {self.alarm_id}"
-        self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
-        self.entity_id = f"sensor.{self.ucr_id}_alarm_{self.alarm_id}"
-
-    def _get_alarm_data(self) -> dict[str, Any] | None:
-        """Get alarm data safely, return None if alarm doesn't exist."""
-        alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
-        return alarm_items.get(self.alarm_id)
-
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if super().available and self._get_alarm_data() is not None:
-            return True
-        return False
-
-    @property
-    def state(self) -> str:
-        """Return the state of the alarm."""
-        if alarm_data := self._get_alarm_data():
-            return alarm_data.get("title", "Unknown")
-        return "Unknown"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the extra state attributes of the alarm."""
-        return self._get_alarm_data() or {}
-
-    @property
-    def icon(self) -> str:
-        """Return the icon of the alarm."""
-        if alarm_data := self._get_alarm_data():
-            _closed = alarm_data.get("closed", False)
-            _priority = alarm_data.get("priority", False)
-            return (
-                I_CLOSED_ALARM
-                if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
-            )
-        return I_OPEN_ALARM_NOPRIO
 
 
 class DiveraVehicleSensor(BaseDiveraEntity):

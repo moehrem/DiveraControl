@@ -204,6 +204,38 @@ def _validate_data(data: dict[str, Any], rules: dict[str, dict]) -> None:
             )
 
 
+def _resolve_single_id(value: Any, field_name: str, allow_empty: bool = False) -> int:
+    """Resolve a normalized ID list to a single integer ID.
+
+    Args:
+        value: Normalized service data value (list of IDs).
+        field_name: Name of the field, used in error messages.
+        allow_empty: Return 0 instead of raising when the list is empty.
+
+    Returns:
+        Single integer ID.
+
+    Raises:
+        ServiceValidationError: If the list contains more than one ID.
+    """
+    if not value:
+        if allow_empty:
+            return 0
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_alarm_id",
+        )
+    if isinstance(value, list):
+        if len(value) != 1:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="service_wrong_alarms_count",
+                translation_placeholders={"num_alarms": str(len(value))},
+            )
+        return value[0]
+    return int(value)
+
+
 def _prepare_data(
     hass: HomeAssistant,
     call_data: dict[str, Any],
@@ -471,9 +503,9 @@ async def handle_put_alarm(
     payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
-    alarm_id: Any = data.get("alarm_id")
+    alarm_ids = _resolve_single_id(data.get("alarm_id"), "alarm_id")
     try:
-        await api.put_alarms(alarm_id, payload)
+        await api.put_alarms(alarm_ids, payload)
         await coordinator.async_request_refresh()
 
     except HomeAssistantError as err:
@@ -511,7 +543,7 @@ async def handle_post_close_alarm(
     payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
-    alarm_id: Any = data.get("alarm_id")
+    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
     try:
         await api.post_close_alarm(alarm_id, payload)
         await coordinator.async_request_refresh()
@@ -554,7 +586,7 @@ async def handle_post_confirm_alarm(
     payload = {"Status": status_data}
 
     # call api function and handle entity
-    alarm_id: Any = data.get("alarm_id")
+    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
     try:
         await api.post_confirm_alarm(payload, alarm_id)
         await coordinator.async_request_refresh()
@@ -592,7 +624,7 @@ async def handle_post_message(
 
     # Determine message_channel_id from alarm_id if not given
     message_channel_id: int = data.get("message_channel_id") or 0
-    alarm_id: int = data.get("alarm_id") or 0
+    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id", allow_empty=True)
 
     # Try to get message_channel_id from alarm_id if not provided
     if not message_channel_id and alarm_id:

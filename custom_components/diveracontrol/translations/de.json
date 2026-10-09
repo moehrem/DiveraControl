@@ -342,6 +342,9 @@
     "service_wrong_devices_count": {
       "message": "Der Dienst unterstützt nur die Angabe genau einer einzigen Gerät-ID. {num_devices} wurden angegeben."
     },
+    "service_wrong_alarms_count": {
+      "message": "Es muss genau ein Alarm ausgewählt werden, es sind {num_alarms}."
+    },
     "invalid_id_list_format": {
       "message": "Ungültiges Format für {field}, es muss sich um eine Liste von Ganzzahlen handeln."
     },
@@ -353,6 +356,9 @@
     },
     "invalid_vehicle_id_format": {
       "message": "Ungültiges Format für Fahrzeug-ID {vehicle}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+    },
+    "invalid_alarm_id_format": {
+      "message": "Ungültiges Format für Alarm-ID {alarm_id}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
     },
     "no_vehicles_selected": {
       "message": "Empfängerauswahl Fahrzeuge, jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
