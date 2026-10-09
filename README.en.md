@@ -16,8 +16,8 @@
 ![GitHub issues](https://img.shields.io/github/issues/moehrem/DiveraControl)
 ![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations)
 [![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg)](https://github.com/hacs/integration)
-[![HASS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml)
-[![HACS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml)
+[![HASS QS](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_tests.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_tests.yml)
+[![HACS QS](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_ci.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_ci.yml)
 
 ---
 
@@ -196,7 +196,7 @@ Intervals are configured **per unit**:
 ### 🌐 Base URL
 
 The base address of the Divera instance can be **individually adjusted**.
-**Default:** `https://api.divera247.com` (for Divera-hosted instances).
+**Default:** `https://app.divera247.com` (for Divera-hosted instances).
 
 ---
 
@@ -229,6 +229,7 @@ The integration offers several actions per device/user, that can be used in **au
 | **Create alarm** | `title`, `message`, `priority` | Creates a new alarm | Admin/Unit Owner |
 | **Modify alarm** | `alarm_id`, `title`, `message` | Edits an existing alarm | Admin |
 | **Open/Close alarm** | `alarm_id`, `status` | Changes alarm status | Admin |
+| **Confirm alarm** | `alarm_id`, `text` | Sends a response to an alarm | All Users |
 | **Set user status** | `status_id` | Changes the user's status | Personal User |
 | **Send message** | `channel_id`, `message` | Sends a message | Depends on channel |
 | **Create notice** | `title`, `message`, `recipients` | Creates a notice | Admin |
@@ -310,3 +311,11 @@ The integration **dynamically creates entities** per unit:
 3. Register the webhook URL in Divera.
 
 > **Advantage:** No more regular polling required – updates occur **on-demand**.
+
+> **Note:** This is **not a dedicated webhook feature of the integration**, but the generic Home Assistant webhook trigger combined with the *"Request data update"* action.
+
+---
+
+## 🤖 Note on Development
+
+Parts of this project (code, tests, documentation) were created with AI assistance and manually reviewed. Errors cannot be ruled out – please report them as an [Issue](https://github.com/moehrem/DiveraControl/issues).
