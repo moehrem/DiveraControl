@@ -48,6 +48,7 @@ from .utils import get_cluster_coordinators_ucrs_from_config_hass
 PLATFORMS: list[Platform] = [
     Platform.CALENDAR,
     Platform.DEVICE_TRACKER,
+    Platform.EVENT,
     Platform.SELECT,
     Platform.SENSOR,
 ]

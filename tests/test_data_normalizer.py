@@ -7,6 +7,7 @@ import pytest
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.diveracontrol.data_normalizer import (
+    AlarmIdNormalizer,
     CrewIDNormalizer,
     DateTimeNormalizer,
     DeviceIdNormalizer,
@@ -250,6 +251,46 @@ class TestVehicleIdNormalizer:
     def test_normalize_invalid_format_raises(self) -> None:
         """Test that invalid format raises ServiceValidationError."""
         normalizer = VehicleIdNormalizer("vehicle_id")
+        with pytest.raises(ServiceValidationError):
+            normalizer.normalize("invalid_id")
+
+
+class TestAlarmIdNormalizer:
+    """Test AlarmIdNormalizer class."""
+
+    def test_normalize_entity_id_format(self) -> None:
+        """Test normalizing entity IDs like 'event.123456_alarm_789'."""
+        normalizer = AlarmIdNormalizer("alarm_id")
+        result = normalizer.normalize("event.123456_alarm_789")
+        assert result == [789]
+
+    def test_normalize_list_of_ints(self) -> None:
+        """Test normalizing a list of alarm IDs."""
+        normalizer = AlarmIdNormalizer("alarm_id")
+        result = normalizer.normalize([1, 2, 3])
+        assert result == [1, 2, 3]
+
+    def test_normalize_single_int(self) -> None:
+        """Test normalizing a single integer alarm ID."""
+        normalizer = AlarmIdNormalizer("alarm_id")
+        result = normalizer.normalize(789)
+        assert result == [789]
+
+    def test_normalize_comma_separated_string(self) -> None:
+        """Test normalizing a comma-separated string of alarm IDs."""
+        normalizer = AlarmIdNormalizer("alarm_id")
+        result = normalizer.normalize("1,2,3")
+        assert result == [1, 2, 3]
+
+    def test_normalize_none(self) -> None:
+        """Test normalizing None returns empty list."""
+        normalizer = AlarmIdNormalizer("alarm_id")
+        result = normalizer.normalize(None)
+        assert result == []
+
+    def test_normalize_invalid_format_raises(self) -> None:
+        """Test that invalid format raises ServiceValidationError."""
+        normalizer = AlarmIdNormalizer("alarm_id")
         with pytest.raises(ServiceValidationError):
             normalizer.normalize("invalid_id")
 

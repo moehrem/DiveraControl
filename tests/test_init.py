@@ -96,7 +96,8 @@ class TestPlatforms:
         assert Platform.DEVICE_TRACKER in PLATFORMS
         assert Platform.SELECT in PLATFORMS
         assert Platform.SENSOR in PLATFORMS
-        assert len(PLATFORMS) == 4
+        assert Platform.EVENT in PLATFORMS
+        assert len(PLATFORMS) == 5
 
 
 class TestAsyncSetup:

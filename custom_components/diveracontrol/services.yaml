@@ -288,7 +288,7 @@ put_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: event
     title:
       required: true
       example: "FEU"
@@ -520,7 +520,7 @@ post_close_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: event
     closed:
       required: true
       example: true
@@ -545,7 +545,7 @@ post_confirm_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: event
     id:
       required: true
       example: 1
@@ -575,7 +575,7 @@ post_message:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: event
     text:
       required: false
       example: "Dies ist eine Testnachricht."
