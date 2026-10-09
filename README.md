@@ -16,8 +16,8 @@
 ![GitHub issues](https://img.shields.io/github/issues/moehrem/DiveraControl)
 ![HA Analytics](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.diveracontrol.total&label=Active%20Installations)
 [![hacs](https://img.shields.io/badge/HACS-Integration-blue.svg)](https://github.com/hacs/integration)
-[![HASS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hass.yml)
-[![HACS QS](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/hacs.yml)
+[![HASS QS](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_tests.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_tests.yml)
+[![HACS QS](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_ci.yml/badge.svg)](https://github.com/moehrem/DiveraControl/actions/workflows/homeassistant_ci.yml)
 
 ---
 
@@ -187,7 +187,7 @@ Die Intervalle werden **je Einheit** konfiguriert:
 ### 🌐 Basis-URL
 
 Die Basis-Adresse der Divera-Instanz kann **individuell angepasst** werden.
-**Standard:** `https://api.divera247.com` (für Divera-gehostete Instanzen).
+**Standard:** `https://app.divera247.com` (für Divera-gehostete Instanzen).
 
 ---
 ### 🔁 Re-Konfiguration
@@ -210,13 +210,14 @@ Es wird unterschieden zwischen:
 ---
 ### 📟 Aktionen
 
-Es werden für jedes Gerät/jeden Nutzer verschiedene Aktionen bereitgestell. Diese können in **Automationen, Dashboards oder Skripten** genutzt werden.
+Es werden für jedes Gerät/jeden Nutzer verschiedene Aktionen bereitgestellt. Diese können in **Automationen, Dashboards oder Skripten** genutzt werden.
 
 | **Aktion**                          | **Parameter** (Beispiele)               | **Beschreibung**                          | **Berechtigung**          |
 |-------------------------------------|-----------------------------------------|------------------------------------------|---------------------------|
 | **Alarm erstellen**                 | `title`, `message`, `priority`          | Erstellt einen neuen Alarm               | Admin/Einheitenbesitzer    |
 | **Alarm ändern**                    | `alarm_id`, `title`, `message`          | Bearbeitet einen bestehenden Alarm       | Admin                     |
 | **Alarm öffnen/schließen**          | `alarm_id`, `status`                    | Ändert den Alarmstatus                   | Admin                     |
+| **Alarm bestätigen**              | `alarm_id`, `text`                      | Einsatzrückmeldung zu einem Alarm        | Alle Nutzer              |
 | **Nutzerstatus setzen**             | `status_id`                             | Ändert den Status des Nutzers            | Persönlicher Nutzer       |
 | **Nachricht senden**                | `channel_id`, `message`                 | Sendet eine Nachricht                     | Abhängig vom Kanal         |
 | **Mitteilung erstellen**            | `title`, `message`, `recipients`        | Erstellt eine Mitteilung                 | Admin                     |
@@ -292,3 +293,5 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 3. Webhook-URL in Divera hinterlegen.
 
 > **Vorteil:** Keine regelmäßigen Abfragen mehr nötig – Updates erfolgen **on-demand**.
+
+> **Hinweis:** Es handelt sich **nicht um ein eigenes Webhook-Feature der Integration**, sondern um den generischen Webhook-Trigger von Home Assistant in Kombination mit der Aktion *"Datenaktualisierung anfordern"*.
