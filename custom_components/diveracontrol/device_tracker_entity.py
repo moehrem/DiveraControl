@@ -174,7 +174,6 @@ def _get_position(data: dict[str, Any]) -> tuple[float | None, float | None]:
     return lat, lng
 
 
-
 class DiveraAlarmTracker(BaseDiveraEntity, TrackerEntity):  # type: ignore[misc]
     """A device tracker for alarms."""
 
