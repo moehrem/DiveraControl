@@ -52,13 +52,14 @@ class DiveraAlarmEventManager:
                 self._unsub = None
 
     def _handle_coordinator_update(self) -> None:
-        """Sync known entities with the current data from the coordinator."""
+        """Sync known entities with the current data from the coordinator.
+
+        Alarms stay available as events until Divera archives them (removes
+        them from the alarm items, at the latest 90 days after creation).
+        Closed alarms therefore remain visible as closed alarms.
+        """
         alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
-        current_ids = {
-            alarm_id
-            for alarm_id, alarm_data in alarm_items.items()
-            if not alarm_data.get("closed", False)
-        }
+        current_ids = set(alarm_items.keys())
 
         removed_ids = self._known_ids - current_ids
         if removed_ids:

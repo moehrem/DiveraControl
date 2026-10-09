@@ -20,6 +20,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
     _attr_event_types = ["triggered", "updated", "closed"]
 
     _fired_initial_event: bool = False
+    _fired_closed_event: bool = False
 
     def __init__(self, coordinator: DiveraCoordinator, alarm_id: str) -> None:
         """Init class DiveraAlarmEvent."""
@@ -72,9 +73,20 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
         return I_OPEN_ALARM_NOPRIO
 
     def _handle_coordinator_update(self) -> None:
-        """Fire a triggered event when the alarm first appears."""
+        """Fire events on alarm lifecycle transitions.
+
+        - "triggered": once, when the alarm first appears
+        - "closed": once, when the alarm changes from open to closed
+        """
         alarm_data = self._get_alarm_data()
-        if alarm_data is not None and not self._fired_initial_event:
+        if alarm_data is None:
+            super()._handle_coordinator_update()
+            return
+
+        if not self._fired_initial_event:
             self._fired_initial_event = True
             self._trigger_event("triggered", alarm_data)
+        elif not self._fired_closed_event and alarm_data.get("closed", False):
+            self._fired_closed_event = True
+            self._trigger_event("closed", alarm_data)
         super()._handle_coordinator_update()

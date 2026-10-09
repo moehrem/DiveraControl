@@ -54,10 +54,8 @@ def test_alarm_event_name_attributes_icon(hass: HomeAssistant) -> None:
     assert missing_alarm.icon == I_OPEN_ALARM_NOPRIO
 
 
-def test_alarm_event_manager_adds_open_and_skips_closed_alarms(
-    hass: HomeAssistant,
-) -> None:
-    """Test that the manager only creates entities for open alarms."""
+def test_alarm_event_manager_keeps_closed_alarms(hass: HomeAssistant) -> None:
+    """Test that closed alarms stay until Divera archives them."""
     coordinator = _mock_coordinator(
         hass,
         {
@@ -77,10 +75,39 @@ def test_alarm_event_manager_adds_open_and_skips_closed_alarms(
     manager = DiveraAlarmEventManager(coordinator, _add_entities)
     manager._handle_coordinator_update()
 
-    assert len(added_entities) == 1
-    assert isinstance(added_entities[0], DiveraAlarmEvent)
-    assert added_entities[0].alarm_id == "open_alarm"
-    assert manager._known_ids == {"open_alarm"}
+    assert len(added_entities) == 2
+    assert all(isinstance(entity, DiveraAlarmEvent) for entity in added_entities)
+    assert manager._known_ids == {"open_alarm", "closed_alarm"}
+
+    # Closing the open alarm must NOT remove its entity
+    manager._handle_coordinator_update()
+    assert manager._known_ids == {"open_alarm", "closed_alarm"}
+
+
+def test_alarm_event_manager_removes_archived_alarms(hass: HomeAssistant) -> None:
+    """Test that entities are removed once Divera archives the alarm."""
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {}}},
+    )
+    added_entities: list = []
+
+    def _add_entities(entities, update_before_add=False):
+        added_entities.extend(entities)
+
+    manager = DiveraAlarmEventManager(coordinator, _add_entities)
+    manager._known_ids = {"archived_alarm"}
+
+    mock_registry = MagicMock()
+    mock_registry.async_get_entity_id.return_value = "event.to_remove"
+    with patch(
+        "custom_components.diveracontrol.event.er.async_get",
+        return_value=mock_registry,
+    ):
+        manager._handle_coordinator_update()
+
+    mock_registry.async_remove.assert_called_once_with("event.to_remove")
+    assert manager._known_ids == set()
 
 
 def test_alarm_event_manager_removes_closed_alarms(hass: HomeAssistant) -> None:
