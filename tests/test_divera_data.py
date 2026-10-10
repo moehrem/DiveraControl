@@ -382,6 +382,88 @@ class TestUpdateData:
         # Should set open_alarms to 0
         assert result[D_ALARM][D_OPEN_ALARMS] == 0
 
+    async def test_update_data_preserves_last_alarm_when_no_alarm_delivered(
+        self, mock_api: MagicMock
+    ) -> None:
+        """Test that the last alarm is preserved when API delivers no alarm."""
+        cluster_data = {
+            D_ALARM: {
+                "items": {
+                    "alarm1": {"closed": True, "title": "Fire Alarm"},
+                },
+                "sorting": ["alarm1"],
+                D_OPEN_ALARMS: 0,
+            }
+        }
+
+        raw_ucr_data = {
+            "success": True,
+            D_DATA: {D_ALARM: {}},
+        }
+
+        result = await update_data(mock_api, raw_ucr_data, cluster_data)
+
+        # Last alarm data should be preserved
+        assert result[D_ALARM]["items"]["alarm1"]["title"] == "Fire Alarm"
+        assert result[D_ALARM]["sorting"] == ["alarm1"]
+        # Open alarms should be recalculated
+        assert result[D_ALARM][D_OPEN_ALARMS] == 0
+
+    async def test_update_data_preserves_last_alarm_on_empty_items(
+        self, mock_api: MagicMock
+    ) -> None:
+        """Test that the last alarm is preserved when API delivers empty items."""
+        cluster_data = {
+            D_ALARM: {
+                "items": {
+                    "alarm1": {"closed": False, "title": "Medical Emergency"},
+                },
+                "sorting": ["alarm1"],
+            }
+        }
+
+        raw_ucr_data = {
+            "success": True,
+            D_DATA: {D_ALARM: {"items": {}}},
+        }
+
+        result = await update_data(mock_api, raw_ucr_data, cluster_data)
+
+        assert result[D_ALARM]["items"]["alarm1"]["title"] == "Medical Emergency"
+        assert result[D_ALARM][D_OPEN_ALARMS] == 1
+
+    async def test_update_data_replaces_alarm_data_on_new_alarm(
+        self, mock_api: MagicMock
+    ) -> None:
+        """Test that alarm data is replaced when the API delivers new alarms."""
+        cluster_data = {
+            D_ALARM: {
+                "items": {
+                    "alarm1": {"closed": True, "title": "Old Alarm"},
+                },
+                "sorting": ["alarm1"],
+            }
+        }
+
+        raw_ucr_data = {
+            "success": True,
+            D_DATA: {
+                D_ALARM: {
+                    "items": {
+                        "alarm2": {"closed": False, "title": "New Alarm"},
+                    },
+                    "sorting": ["alarm2"],
+                }
+            },
+        }
+
+        result = await update_data(mock_api, raw_ucr_data, cluster_data)
+
+        # New alarm data should replace old data
+        assert "alarm2" in result[D_ALARM]["items"]
+        assert "alarm1" not in result[D_ALARM]["items"]
+        assert result[D_ALARM][D_OPEN_ALARMS] == 1
+
     async def test_update_data_preserves_existing_data_on_invalid_payload(
         self, mock_api: MagicMock
     ) -> None:

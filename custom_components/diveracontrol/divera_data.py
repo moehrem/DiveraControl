@@ -108,6 +108,10 @@ async def update_data(
             D_STATUSPLAN: {},
         }
 
+    # snapshot alarm data before updating, so the last alarm can be
+    # preserved when the API no longer reports any alarm
+    previous_alarm_data: dict[str, Any] = dict(cluster_data.get(D_ALARM, {}))
+
     # set local data
     raw_cluster: dict[str, Any] = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
 
@@ -195,6 +199,15 @@ async def update_data(
         _LOGGER.error("Error fetching vehicle properties, error: '%s'", e)
     except Exception:
         _LOGGER.exception("Unexpected error while processing vehicle properties")
+
+    # preserve last known alarm data if the API no longer delivers any alarm,
+    # so the last alarm sensor can keep showing the most recent alarm
+    current_alarm_data = cluster_data.get(D_ALARM, {})
+    if not current_alarm_data.get("items") and previous_alarm_data.get("items"):
+        _LOGGER.debug("No alarm data delivered, keeping last known alarm data")
+        preserved_alarm_data = dict(previous_alarm_data)
+        preserved_alarm_data.pop(D_OPEN_ALARMS, None)
+        cluster_data[D_ALARM] = preserved_alarm_data
 
     # handle open alarms
     try:
