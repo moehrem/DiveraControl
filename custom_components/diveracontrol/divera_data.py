@@ -111,6 +111,9 @@ async def update_data(
     # set local data
     raw_cluster: dict[str, Any] = raw_ucr_data.get(D_DATA, {}).get(D_CLUSTER, {})
 
+    # persist last alarm data
+    last_alarm = cluster_data.get(D_ALARM, {}).get("last_alarm")
+
     # update data if new data available
     key = None
     try:
@@ -215,8 +218,31 @@ async def update_data(
         _LOGGER.debug("Open alarms updated: %s", open_alarms)
 
     except (KeyError, AttributeError) as e:
-        _LOGGER.error("Error processing alarm data: %s", e)
+        _LOGGER.error("Error processing open alarm data: %s", e)
     except Exception:
-        _LOGGER.exception("Unexpected error while processing alarms")
+        _LOGGER.exception("Unexpected error while processing open alarms")
+
+    # handle last alarm
+    # last alarm is the item of alarm_items with the highest number
+    # last_alarm is persisted above to avoid losing it if no alarms are present anymore
+    try:
+        alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
+        if alarm_items:
+            last_alarm = max(
+                alarm_items.values(),
+                key=lambda alarm: alarm.get("number", 0),
+                default=None,
+            )
+            cluster_data.setdefault(D_ALARM, {})["last_alarm"] = last_alarm
+            _LOGGER.debug("Last alarm updated: %s", last_alarm)
+        else:
+            # cluster_data.setdefault(D_ALARM, {})["last_alarm"] = None
+            cluster_data.setdefault(D_ALARM, {})["last_alarm"] = last_alarm
+            _LOGGER.debug("No new alarms found, last alarm remains unchanged")
+
+    except (KeyError, AttributeError) as e:
+        _LOGGER.error("Error processing last alarm data: %s", e)
+    except Exception:
+        _LOGGER.exception("Unexpected error while processing last alarms")
 
     return cluster_data

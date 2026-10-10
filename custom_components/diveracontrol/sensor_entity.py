@@ -391,47 +391,49 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
         self._attr_unique_id = f"{self.ucr_id}_last_alarm"
         self.entity_id = f"sensor.{self.ucr_id}_last_alarm"
 
-    def _get_alarm_data(self) -> dict[str, Any] | None:
-        """Get alarm data safely, return None if alarm doesn't exist."""
+    def _get_last_alarm_data(self) -> dict[str, Any] | None:
+        """Get last alarm data safely, return None if alarm doesn't exist."""
 
-        sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
-        if isinstance(sorting, list) and sorting:
-            last_alarm_id = sorting[0]
-        else:
-            last_alarm_id = None
+        # sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
+        # if isinstance(sorting, list) and sorting:
+        #     last_alarm_id = sorting[0]
+        # else:
+        #     last_alarm_id = None
 
-        if last_alarm_id is None:
-            return None
+        # if last_alarm_id is None:
+        #     return None
 
-        return (
-            self.coordinator.data.get(D_ALARM, {})
-            .get("items", {})
-            .get(str(last_alarm_id), {})
-        )
+        # return (
+        #     self.coordinator.data.get(D_ALARM, {})
+        #     .get("items", {})
+        #     .get(str(last_alarm_id), {})
+        # )
+
+        return self.coordinator.data.get(D_ALARM, {}).get("last_alarm")
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if super().available and self._get_alarm_data() is not None:
+        if super().available and self._get_last_alarm_data() is not None:
             return True
         return False
 
     @property
     def state(self) -> str:
         """Return the state of the alarm."""
-        if alarm_data := self._get_alarm_data():
+        if alarm_data := self._get_last_alarm_data():
             return alarm_data.get("title", "Unknown")
         return "Unknown"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the extra state attributes of the alarm."""
-        return self._get_alarm_data() or {}
+        return self._get_last_alarm_data() or {}
 
     @property
     def icon(self) -> str:
         """Return the icon of the alarm."""
-        if alarm_data := self._get_alarm_data():
+        if alarm_data := self._get_last_alarm_data():
             _closed = alarm_data.get("closed", False)
             _priority = alarm_data.get("priority", False)
             return (
