@@ -13,7 +13,6 @@ from .const import (
     DOMAIN,
     I_AVAILABILITY,
     I_VEHICLE,
-    PERM_STATUS_USER,
 )
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
@@ -32,13 +31,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         self._selected_status_id: str | None = None
         self.entity_id = f"select.{self.ucr_id}_user_status"
         self._attr_unique_id = f"{self.ucr_id}_user_status"
-        self._attr_entity_registry_enabled_default = self._user_status_permitted()
-
-    def _user_status_permitted(self) -> bool:
-        """Return whether the user may set their own status in Divera."""
-        if self.coordinator.api is None:
-            return False
-        return self.coordinator.api.permissions.is_permitted(PERM_STATUS_USER)
 
     def _get_status_items(self) -> dict[str, dict[str, Any]]:
         """Get user status mapping from coordinator data."""
