@@ -503,9 +503,9 @@ async def handle_put_alarm(
     payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
-    alarm_ids = _resolve_single_id(data.get("alarm_id"), "alarm_id")
+    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
     try:
-        await api.put_alarms(alarm_ids, payload)
+        await api.put_alarms(alarm_id, payload)
         await coordinator.async_request_refresh()
 
     except HomeAssistantError as err:

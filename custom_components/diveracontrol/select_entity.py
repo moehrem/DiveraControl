@@ -137,6 +137,29 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
         vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
         return vehicle_items.get(self.vehicle_id)
 
+    def _get_fms_status_items(self) -> dict[str, dict[str, Any]]:
+        """Get FMS status items keyed by status id (fmsstatus_id)."""
+        items = (
+            self.coordinator.data.get(D_CLUSTER, {})
+            .get("fms_status", {})
+            .get("items", {})
+        )
+        return {str(item_id): item for item_id, item in items.items()}
+
+    def _status_option(self, status_id: str) -> str:
+        """Return the display option for a FMS status id."""
+        item = self._get_fms_status_items().get(status_id)
+        if item is None:
+            return status_id
+        return f"{item.get('number')} - {item.get('name')}"
+
+    def _option_to_status_id(self, option: str) -> str | None:
+        """Map a displayed option back to the FMS status id."""
+        for status_id in self._get_fms_status_items():
+            if option == self._status_option(status_id):
+                return status_id
+        return None
+
     def _get_device_id(self) -> str | None:
         """Resolve the Home Assistant device_id for this entity."""
         registry = er.async_get(self.hass)
@@ -164,7 +187,7 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
     @property
     def options(self) -> list[str]:
         """Return the selectable FMS status options."""
-        return [str(status_id) for status_id in range(1, 10)]
+        return [self._status_option(sid) for sid in self._get_fms_status_items()]
 
     @property
     def current_option(self) -> str | None:
@@ -173,7 +196,7 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
             status_id = vehicle_data.get("fmsstatus_id")
             if status_id is None:
                 return None
-            return str(status_id)
+            return self._status_option(str(status_id))
         return None
 
     async def async_select_option(self, option: str) -> None:
@@ -183,12 +206,11 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
             raise HomeAssistantError(
                 "Could not resolve device_id for vehicle status select"
             )
-        try:
-            status_id = int(option)
-        except ValueError as err:
+        status_id_str = self._option_to_status_id(option)
+        if status_id_str is None:
             raise HomeAssistantError(
                 f"Unknown vehicle status option selected: {option}"
-            ) from err
+            )
 
         await self.hass.services.async_call(
             DOMAIN,
@@ -196,7 +218,7 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
             {
                 "device_id": device_id,
                 "vehicle": self.vehicle_id,
-                "status_id": status_id,
+                "status": int(status_id_str),
             },
             blocking=True,
         )
