@@ -41,6 +41,27 @@ class DiveraPermissions:
             len(self.permissions),
         )
 
+    def is_permitted(self, perm_key: str) -> bool:
+        """Return whether a permission is granted without raising.
+
+        Mirrors the logic of ``check`` but returns a boolean instead of
+        raising ``HomeAssistantError``. Management permission grants access
+        to every permission key. Unknown or missing permission data is
+        treated as denied.
+
+        Args:
+            perm_key: The permission key to check for.
+
+        Returns:
+            True if the permission is granted, False otherwise.
+
+        """
+        if not self.permissions:
+            return False
+        if self.permissions.get(PERM_MANAGEMENT):
+            return True
+        return bool(self.permissions.get(perm_key, False))
+
     def check(self, perm_key: str) -> None:
         """Raise when a permission is not granted by the current permission cache.
 

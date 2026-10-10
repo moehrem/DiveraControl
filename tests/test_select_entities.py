@@ -66,3 +66,59 @@ def test_vehicle_status_select_has_own_name(hass: HomeAssistant) -> None:
 
     assert select.has_entity_name is False
     assert select.name == "LF / 16-1"
+
+
+def _mock_coordinator_with_permissions(
+    hass: HomeAssistant, data: dict, permitted: bool | None
+) -> MagicMock:
+    """Create a coordinator mock with a permission-aware API mock."""
+    coordinator = _mock_coordinator(hass, data)
+    if permitted is None:
+        coordinator.api = None
+    else:
+        from custom_components.diveracontrol.divera_permissions import (
+            DiveraPermissions,
+        )
+
+        permissions = DiveraPermissions()
+        permissions.ucr_id = coordinator.ucr_id
+        permissions.permissions = {"status_manual": permitted}
+        coordinator.api = MagicMock()
+        coordinator.api.permissions = permissions
+    return coordinator
+
+
+def test_user_status_select_enabled_when_permitted(hass: HomeAssistant) -> None:
+    """Test that the select is created enabled when the user may set status."""
+    coordinator = _mock_coordinator_with_permissions(
+        hass,
+        {D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}}}},
+        permitted=True,
+    )
+    select = DiveraUserStatusSelect(coordinator)
+
+    assert select.entity_registry_enabled_default is True
+
+
+def test_user_status_select_disabled_without_permission(hass: HomeAssistant) -> None:
+    """Test that the select is created disabled when the permission is missing."""
+    coordinator = _mock_coordinator_with_permissions(
+        hass,
+        {D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}}}},
+        permitted=False,
+    )
+    select = DiveraUserStatusSelect(coordinator)
+
+    assert select.entity_registry_enabled_default is False
+
+
+def test_user_status_select_disabled_without_api(hass: HomeAssistant) -> None:
+    """Test that the select is created disabled when no API is available yet."""
+    coordinator = _mock_coordinator_with_permissions(
+        hass,
+        {D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}}}},
+        permitted=None,
+    )
+    select = DiveraUserStatusSelect(coordinator)
+
+    assert select.entity_registry_enabled_default is False
