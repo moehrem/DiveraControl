@@ -225,9 +225,15 @@ class TestVehicleIdNormalizer:
         assert result == [1, 2, 3]
 
     def test_normalize_entity_id_format(self) -> None:
-        """Test normalizing entity IDs like 'sensor.vehicle_123456'."""
+        """Test normalizing legacy entity IDs like 'sensor.vehicle_123456'."""
         normalizer = VehicleIdNormalizer("vehicle_id")
         result = normalizer.normalize("sensor.vehicle_123456")
+        assert result == [123456]
+
+    def test_normalize_select_entity_id_format(self) -> None:
+        """Test normalizing current entity IDs like 'select.ucr_vehicle_status_123'."""
+        normalizer = VehicleIdNormalizer("vehicle")
+        result = normalizer.normalize("select.123456_vehicle_status_123456")
         assert result == [123456]
 
     def test_normalize_single_int_string(self) -> None:

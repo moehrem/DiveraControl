@@ -339,7 +339,7 @@ class VehicleIdNormalizer(FieldNormalizer):
 
         """
         try:
-            # Entity ID format: "sensor.vehicle_123456"
+            # Entity ID format: "select.<ucr>_vehicle_status_123456"
             if "_" in value:
                 return int(value.split("_")[-1])
             # Direct vehicle ID

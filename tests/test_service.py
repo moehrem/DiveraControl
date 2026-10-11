@@ -10,6 +10,7 @@ from custom_components.diveracontrol.const import DOMAIN
 from custom_components.diveracontrol.service import (
     POST_ALARM_VALIDATION_RULES,
     POST_USING_VEHICLE_CREW_VALIDATION_RULES,
+    POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES,
     POST_VEHICLE_VALIDATION_RULES,
     _build_payload,
     _validate_data,
@@ -60,6 +61,19 @@ class TestValidateData:
         # Should fail on vehicle_count validation
         assert exc_info.value.translation_key == "invalid_number_of_vehicles"
         assert exc_info.value.translation_placeholders == {"num_vehicles": "2"}
+
+    def test_validate_data_failure_vehicle_property_multiple_vehicles(self):
+        """Test that vehicle property service rejects multiple vehicles."""
+        data = {"vehicle": [123, 456]}
+        with pytest.raises(ServiceValidationError) as exc_info:
+            _validate_data(data, POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES)
+        assert exc_info.value.translation_key == "invalid_number_of_vehicles"
+        assert exc_info.value.translation_placeholders == {"num_vehicles": "2"}
+
+    def test_validate_data_success_vehicle_property_single_vehicle(self):
+        """Test that vehicle property service accepts a single vehicle."""
+        data = {"vehicle": [123]}
+        _validate_data(data, POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES)
 
 
 class TestBuildPayload:
