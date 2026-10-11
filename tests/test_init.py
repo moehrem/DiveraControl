@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
@@ -661,264 +662,270 @@ class TestRemoveOldEntityEntries:
             _remove_old_entity_entries(hass, mock_config_entry)
 
 
-# class TestMigrations:
-#     """Test migration functions."""
+class TestMigrations:
+    """Test migration functions."""
 
-#     @pytest.mark.asyncio
-#     async def test_async_migrate_entry_no_migration_needed(
-#         self, hass: HomeAssistant, mock_config_entry: ConfigEntry
-#     ) -> None:
-#         """Test migration when no migration is needed."""
-#         result = await async_migrate_entry(hass, mock_config_entry)
-#         assert result is True
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_no_migration_needed(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration when no migration is needed."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={},
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
+        entry.add_to_hass(hass)
+        assert await async_migrate_entry(hass, entry) is True
 
-#     @pytest.mark.asyncio
-#     async def test_async_migrate_entry_current_version(
-#         self, hass: HomeAssistant
-#     ) -> None:
-#         """Test migration when config entry is already at current version."""
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {
-#             D_CLUSTER_ID: "test_cluster",
-#             D_CLUSTER_NAME: "Test Cluster",
-#             D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-#         }
-#         mock_config_entry.entry_id = "test_entry_id"
-#         mock_config_entry.version = VERSION
-#         mock_config_entry.minor_version = MINOR_VERSION
-#         hass.config_entries._entries = {"test_entry_id": mock_config_entry}
-#         hass.config_entries.async_update_entry = MagicMock()
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_success(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 with valid API key."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
 
-#         result = await async_migrate_entry(hass, mock_config_entry)
-#         assert result is True
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
 
-#     @pytest.mark.asyncio
-#     async def test_async_migrate_entry_v2_0_0_success(
-#         self, hass: HomeAssistant
-#     ) -> None:
-#         """Test migration to v2.0.0 with valid API key."""
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {
-#             D_CLUSTER_ID: "test_cluster",
-#             D_CLUSTER_NAME: "Test Cluster",
-#             "api_key": "valid_api_key",
-#             D_BASE_API_URL: "https://api.test.com",
-#             D_INTEGRATION_VERSION: "1.4.0",
-#             D_UCR_ID: "ucr1",
-#         }
-#         mock_config_entry.entry_id = "test_entry_id"
-#         mock_config_entry.version = 1
-#         mock_config_entry.minor_version = 4
-#         hass.config_entries._entries = {"test_entry_id": mock_config_entry}
-#         hass.config_entries.async_update_entry = MagicMock()
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        assert D_RELATIONS_KEY in entry.data
+        assert entry.data[D_RELATIONS_KEY]["ucr1"][D_ACCESSKEY] == "key1"
+        assert entry.data[D_CLUSTER_ID] == "test_cluster"
+        # unique_id must be aligned to the cluster_id convention of v2.0.0
+        assert entry.unique_id == "test_cluster"
 
-#         mock_api_client = AsyncMock()
-#         mock_api_client.request_access = AsyncMock(
-#             return_value=(
-#                 {},
-#                 {
-#                     "test_cluster": {
-#                         D_RELATIONS_KEY: {
-#                             "ucr1": {D_ACCESSKEY: "key1", D_USERNAME: "user1"}
-#                         },
-#                         D_CLUSTER_ID: "test_cluster",
-#                         D_CLUSTER_NAME: "Test Cluster",
-#                     }
-#                 },
-#             )
-#         )
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_api_failure(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 when API key validation fails."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "invalid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
 
-#         with (
-#             patch(
-#                 "custom_components.diveracontrol.DiveraAPIClient",
-#                 return_value=mock_api_client,
-#             ),
-#             patch(
-#                 "custom_components.diveracontrol.ir.async_create_issue"
-#             ) as mock_create_issue,
-#             patch("custom_components.diveracontrol.dr.async_get") as mock_dr_get,
-#         ):
-#             mock_dr = MagicMock()
-#             mock_dr.async_clear_config_entry = MagicMock()
-#             mock_dr_get.return_value = mock_dr
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=({"base": "invalid_accesskey"}, {})
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is False
 
-#             result = await async_migrate_entry(hass, mock_config_entry)
-#             assert result is True
-#             # The migration calls async_update_entry with the updated data
-#             # Check that it was called with D_RELATIONS_KEY in the data
-#             call_args = hass.config_entries.async_update_entry.call_args
-#             assert call_args is not None
-#             assert D_RELATIONS_KEY in call_args[1]["data"]
+        assert entry.version == 1
+        assert entry.minor_version == 4
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_failed_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
 
-#     @pytest.mark.asyncio
-#     async def test_async_migrate_entry_v2_0_0_api_failure(
-#         self, hass: HomeAssistant
-#     ) -> None:
-#         """Test migration to v2.0.0 when API key validation fails."""
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {
-#             D_CLUSTER_ID: "test_cluster",
-#             D_CLUSTER_NAME: "Test Cluster",
-#             "api_key": "invalid_api_key",
-#             D_BASE_API_URL: "https://api.test.com",
-#             D_INTEGRATION_VERSION: "1.4.0",
-#             D_UCR_ID: "ucr1",
-#         }
-#         mock_config_entry.entry_id = "test_entry_id"
-#         mock_config_entry.version = 1
-#         mock_config_entry.minor_version = 4
-#         hass.config_entries._entries = {"test_entry_id": mock_config_entry}
-#         hass.config_entries.async_update_entry = MagicMock()
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_no_matching_cluster(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 when no matching cluster is found."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "unknown_ucr",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="unknown_ucr",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
 
-#         mock_api_client = AsyncMock()
-#         mock_api_client.request_access = AsyncMock(
-#             return_value=({"base": "Invalid API key"}, {})
-#         )
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is False
 
-#         with (
-#             patch(
-#                 "custom_components.diveracontrol.DiveraAPIClient",
-#                 return_value=mock_api_client,
-#             ),
-#             patch(
-#                 "custom_components.diveracontrol.ir.async_create_issue"
-#             ) as mock_create_issue,
-#         ):
-#             result = await async_migrate_entry(hass, mock_config_entry)
-#             assert result is False
-#             mock_create_issue.assert_called_once()
+        assert entry.version == 1
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_failed_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
 
-#     @pytest.mark.asyncio
-#     async def test_async_migrate_entry_v2_0_0_no_matching_cluster(
-#         self, hass: HomeAssistant
-#     ) -> None:
-#         """Test migration to v2.0.0 when no matching cluster is found."""
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {
-#             D_CLUSTER_ID: "test_cluster",
-#             D_CLUSTER_NAME: "Test Cluster",
-#             "api_key": "valid_api_key",
-#             D_BASE_API_URL: "https://api.test.com",
-#             D_INTEGRATION_VERSION: "1.4.0",
-#             D_UCR_ID: "unknown_ucr",
-#         }
-#         mock_config_entry.entry_id = "test_entry_id"
-#         mock_config_entry.version = 1
-#         mock_config_entry.minor_version = 4
-#         hass.config_entries._entries = {"test_entry_id": mock_config_entry}
-#         hass.config_entries.async_update_entry = MagicMock()
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_offline_fallback(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 falls back to offline migration when API is unreachable."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
 
-#         mock_api_client = AsyncMock()
-#         mock_api_client.request_access = AsyncMock(
-#             return_value=(
-#                 {},
-#                 {
-#                     "test_cluster": {
-#                         D_RELATIONS_KEY: {
-#                             "ucr1": {D_ACCESSKEY: "key1", D_USERNAME: "user1"}
-#                         },
-#                         D_CLUSTER_ID: "test_cluster",
-#                     }
-#                 },
-#             )
-#         )
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=({"base": "cannot_connect"}, {})
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
 
-#         with (
-#             patch(
-#                 "custom_components.diveracontrol.DiveraAPIClient",
-#                 return_value=mock_api_client,
-#             ),
-#             patch(
-#                 "custom_components.diveracontrol.ir.async_create_issue"
-#             ) as mock_create_issue,
-#         ):
-#             result = await async_migrate_entry(hass, mock_config_entry)
-#             assert result is False
-#             mock_create_issue.assert_called_once()
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        # offline migration keeps the stored accesskey and ucr_id
+        assert entry.data[D_RELATIONS_KEY]["ucr1"][D_ACCESSKEY] == "valid_api_key"
+        assert entry.data[D_CLUSTER_ID] == "test_cluster"
+        assert entry.unique_id == "test_cluster"
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_offline_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
 
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_from_v1_0_full_chain(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration chain from version 1.0 applies all migration steps."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=0,
+        )
+        entry.add_to_hass(hass)
 
-# class TestMigrationHelperFunctions:
-#     """Test individual migration helper functions."""
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
 
-#     def test_migrate_to_v1_2_0(self, hass: HomeAssistant) -> None:
-#         """Test _migrate_to_v1_2_0 function."""
-#         from custom_components.diveracontrol import _migrate_to_v1_2_0
-
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {D_CLUSTER_ID: "test_cluster", D_CLUSTER_NAME: "Test Cluster"}
-#         mock_config_entry.entry_id = "test_entry_id"
-
-#         updated_data = {}
-#         with patch(
-#             "custom_components.diveracontrol.ir.async_create_issue"
-#         ), patch(
-#             "custom_components.diveracontrol.er.async_get"
-#         ) as mock_er_get:
-#             mock_er = MagicMock()
-#             mock_er.entities = {}
-#             mock_er.async_clear_config_entry = MagicMock()
-#             mock_er_get.return_value = mock_er
-
-#             result = _migrate_to_v1_2_0(updated_data, mock_config_entry, hass)
-#             assert result[3] is True
-#             assert D_INTEGRATION_VERSION in result[0]
-
-#     def test_migrate_to_v1_3_0(self) -> None:
-#         """Test _migrate_to_v1_3_0 function."""
-#         from custom_components.diveracontrol import _migrate_to_v1_3_0
-
-#         updated_data = {D_CLUSTER_ID: "test_cluster"}
-#         result = _migrate_to_v1_3_0(updated_data)
-#         assert result[3] is True
-#         assert D_BASE_API_URL in result[0]
-
-#     def test_migrate_to_v1_4_0(self) -> None:
-#         """Test _migrate_to_v1_4_0 function."""
-#         from custom_components.diveracontrol import _migrate_to_v1_4_0
-
-#         updated_data = {D_CLUSTER_ID: "test_cluster"}
-#         result = _migrate_to_v1_4_0(updated_data)
-#         assert result[3] is True
-#         assert D_USE_WEBHOOKS in result[0]
-#         assert result[0][D_USE_WEBHOOKS] is False
-
-#     @pytest.mark.asyncio
-#     async def test_migrate_to_v2_0_0(self, hass: HomeAssistant) -> None:
-#         """Test _migrate_to_v2_0_0 function."""
-#         from custom_components.diveracontrol import _migrate_to_v2_0_0
-
-#         mock_config_entry = MagicMock(spec=ConfigEntry)
-#         mock_config_entry.data = {
-#             D_CLUSTER_ID: "test_cluster",
-#             D_CLUSTER_NAME: "Test Cluster",
-#             "api_key": "valid_api_key",
-#             D_BASE_API_URL: "https://api.test.com",
-#             D_UCR_ID: "ucr1",
-#             D_UPDATE_INTERVAL_ALARM: 30,
-#             D_UPDATE_INTERVAL_DATA: 60,
-#         }
-#         mock_config_entry.entry_id = "test_entry_id"
-
-#         updated_data = {}
-#         mock_api_client = AsyncMock()
-#         mock_api_client.request_access = AsyncMock(
-#             return_value=(
-#                 {},
-#                 {
-#                     "test_cluster": {
-#                         D_RELATIONS_KEY: {"ucr1": {D_ACCESSKEY: "key1", D_USERNAME: "user1"}},
-#                         D_CLUSTER_ID: "test_cluster",
-#                         D_CLUSTER_NAME: "Test Cluster",
-#                     }
-#                 },
-#             )
-#         )
-
-#         with patch(
-#             "custom_components.diveracontrol.DiveraAPIClient", return_value=mock_api_client
-#         ), patch(
-#             "custom_components.diveracontrol.ir.async_create_issue"
-#         ):
-#             result = await _migrate_to_v2_0_0(hass, mock_config_entry, updated_data)
-#             assert result is not None
-#             assert D_RELATIONS_KEY in result[0]
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        assert D_RELATIONS_KEY in entry.data
+        assert D_BASE_API_URL in entry.data
+        assert entry.unique_id == "test_cluster"

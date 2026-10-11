@@ -603,6 +603,97 @@ def _migrate_to_v1_4_0(
     return updated_data, current_version, current_minor_version, migrated
 
 
+def _build_v2_user_cluster_relations(
+    config_entry: ConfigEntry,
+    accesskey: str,
+    username: str,
+) -> dict[str, dict]:
+    """Build the v2.0.0 user_cluster_relations structure from a v1.x entry."""
+    old_ucr_id: str = str(config_entry.data.get(D_UCR_ID, ""))
+    return {
+        old_ucr_id: {
+            D_USERNAME: username,
+            D_ACCESSKEY: accesskey,
+        },
+    }
+
+
+def _finalize_v2_0_0_migration(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    cluster_data: dict,
+    user_cluster_relations: dict[str, dict],
+) -> tuple[dict, int, int, bool]:
+    """Finalize the v2.0.0 migration and create the breaking changes issue."""
+    updated_data = {
+        **cluster_data,
+        D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
+        D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
+        D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
+        D_RELATIONS_KEY: user_cluster_relations,
+    }
+    current_version = 2
+    current_minor_version = 0
+    migrated = True
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        f"breaking_changes_v2_0_0_{config_entry.entry_id}",
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="breaking_changes_v2_0_0",
+        translation_placeholders={
+            "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+        },
+    )
+    return updated_data, current_version, current_minor_version, migrated
+
+
+def _migrate_to_v2_0_0_offline(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+) -> tuple[dict, int, int, bool]:
+    """Migrate to v2.0.0 offline using the data already stored in the entry.
+
+    This fallback is used when the Divera API cannot be reached during
+    migration (e.g. temporary outage or maintenance at startup). The config
+    structure is migrated with the stored accesskey so the integration keeps
+    working; cluster metadata that requires API access is filled from the
+    previous entry data.
+    """
+    _LOGGER.warning(
+        "Divera API unreachable during migration to v2.0.0, migrating config "
+        "entry %s offline with stored data",
+        config_entry.entry_id,
+    )
+    cluster_data = {
+        D_CLUSTER_ID: str(
+            config_entry.data.get(D_CLUSTER_ID, config_entry.unique_id or "")
+        ),
+        D_CLUSTER_NAME: config_entry.data.get(D_CLUSTER_NAME, ""),
+    }
+    user_cluster_relations = _build_v2_user_cluster_relations(
+        config_entry,
+        accesskey=config_entry.data.get("api_key", ""),
+        username=config_entry.data.get(D_USERNAME, "unknown user"),
+    )
+    result = _finalize_v2_0_0_migration(
+        hass, config_entry, cluster_data, user_cluster_relations
+    )
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        f"migration_offline_v2_0_0_{config_entry.entry_id}",
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="migration_offline_v2_0_0",
+        translation_placeholders={
+            "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
+        },
+    )
+    return result
+
+
 async def _migrate_to_v2_0_0(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -610,20 +701,25 @@ async def _migrate_to_v2_0_0(
 ) -> tuple[dict, int, int, bool] | None:
     """Migrate to v2.0.0: Restructure config to support multiple users per cluster.
 
+    The migration first tries to validate the stored accesskey against the
+    Divera API to enrich the migrated entry with current cluster data and all
+    user relations of the cluster. If the API cannot be reached, the migration
+    falls back to an offline migration using the stored data instead of
+    leaving the integration unusable.
+
     Returns None if migration fails, otherwise returns (updated_data, current_version,
     current_minor_version, migrated).
     """
     _LOGGER.info("Migrating config entry to integration version 2.0.0")
-
     user_input = {
         D_ACCESSKEY: config_entry.data.get("api_key", ""),
     }
     base_api_url = config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
-
     config_api = DiveraAPIClient(hass, base_api_url)
     validation_errors, clusters = await config_api.request_access(user_input)
-
     if validation_errors:
+        if validation_errors.get("base") == "cannot_connect":
+            return _migrate_to_v2_0_0_offline(hass, config_entry)
         _LOGGER.error(
             "API key validation failed during migration: %s", validation_errors
         )
@@ -639,13 +735,11 @@ async def _migrate_to_v2_0_0(
             },
         )
         return None
-
     ucr_id: str = config_entry.data.get(D_UCR_ID, "")
     migrated_cluster: dict | None = next(
         (c for c in clusters.values() if c.get(D_RELATIONS_KEY, {}).get(ucr_id)),
         None,
     )
-
     if migrated_cluster is None:
         _LOGGER.error(
             "No matching cluster found for UCR_ID %s during migration to v2.0.0", ucr_id
@@ -662,13 +756,11 @@ async def _migrate_to_v2_0_0(
             },
         )
         return None
-
     raw_relations: dict = migrated_cluster.pop(D_RELATIONS_KEY, {})
     user_cluster_relations: dict[str, dict] = {}
     for raw_ucr_id, raw_relation_data in raw_relations.items():
         if not isinstance(raw_relation_data, dict):
             continue
-
         ucr_id = str(raw_ucr_id)
         relation_data = dict(raw_relation_data)
         relation_data.pop(D_BASE_API_URL, None)
@@ -676,32 +768,9 @@ async def _migrate_to_v2_0_0(
         relation_data.pop(D_UPDATE_INTERVAL_ALARM, None)
         relation_data.pop(D_UCR_ID, None)  # Remove redundant UCR_ID from relation data
         user_cluster_relations[ucr_id] = relation_data
-
-    updated_data = {
-        **migrated_cluster,
-        D_UPDATE_INTERVAL_ALARM: config_entry.data.get(D_UPDATE_INTERVAL_ALARM, 30),
-        D_UPDATE_INTERVAL_DATA: config_entry.data.get(D_UPDATE_INTERVAL_DATA, 60),
-        D_BASE_API_URL: config_entry.data.get(D_BASE_API_URL, BASE_API_URL),
-        D_RELATIONS_KEY: user_cluster_relations,
-    }
-
-    current_version = 2
-    current_minor_version = 0
-    migrated = True
-
-    ir.async_create_issue(
-        hass,
-        DOMAIN,
-        f"breaking_changes_v2_0_0_{config_entry.entry_id}",
-        is_fixable=False,
-        severity=ir.IssueSeverity.WARNING,
-        translation_key="breaking_changes_v2_0_0",
-        translation_placeholders={
-            "cluster_name": config_entry.data.get(D_CLUSTER_NAME, "Unknown"),
-        },
+    return _finalize_v2_0_0_migration(
+        hass, config_entry, migrated_cluster, user_cluster_relations
     )
-
-    return updated_data, current_version, current_minor_version, migrated
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -777,16 +846,31 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
                 config_entry.entry_id,
             )
             _remove_old_entity_entries(hass, config_entry)
-
-            dr.async_get(hass).async_clear_config_entry(config_entry.entry_id)
-            er.async_get(hass).async_clear_config_entry(config_entry.entry_id)
-
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=updated_data,
-            version=current_version,
-            minor_version=current_minor_version,
-        )
+        # Align the entry's unique_id with the v2.0.0 config flow convention
+        # (cluster_id instead of the v1.x ucr_id) to keep duplicate detection
+        # consistent for migrated and freshly created entries.
+        new_unique_id = str(updated_data.get(D_CLUSTER_ID, ""))
+        if new_unique_id and config_entry.unique_id != new_unique_id:
+            _LOGGER.info(
+                "Migration: updating unique_id of config entry %s from %s to %s",
+                config_entry.entry_id,
+                config_entry.unique_id,
+                new_unique_id,
+            )
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data=updated_data,
+                version=current_version,
+                minor_version=current_minor_version,
+                unique_id=new_unique_id,
+            )
+        else:
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data=updated_data,
+                version=current_version,
+                minor_version=current_minor_version,
+            )
 
     _LOGGER.debug(
         "Migration complete, config_entry is now at version %s.%s.%s",
