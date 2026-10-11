@@ -12,7 +12,7 @@ from .sensor_entity import (
     DiveraOpenAlarmsSensor,
     DiveraUnitSensor,
     DiveraUserSensor,
-    DiveraVehicleSensorManager,
+    # DiveraVehicleSensorManager,
 )
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
@@ -33,15 +33,15 @@ async def async_setup_entry(
 
     for ucr in ucrs:
         # Create manager helpers that handle dynamic sensors
-        vehicle_manager = DiveraVehicleSensorManager(ucr, async_add_entities)
+        # vehicle_manager = DiveraVehicleSensorManager(ucr, async_add_entities)
         availability_manager = DiveraAvailabilitySensorManager(ucr, async_add_entities)
 
         # Start managers (they register listeners and create dynamic entities)
-        vehicle_manager.start()
+        # vehicle_manager.start()
         availability_manager.start()
 
         # Ensure managers are stopped when the config entry is unloaded
-        config_entry.async_on_unload(vehicle_manager.stop)
+        # config_entry.async_on_unload(vehicle_manager.stop)
         config_entry.async_on_unload(availability_manager.stop)
 
         static_sensors = [

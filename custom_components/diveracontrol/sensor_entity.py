@@ -130,21 +130,21 @@ class DiveraSensorManager:
 # -------------------------------------------------------------------------------------
 
 
-def DiveraVehicleSensorManager(  # pylint: disable=invalid-name
-    coordinator: DiveraCoordinator,
-    async_add_entities: AddEntitiesCallback,
-) -> DiveraSensorManager:
-    """Create a DiveraSensorManager pre-configured for vehicle sensors."""
-    return DiveraSensorManager(
-        coordinator=coordinator,
-        async_add_entities=async_add_entities,
-        get_current_ids=lambda data: set(
-            data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
-        ),
-        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_{item_id}",
-        entity_factory=DiveraVehicleSensor,
-        label="vehicle",
-    )
+# def DiveraVehicleSensorManager(  # pylint: disable=invalid-name
+#     coordinator: DiveraCoordinator,
+#     async_add_entities: AddEntitiesCallback,
+# ) -> DiveraSensorManager:
+#     """Create a DiveraSensorManager pre-configured for vehicle sensors."""
+#     return DiveraSensorManager(
+#         coordinator=coordinator,
+#         async_add_entities=async_add_entities,
+#         get_current_ids=lambda data: set(
+#             data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
+#         ),
+#         build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_{item_id}",
+#         entity_factory=DiveraVehicleSensor,
+#         label="vehicle",
+#     )
 
 
 def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
@@ -169,75 +169,75 @@ def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
 # -------------------------
 
 
-class DiveraVehicleSensor(BaseDiveraEntity):
-    """Sensor to represent a single vehicle."""
+# class DiveraVehicleSensor(BaseDiveraEntity):
+#     """Sensor to represent a single vehicle."""
 
-    def __init__(self, coordinator: DiveraCoordinator, vehicle_id: str) -> None:
-        """Init class DiveraVehicleSensor."""
-        super().__init__(coordinator)
+#     def __init__(self, coordinator: DiveraCoordinator, vehicle_id: str) -> None:
+#         """Init class DiveraVehicleSensor."""
+#         super().__init__(coordinator)
 
-        self.vehicle_id = vehicle_id
+#         self.vehicle_id = vehicle_id
 
-        # static entity attributes
-        self._attr_has_entity_name = False
-        self._attr_unique_id = f"{self.ucr_id}_vehicle_{self.vehicle_id}"
-        # self._attr_icon = I_VEHICLE
-        self.entity_id = f"sensor.{self.ucr_id}_vehicle_{self.vehicle_id}"
-        self._attr_device_class = SensorDeviceClass.ENUM
+#         # static entity attributes
+#         self._attr_has_entity_name = False
+#         self._attr_unique_id = f"{self.ucr_id}_vehicle_{self.vehicle_id}"
+#         # self._attr_icon = I_VEHICLE
+#         self.entity_id = f"sensor.{self.ucr_id}_vehicle_{self.vehicle_id}"
+#         self._attr_device_class = SensorDeviceClass.ENUM
 
-    def _get_vehicle_data(self) -> dict[str, Any] | None:
-        """Get vehicle data safely, return None if vehicle doesn't exist."""
-        vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-        return vehicle_items.get(self.vehicle_id)
+#     def _get_vehicle_data(self) -> dict[str, Any] | None:
+#         """Get vehicle data safely, return None if vehicle doesn't exist."""
+#         vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+#         return vehicle_items.get(self.vehicle_id)
 
-    @property
-    def options(self) -> list[str]:
-        """Return the list of valid FMS status values."""
-        return [str(status_id) for status_id in range(1, 10)]
+#     @property
+#     def options(self) -> list[str]:
+#         """Return the list of valid FMS status values."""
+#         return [str(status_id) for status_id in range(1, 10)]
 
-    @property
-    def available(self) -> bool:
-        """Return availability of the vehicle."""
-        if super().available and self._get_vehicle_data() is not None:
-            return True
-        return False
+#     @property
+#     def available(self) -> bool:
+#         """Return availability of the vehicle."""
+#         if super().available and self._get_vehicle_data() is not None:
+#             return True
+#         return False
 
-    @property
-    def state(self) -> str:
-        """Return state of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            return str(vehicle_data.get("fmsstatus_id", "Unknown"))
-        return "Unknown"
+#     @property
+#     def state(self) -> str:
+#         """Return state of the vehicle."""
+#         if vehicle_data := self._get_vehicle_data():
+#             return str(vehicle_data.get("fmsstatus_id", "Unknown"))
+#         return "Unknown"
 
-    @property
-    def name(self) -> str:
-        """Return name of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            _shortname = vehicle_data.get("shortname", "Unknown")
-            _veh_name = vehicle_data.get("name", "Unknown")
-            return f"{_shortname} / {_veh_name}"
-        return "Unknown Vehicle"
+#     @property
+#     def name(self) -> str:
+#         """Return name of the vehicle."""
+#         if vehicle_data := self._get_vehicle_data():
+#             _shortname = vehicle_data.get("shortname", "Unknown")
+#             _veh_name = vehicle_data.get("name", "Unknown")
+#             return f"{_shortname} / {_veh_name}"
+#         return "Unknown Vehicle"
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            return {"vehicle_id": self.vehicle_id, **vehicle_data}
-        return {}
+#     @property
+#     def extra_state_attributes(self) -> dict[str, Any]:
+#         """Return extra state attributes of the vehicle."""
+#         if vehicle_data := self._get_vehicle_data():
+#             return {"vehicle_id": self.vehicle_id, **vehicle_data}
+#         return {}
 
-    @property
-    def icon(self) -> str:  # type: ignore[override]
-        """Return icon of the vehicle tracker."""
-        vehicle_data = self._get_vehicle_data()
-        if not vehicle_data:
-            # Vehicle data missing → fall back to generic vehicle icon
-            return I_VEHICLE
+#     @property
+#     def icon(self) -> str:  # type: ignore[override]
+#         """Return icon of the vehicle tracker."""
+#         vehicle_data = self._get_vehicle_data()
+#         if not vehicle_data:
+#             # Vehicle data missing → fall back to generic vehicle icon
+#             return I_VEHICLE
 
-        veh_status = vehicle_data.get("fmsstatus_id", "unknown")
-        if veh_status == "unknown":
-            return I_VEHICLE
+#         veh_status = vehicle_data.get("fmsstatus_id", "unknown")
+#         if veh_status == "unknown":
+#             return I_VEHICLE
 
-        return f"mdi:numeric-{veh_status}-box-outline"
+#         return f"mdi:numeric-{veh_status}-box-outline"
 
 
 class DiveraUnitSensor(BaseDiveraEntity):
@@ -440,6 +440,8 @@ class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO

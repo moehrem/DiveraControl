@@ -199,6 +199,13 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
             return self._status_option(str(status_id))
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes of the vehicle."""
+        if vehicle_data := self._get_vehicle_data():
+            return {"vehicle_id": self.vehicle_id, **vehicle_data}
+        return {}
+
     async def async_select_option(self, option: str) -> None:
         """Push a newly selected FMS status to Divera."""
         device_id = self._get_device_id()
