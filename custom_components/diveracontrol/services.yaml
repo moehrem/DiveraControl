@@ -15,8 +15,7 @@ post_vehicle_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     status:
       required: false
       example: 123456
@@ -110,8 +109,7 @@ post_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -342,8 +340,7 @@ put_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -595,8 +592,7 @@ post_using_vehicle_property:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     properties:
       required: false
       example: |
@@ -618,8 +614,7 @@ post_using_vehicle_crew:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     mode:
       required: true
       example: add
@@ -811,8 +806,7 @@ post_user_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: enum
+          domain: select
     note:
       required: false
       example: "Komme mit dem Fahrrad"
@@ -848,4 +842,3 @@ post_user_status:
       example: true
       selector:
         boolean:
-
