@@ -115,6 +115,20 @@ POST_MESSAGE_VALIDATION_RULES = {
     },
 }
 
+POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES = {
+    "vehicle": {
+        "condition": lambda data: not data.get("vehicle"),
+        "error_key": "no_vehicle_id",
+    },
+    "vehicle_count": {
+        "condition": lambda data: len(data.get("vehicle", [])) != 1,
+        "error_key": "invalid_number_of_vehicles",
+        "translation_placeholders": lambda data: {
+            "num_vehicles": str(len(data.get("vehicle", [])))
+        },
+    },
+}
+
 POST_USING_VEHICLE_CREW_VALIDATION_RULES = {
     "vehicle": {
         "condition": lambda data: not data.get("vehicle"),
@@ -690,7 +704,7 @@ async def handle_post_using_vehicle_property(
 
     # prepare data
     data, coordinator, api = _prepare_data(
-        hass, call.data, POST_VEHICLE_VALIDATION_RULES
+        hass, call.data, POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES
     )
 
     # create payload

@@ -229,5 +229,4 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
             },
             blocking=True,
         )
-        await self.coordinator.async_request_refresh()
         self.async_write_ha_state()

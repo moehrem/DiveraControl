@@ -6,8 +6,28 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
+from .const import D_CLUSTER, D_VEHICLE
 from .select_entity import DiveraUserStatusSelect, DiveraVehicleStatusSelect
+from .sensor_entity import DiveraSensorManager
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
+
+
+def DiveraVehicleSelectManager(  # pylint: disable=invalid-name
+    coordinator,
+    async_add_entities,
+) -> DiveraSensorManager:
+    """Create a DiveraSensorManager pre-configured for vehicle selects."""
+    return DiveraSensorManager(
+        coordinator=coordinator,
+        async_add_entities=async_add_entities,
+        get_current_ids=lambda data: set(
+            data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
+        ),
+        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_status_{item_id}",
+        entity_factory=DiveraVehicleStatusSelect,
+        label="vehicle select",
+        domain="select",
+    )
 
 
 def _ensure_enabled(
@@ -58,13 +78,6 @@ async def async_setup_entry(
             update_before_add=False,
         )
 
-        vehicles: dict = coordinator.data.get("cluster", {}).get("vehicle", {})
-        vehicle_entities = [
-            DiveraVehicleStatusSelect(coordinator, str(vehicle_id))
-            for vehicle_id in vehicles
-        ]
-        if vehicle_entities:
-            async_add_entities(
-                vehicle_entities,
-                update_before_add=False,
-            )
+        vehicle_manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+        vehicle_manager.start()
+        config_entry.async_on_unload(vehicle_manager.stop)

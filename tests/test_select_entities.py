@@ -66,3 +66,73 @@ def test_vehicle_status_select_has_own_name(hass: HomeAssistant) -> None:
 
     assert select.has_entity_name is False
     assert select.name == "LF / 16-1"
+
+
+def test_vehicle_status_select_state_options_and_attributes(
+    hass: HomeAssistant,
+) -> None:
+    """Test vehicle select current option, options and extra attributes."""
+    coordinator = _mock_coordinator(
+        hass,
+        {
+            D_CLUSTER: {
+                D_VEHICLE: {
+                    "v1": {"shortname": "LF", "name": "16-1", "fmsstatus_id": 2}
+                },
+                "fms_status": {
+                    "items": {
+                        "2": {"number": 2, "name": "Einsatzbereit über Funk"},
+                    }
+                },
+            }
+        },
+    )
+    select = DiveraVehicleStatusSelect(coordinator, "v1")
+    assert select.available is True
+    assert select.options == ["2 - Einsatzbereit über Funk"]
+    assert select.current_option == "2 - Einsatzbereit über Funk"
+    assert select.extra_state_attributes["vehicle_id"] == "v1"
+    assert select.extra_state_attributes["name"] == "16-1"
+
+
+def test_vehicle_status_select_unknown_vehicle(hass: HomeAssistant) -> None:
+    """Test vehicle select availability and fallbacks for unknown vehicles."""
+    coordinator = _mock_coordinator(hass, {D_CLUSTER: {D_VEHICLE: {}}})
+    select = DiveraVehicleStatusSelect(coordinator, "gone")
+    assert select.available is False
+    assert select.current_option is None
+    assert select.extra_state_attributes == {}
+    assert select.name == "Unknown Vehicle"
+
+
+def test_vehicle_select_manager_adds_and_removes_entities(
+    hass: HomeAssistant,
+) -> None:
+    """Test that the vehicle select manager syncs entities with coordinator data."""
+    from custom_components.diveracontrol.select import DiveraVehicleSelectManager
+
+    coordinator = _mock_coordinator(
+        hass, {D_CLUSTER: {D_VEHICLE: {"v1": {"shortname": "LF"}}}}
+    )
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+    manager.start()
+    assert len(added) == 1
+    assert added[0].vehicle_id == "v1"
+
+    # Simulate a new vehicle appearing in the coordinator data
+    coordinator.data = {D_CLUSTER: {D_VEHICLE: {"v1": {}, "v2": {}}}}
+    manager._handle_coordinator_update()
+    assert len(added) == 2
+    assert {entity.vehicle_id for entity in added} == {"v1", "v2"}
+
+    # Simulate a vehicle being removed
+    coordinator.data = {D_CLUSTER: {D_VEHICLE: {"v2": {}}}}
+    manager._handle_coordinator_update()
+    assert manager._known_ids == {"v2"}
+
+    manager.stop()

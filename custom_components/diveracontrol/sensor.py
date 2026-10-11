@@ -12,7 +12,6 @@ from .sensor_entity import (
     DiveraOpenAlarmsSensor,
     DiveraUnitSensor,
     DiveraUserSensor,
-    # DiveraVehicleSensorManager,
 )
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
