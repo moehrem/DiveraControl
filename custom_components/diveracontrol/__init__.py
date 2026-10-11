@@ -504,7 +504,7 @@ def _remove_old_entity_entries(
                 and identifier[1] in config_entry.data.get(D_RELATIONS_KEY, {})
                 for identifier in d.identifiers
             )
-            or not d.config_entries  # Orphaned devices
+            or not d.config_entry_id  # Orphaned devices
         ]
 
         # 3. Zusammenführen und Duplikate vermeiden
@@ -521,7 +521,7 @@ def _remove_old_entity_entries(
                 "Migration: removing old device %s (name=%s, config_entry_id=%s)",
                 device.id,
                 device.name_by_user or device.name,
-                device.config_entries,
+                device.config_entry_id,
             )
             dev_reg.async_remove_device(device.id)
 

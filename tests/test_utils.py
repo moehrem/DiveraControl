@@ -25,7 +25,7 @@ class TestGetUcrDataFromDevice:
     def test_get_ucr_data_from_device_success(self, hass: HomeAssistant) -> None:
         """Test getting ucr data from device successfully."""
         mock_device = MagicMock()
-        mock_device.config_entries = {"entry1"}
+        mock_device.config_entry_id = "entry1"
         mock_device.identifiers = [(DOMAIN, "test_ucr_id")]
 
         mock_entry = MagicMock()
@@ -56,7 +56,7 @@ class TestGetUcrDataFromDevice:
     def test_get_ucr_data_from_device_with_key(self, hass: HomeAssistant) -> None:
         """Test getting specific key from coordinator."""
         mock_device = MagicMock()
-        mock_device.config_entries = {"entry1"}
+        mock_device.config_entry_id = "entry1"
         mock_device.identifiers = [(DOMAIN, "test_ucr_id")]
 
         mock_entry = MagicMock()
@@ -97,7 +97,7 @@ class TestGetUcrDataFromDevice:
     def test_get_ucr_data_from_device_no_ucr_id(self, hass: HomeAssistant) -> None:
         """Test error when device has no ucr_id identifier."""
         mock_device = MagicMock()
-        mock_device.config_entries = {"entry1"}
+        mock_device.config_entry_id = "entry1"
         mock_device.identifiers = []
 
         mock_entry = MagicMock()
