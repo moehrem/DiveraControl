@@ -26,6 +26,7 @@ from .const import (
     D_USER,
     D_VEHICLE,
     D_OPEN_ALARMS,
+    D_LAST_ALARM,
 )
 from .divera_api import DiveraAPI
 
@@ -143,6 +144,11 @@ async def update_data(
     except Exception:
         _LOGGER.exception("Unexpected error while updating data from Divera")
 
+    # restore persisted last alarm immediately after the merge loop, so it
+    # survives even if any later processing step raises
+    if last_alarm is not None:
+        cluster_data.setdefault(D_ALARM, {})[D_LAST_ALARM] = last_alarm
+
     # adding properties to vehicle
     try:
         vehicle_ids = list(raw_cluster.get(D_VEHICLE, {}).keys())
@@ -155,14 +161,9 @@ async def update_data(
                 except HomeAssistantError:
                     continue
 
-            # Wait for all vehicle tasks to complete with a timeout
-            try:
-                vehicle_responses = await asyncio.gather(
-                    *vehicle_tasks, return_exceptions=True
-                )
-            except asyncio.TimeoutError:
-                _LOGGER.warning("Timeout while fetching vehicle properties")
-                vehicle_responses = []
+            vehicle_responses = await asyncio.gather(
+                *vehicle_tasks, return_exceptions=True
+            )
 
             # Process vehicle responses
             for key, raw_vehicle_property in zip(vehicle_ids, vehicle_responses):
@@ -199,9 +200,9 @@ async def update_data(
     except Exception:
         _LOGGER.exception("Unexpected error while processing vehicle properties")
 
-    # handle open alarms
+    # handle open alarms and last alarm
+    # last alarm is the item of alarm_items with the highest number
     try:
-        # Use normalized data from cluster_data instead of raw alarm data
         alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
         if alarm_items:
             open_alarms = sum(
@@ -210,39 +211,21 @@ async def update_data(
                 if not alarm_details.get("closed", True)
             )
             cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = open_alarms
-        else:
-            # Set open_alarms to 0 when no alarm items exist
-            cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = 0
-            open_alarms = 0
-
-        _LOGGER.debug("Open alarms updated: %s", open_alarms)
-
-    except (KeyError, AttributeError) as e:
-        _LOGGER.error("Error processing open alarm data: %s", e)
-    except Exception:
-        _LOGGER.exception("Unexpected error while processing open alarms")
-
-    # handle last alarm
-    # last alarm is the item of alarm_items with the highest number
-    # last_alarm is persisted above to avoid losing it if no alarms are present anymore
-    try:
-        alarm_items = cluster_data.get(D_ALARM, {}).get("items", {})
-        if alarm_items:
             last_alarm = max(
                 alarm_items.values(),
                 key=lambda alarm: alarm.get("number", 0),
                 default=None,
             )
-            cluster_data.setdefault(D_ALARM, {})["last_alarm"] = last_alarm
+            if last_alarm is not None:
+                cluster_data.setdefault(D_ALARM, {})[D_LAST_ALARM] = last_alarm
+            _LOGGER.debug("Open alarms updated: %s", open_alarms)
             _LOGGER.debug("Last alarm updated: %s", last_alarm)
         else:
-            # cluster_data.setdefault(D_ALARM, {})["last_alarm"] = None
-            cluster_data.setdefault(D_ALARM, {})["last_alarm"] = last_alarm
+            cluster_data.setdefault(D_ALARM, {})[D_OPEN_ALARMS] = 0
             _LOGGER.debug("No new alarms found, last alarm remains unchanged")
-
     except (KeyError, AttributeError) as e:
-        _LOGGER.error("Error processing last alarm data: %s", e)
+        _LOGGER.error("Error processing alarm data: %s", e)
     except Exception:
-        _LOGGER.exception("Unexpected error while processing last alarms")
+        _LOGGER.exception("Unexpected error while processing alarms")
 
     return cluster_data
