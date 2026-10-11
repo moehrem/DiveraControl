@@ -9,12 +9,14 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     D_CLUSTER,
     D_ALARM,
     D_MONITOR,
     D_OPEN_ALARMS,
+    D_LAST_ALARM,
     D_STATUS,
     D_VEHICLE,
     DOMAIN,
@@ -377,7 +379,7 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
         }
 
 
-class DiveraLastAlarmSensor(BaseDiveraEntity):
+class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
     """Sensor to represent the last alarm."""
 
     _attr_has_entity_name = True
@@ -390,26 +392,25 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
         # static entity attributes
         self._attr_unique_id = f"{self.ucr_id}_last_alarm"
         self.entity_id = f"sensor.{self.ucr_id}_last_alarm"
+        self._restored_last_alarm: dict[str, Any] | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last alarm across restarts."""
+        await super().async_added_to_hass()
+        if self._get_last_alarm_data() is not None:
+            return
+        last_state = await self.async_get_last_state()
+        if last_state is None or not last_state.attributes:
+            return
+        self._restored_last_alarm = dict(last_state.attributes)
 
     def _get_last_alarm_data(self) -> dict[str, Any] | None:
         """Get last alarm data safely, return None if alarm doesn't exist."""
 
-        # sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
-        # if isinstance(sorting, list) and sorting:
-        #     last_alarm_id = sorting[0]
-        # else:
-        #     last_alarm_id = None
-
-        # if last_alarm_id is None:
-        #     return None
-
-        # return (
-        #     self.coordinator.data.get(D_ALARM, {})
-        #     .get("items", {})
-        #     .get(str(last_alarm_id), {})
-        # )
-
-        return self.coordinator.data.get(D_ALARM, {}).get("last_alarm")
+        return (
+            self.coordinator.data.get(D_ALARM, {}).get(D_LAST_ALARM)
+            or self._restored_last_alarm
+        )
 
     @property
     def available(self) -> bool:
