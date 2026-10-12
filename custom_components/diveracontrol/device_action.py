@@ -29,7 +29,11 @@ from .const import (
     PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_translation, get_ucr_data_from_device
+from .utils import (
+    get_device_config_entry_ids,
+    get_translation,
+    get_ucr_data_from_device,
+)
 
 ACTION_TYPES: tuple[str, ...] = (
     "request_refresh",
@@ -187,7 +191,7 @@ async def async_get_actions(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entry_id:
+    if not device or not get_device_config_entry_ids(device):
         return []
 
     try:
