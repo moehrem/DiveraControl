@@ -8,14 +8,15 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    D_ALARM,
     D_CLUSTER,
+    D_ALARM,
     D_MONITOR,
     D_OPEN_ALARMS,
+    D_LAST_ALARM,
     D_STATUS,
-    D_VEHICLE,
     DOMAIN,
     I_AVAILABILITY,
     I_CLOSED_ALARM,
@@ -24,7 +25,6 @@ from .const import (
     I_OPEN_ALARM_NOPRIO,
     I_PERSON,
     I_FIRESTATION,
-    I_VEHICLE,
 )
 from .coordinator import DiveraCoordinator
 from .entity import BaseDiveraEntity
@@ -37,7 +37,7 @@ type UniqueIdBuilder = Callable[[str, str], str]
 
 
 class DiveraSensorManager:
-    """Generic manager for dynamic sensor entities.
+    """Generic manager for dynamic entities of one platform.
 
     Manages the lifecycle (add/remove) of sensor entities whose set of IDs
     changes at runtime (e.g. alarms, vehicles, availability statuses).
@@ -45,6 +45,8 @@ class DiveraSensorManager:
     Args:
         coordinator: The DiveraCoordinator supplying data updates.
         async_add_entities: HA callback to register new entities.
+        domain: Home Assistant domain of the managed platform (e.g.
+            ``sensor``, ``select``), used for registry removal.
         get_current_ids: Callable that extracts the current set of item IDs
             from ``coordinator.data``.
         build_unique_id: Callable(ucr_id, item_id) → unique_id string used
@@ -61,8 +63,9 @@ class DiveraSensorManager:
         build_unique_id: UniqueIdBuilder,
         entity_factory: EntityFactory,
         label: str,
+        domain: str = "sensor",
     ) -> None:
-        """Initialize the generic sensor manager."""
+        """Initialize the generic entity manager."""
         self.coordinator = coordinator
         self.hass = coordinator.hass
         self._ucr_id = coordinator.ucr_id
@@ -71,6 +74,7 @@ class DiveraSensorManager:
         self._build_unique_id = build_unique_id
         self._entity_factory = entity_factory
         self._label = label
+        self._domain = domain
         self._known_ids: set[str] = set()
         self._unsub: Callable[[], None] | None = None
 
@@ -103,11 +107,11 @@ class DiveraSensorManager:
             for item_id in removed_ids:
                 unique_id = self._build_unique_id(self._ucr_id, item_id)
                 entity_id = entity_registry.async_get_entity_id(
-                    "sensor", DOMAIN, unique_id
+                    self._domain, DOMAIN, unique_id
                 )
                 if entity_id:
                     entity_registry.async_remove(entity_id)
-                    _LOGGER.debug("Removed %s sensor: %s", self._label, item_id)
+                    _LOGGER.debug("Removed %s entity: %s", self._label, item_id)
             self._known_ids.difference_update(removed_ids)
 
         # Add entities for newly appearing IDs
@@ -118,45 +122,13 @@ class DiveraSensorManager:
             ]
             self._async_add_entities(new_entities, update_before_add=False)
             self._known_ids.update(new_ids)
-            _LOGGER.debug("Added %d %s sensors", len(new_ids), self._label)
+            _LOGGER.debug("Added %d %s entities", len(new_ids), self._label)
 
 
 # -------------------------------------------------------------------------------------
-# Convenience constructors for specific sensor types, plus the actual
+# Convenience constructors for specific entity types, plus the actual
 # entity classes for those types
 # -------------------------------------------------------------------------------------
-
-
-def DiveraAlarmSensorManager(  # pylint: disable=invalid-name
-    coordinator: DiveraCoordinator,
-    async_add_entities: AddEntitiesCallback,
-) -> DiveraSensorManager:
-    """Create a DiveraSensorManager pre-configured for alarm sensors."""
-    return DiveraSensorManager(
-        coordinator=coordinator,
-        async_add_entities=async_add_entities,
-        get_current_ids=lambda data: set(data.get(D_ALARM, {}).get("items", {}).keys()),
-        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_alarm_{item_id}",
-        entity_factory=DiveraAlarmSensor,
-        label="alarm",
-    )
-
-
-def DiveraVehicleSensorManager(  # pylint: disable=invalid-name
-    coordinator: DiveraCoordinator,
-    async_add_entities: AddEntitiesCallback,
-) -> DiveraSensorManager:
-    """Create a DiveraSensorManager pre-configured for vehicle sensors."""
-    return DiveraSensorManager(
-        coordinator=coordinator,
-        async_add_entities=async_add_entities,
-        get_current_ids=lambda data: set(
-            data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
-        ),
-        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_{item_id}",
-        entity_factory=DiveraVehicleSensor,
-        label="vehicle",
-    )
 
 
 def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
@@ -181,126 +153,6 @@ def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
 # -------------------------
 
 
-class DiveraAlarmSensor(BaseDiveraEntity):
-    """Sensor to represent a single alarm."""
-
-    def __init__(self, coordinator: DiveraCoordinator, alarm_id: str) -> None:
-        """Init class DiveraAlarmSensor."""
-        super().__init__(coordinator)
-
-        self.alarm_id = alarm_id
-
-        # static entity attributes
-        self._attr_has_entity_name = False
-        self._attr_name = f"Alarm {self.alarm_id}"
-        self._attr_unique_id = f"{self.ucr_id}_alarm_{self.alarm_id}"
-        self.entity_id = f"sensor.{self.ucr_id}_alarm_{self.alarm_id}"
-        self._attr_device_class = "diveracontrol__alarm"
-
-    def _get_alarm_data(self) -> dict[str, Any] | None:
-        """Get alarm data safely, return None if alarm doesn't exist."""
-        alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
-        return alarm_items.get(self.alarm_id)
-
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if super().available and self._get_alarm_data() is not None:
-            return True
-        return False
-
-    @property
-    def state(self) -> str:
-        """Return the state of the alarm."""
-        if alarm_data := self._get_alarm_data():
-            return alarm_data.get("title", "Unknown")
-        return "Unknown"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the extra state attributes of the alarm."""
-        return self._get_alarm_data() or {}
-
-    @property
-    def icon(self) -> str:
-        """Return the icon of the alarm."""
-        if alarm_data := self._get_alarm_data():
-            _closed = alarm_data.get("closed", False)
-            _priority = alarm_data.get("priority", False)
-            return (
-                I_CLOSED_ALARM
-                if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
-            )
-        return I_OPEN_ALARM_NOPRIO
-
-
-class DiveraVehicleSensor(BaseDiveraEntity):
-    """Sensor to represent a single vehicle."""
-
-    def __init__(self, coordinator: DiveraCoordinator, vehicle_id: str) -> None:
-        """Init class DiveraVehicleSensor."""
-        super().__init__(coordinator)
-
-        self.vehicle_id = vehicle_id
-
-        # static entity attributes
-        self._attr_has_entity_name = False
-        self._attr_unique_id = f"{self.ucr_id}_vehicle_{self.vehicle_id}"
-        # self._attr_icon = I_VEHICLE
-        self.entity_id = f"sensor.{self.ucr_id}_vehicle_{self.vehicle_id}"
-        self._attr_device_class = "diveracontrol__vehicle"
-
-    def _get_vehicle_data(self) -> dict[str, Any] | None:
-        """Get vehicle data safely, return None if vehicle doesn't exist."""
-        vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-        return vehicle_items.get(self.vehicle_id)
-
-    @property
-    def available(self) -> bool:
-        """Return availability of the vehicle."""
-        if super().available and self._get_vehicle_data() is not None:
-            return True
-        return False
-
-    @property
-    def state(self) -> str:
-        """Return state of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            return vehicle_data.get("fmsstatus_id", "Unknown")
-        return "Unknown"
-
-    @property
-    def name(self) -> str:
-        """Return name of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            _shortname = vehicle_data.get("shortname", "Unknown")
-            _veh_name = vehicle_data.get("name", "Unknown")
-            return f"{_shortname} / {_veh_name}"
-        return "Unknown Vehicle"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes of the vehicle."""
-        if vehicle_data := self._get_vehicle_data():
-            return {"vehicle_id": self.vehicle_id, **vehicle_data}
-        return {}
-
-    @property
-    def icon(self) -> str:  # type: ignore[override]
-        """Return icon of the vehicle tracker."""
-        vehicle_data = self._get_vehicle_data()
-        if not vehicle_data:
-            # Vehicle data missing → fall back to generic vehicle icon
-            return I_VEHICLE
-
-        veh_status = vehicle_data.get("fmsstatus_id", "unknown")
-        if veh_status == "unknown":
-            return I_VEHICLE
-
-        return f"mdi:numeric-{veh_status}-box-outline"
-
-
 class DiveraUnitSensor(BaseDiveraEntity):
     """Sensor to represent a divera-unit."""
 
@@ -311,7 +163,6 @@ class DiveraUnitSensor(BaseDiveraEntity):
         cluster_data = coordinator.data.get(D_CLUSTER, {})
         self.cluster_shortname = cluster_data.get("shortname", "Unknown")
         self.cluster_address = cluster_data.get("address", {"error": "no address data"})
-        self._attr_device_class = "diveracontrol__unit"
 
         # static entity attributes
         self._attr_has_entity_name = False
@@ -346,7 +197,6 @@ class DiveraUserSensor(BaseDiveraEntity):
         cluster_data = coordinator.data.get(D_CLUSTER, {})
         self.cluster_shortname = cluster_data.get("shortname", "Unknown")
         self.cluster_address = cluster_data.get("address", {"error": "no address data"})
-        self._attr_device_class = "diveracontrol__user"
 
         # static entity attributes
         self._attr_has_entity_name = False
@@ -405,7 +255,6 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
             .get(status_id, {})
             .get("name", "Unknown")
         )
-        self._attr_device_class = "diveracontrol__availability"
 
         # static entity attributes
         self._attr_has_entity_name = False
@@ -443,7 +292,7 @@ class DiveraAvailabilitySensor(BaseDiveraEntity):
         }
 
 
-class DiveraLastAlarmSensor(BaseDiveraEntity):
+class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
     """Sensor to represent the last alarm."""
 
     _attr_has_entity_name = True
@@ -456,48 +305,49 @@ class DiveraLastAlarmSensor(BaseDiveraEntity):
         # static entity attributes
         self._attr_unique_id = f"{self.ucr_id}_last_alarm"
         self.entity_id = f"sensor.{self.ucr_id}_last_alarm"
+        self._restored_last_alarm: dict[str, Any] | None = None
 
-    def _get_alarm_data(self) -> dict[str, Any] | None:
-        """Get alarm data safely, return None if alarm doesn't exist."""
+    async def async_added_to_hass(self) -> None:
+        """Restore the last alarm across restarts."""
+        await super().async_added_to_hass()
+        if self._get_last_alarm_data() is not None:
+            return
+        last_state = await self.async_get_last_state()
+        if last_state is None or not last_state.attributes:
+            return
+        self._restored_last_alarm = dict(last_state.attributes)
 
-        sorting = self.coordinator.data.get(D_ALARM, {}).get("sorting")
-        if isinstance(sorting, list) and sorting:
-            last_alarm_id = sorting[0]
-        else:
-            last_alarm_id = None
-
-        if last_alarm_id is None:
-            return None
+    def _get_last_alarm_data(self) -> dict[str, Any] | None:
+        """Get last alarm data safely, return None if alarm doesn't exist."""
 
         return (
-            self.coordinator.data.get(D_ALARM, {})
-            .get("items", {})
-            .get(str(last_alarm_id), {})
+            self.coordinator.data.get(D_ALARM, {}).get(D_LAST_ALARM)
+            or self._restored_last_alarm
         )
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if super().available and self._get_alarm_data() is not None:
+        if super().available and self._get_last_alarm_data() is not None:
             return True
         return False
 
     @property
     def state(self) -> str:
         """Return the state of the alarm."""
-        if alarm_data := self._get_alarm_data():
+        if alarm_data := self._get_last_alarm_data():
             return alarm_data.get("title", "Unknown")
         return "Unknown"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the extra state attributes of the alarm."""
-        return self._get_alarm_data() or {}
+        return self._get_last_alarm_data() or {}
 
     @property
     def icon(self) -> str:
         """Return the icon of the alarm."""
-        if alarm_data := self._get_alarm_data():
+        if alarm_data := self._get_last_alarm_data():
             _closed = alarm_data.get("closed", False)
             _priority = alarm_data.get("priority", False)
             return (

@@ -187,7 +187,7 @@ async def async_get_actions(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entries:
+    if not device or not device.config_entry_id:
         return []
 
     try:

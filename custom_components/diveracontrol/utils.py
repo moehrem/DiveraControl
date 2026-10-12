@@ -36,13 +36,13 @@ def get_ucr_data_from_device(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entries:
+    if not device or not device.config_entry_id:
         raise HomeAssistantError(
             f"Device not found or has no config entries: {device_id}"
         )
 
     # Get config entry
-    config_entry_id = next(iter(device.config_entries), None)
+    config_entry_id = device.config_entry_id
     if not config_entry_id:
         raise HomeAssistantError(f"Config entry not found for device: {device_id}")
 

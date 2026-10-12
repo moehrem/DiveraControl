@@ -15,8 +15,7 @@ post_vehicle_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     status:
       required: false
       example: 123456
@@ -110,8 +109,7 @@ post_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -288,8 +286,7 @@ put_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__alarm
+          domain: event
     title:
       required: true
       example: "FEU"
@@ -343,8 +340,7 @@ put_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -521,8 +517,7 @@ post_close_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__alarm
+          domain: event
     closed:
       required: true
       example: true
@@ -547,8 +542,7 @@ post_confirm_alarm:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__alarm
+          domain: event
     id:
       required: true
       example: 1
@@ -578,8 +572,7 @@ post_message:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__alarm
+          domain: event
     text:
       required: false
       example: "Dies ist eine Testnachricht."
@@ -599,8 +592,7 @@ post_using_vehicle_property:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     properties:
       required: false
       example: |
@@ -622,8 +614,7 @@ post_using_vehicle_crew:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     mode:
       required: true
       example: add
@@ -807,8 +798,7 @@ post_user_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__availability
+          domain: select
     vehicle:
       required: false
       example: 123456
@@ -816,8 +806,7 @@ post_user_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
-          device_class: diveracontrol__vehicle
+          domain: select
     note:
       required: false
       example: "Komme mit dem Fahrrad"
@@ -853,4 +842,3 @@ post_user_status:
       example: true
       selector:
         boolean:
-

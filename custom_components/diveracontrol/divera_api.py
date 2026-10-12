@@ -614,7 +614,10 @@ class DiveraAPIClient:
             if not is_valid:
                 return entry_errors, {}
 
-        except (ClientError, TimeoutError, ConfigEntryAuthFailed):
+        except ConfigEntryAuthFailed as err:
+            _LOGGER.debug("Authentication failed while fetching clusters: %s", err)
+            validation_errors["base"] = ConfigFlowErrorCode.INVALID_ACCESSKEY.value
+        except (ClientError, TimeoutError):
             validation_errors["base"] = ConfigFlowErrorCode.CANNOT_CONNECT.value
         except (TypeError, AttributeError):
             validation_errors["base"] = ConfigFlowErrorCode.NO_DATA.value

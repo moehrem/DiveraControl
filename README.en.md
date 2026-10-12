@@ -270,10 +270,15 @@ The integration **dynamically creates entities** per unit:
 
 | **Platform** | **Entities** (Examples) | **Purpose** |
 |--------------|-------------------------|-------------|
-| **Input Select** | Set user status | Change status with one click |
-| **Sensors** | Alarms, vehicles, availability, open alarms counter, last alarm, diagnostic sensors | Data querying & monitoring |
+| **Input Select** | Set user status, set vehicle FMS status | Change status with one click |
+| **Sensors** | Availability, open alarms counter, last alarm, diagnostic sensors | Data querying & monitoring |
+| **Events** | Alarm events (opened, updated, closed) | Alarm tracking in automations |
 | **Device Tracker** | Alarm positions, vehicle positions | Location tracking on maps |
 | **Calendar** | Appointments from Divera | Integration into calendar views |
+
+> **⚠️ Version 2.0 note:** The former `sensor.*_vehicle_*` entities have been merged into the select entities (`select.*_vehicle_status_*`). The vehicle status is now shown as the select's current option and can be set directly. The old sensor entities are no longer created and can be removed; vehicle data remains available as attributes of the select entity.
+>
+> Alarms are no longer provided as sensor entities (`sensor.*_alarm_*`) but as **event entities** (`event.*_alarm_*`) with the event types *opened*, *updated* and *closed*. They remain visible until the alarm is archived in Divera. The *last alarm* state is additionally restored across restarts.
 
 ---
 ---

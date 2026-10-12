@@ -108,9 +108,13 @@
       "title": "Migration fehlgeschlagen: **{cluster_name}**",
       "description": "Die Migration von **{cluster_name}** auf Version 2.0.0 ist fehlgeschlagen. **Die Integration ist damit nicht mehr nutzbar!** Bitte überprüfe die Protokolle für Details und konfiguriere die Integration bei Bedarf neu. Am einfachsten ist es, die Integration zu entfernen und neu zu installieren. \n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du daher anschließend tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
     },
+    "migration_offline_v2_0_0": {
+      "title": "Migration offline abgeschlossen: **{cluster_name}**",
+      "description": "Die Konfiguration von **{cluster_name}** wurde auf Version 2.0.0 migriert, da die Divera-API während der Migration nicht erreichbar war. Die Integration bleibt mit den gespeicherten Zugangsdaten funktionsfähig.\n\n**Bitte beachten:** Einige Cluster-Informationen (z. B. alle Benutzer des Clusters) konnten nicht aktualisiert werden. Sobald die Divera-API wieder erreichbar ist, kannst du das Setup bei Bedarf über die Integrationsoptionen vervollständigen.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Service-Aufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
     "breaking_changes_v2_0_0": {
       "title": "Aktion erforderlich: **{cluster_name}**",
-      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 2.0.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 2.0.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Entfernte Funktionen und Entitäten:**\n- Der Webhook-Modus (`use_webhooks`) wurde entfernt. Die Integration nutzt jetzt ausschließlich Polling.\n- Die `sensor.*_vehicle_*`-Entitäten wurden in die Select-Entitäten (`select.*_vehicle_status_*`) integriert. Der Fahrzeugstatus wird jetzt als Option des Selects angezeigt und kann direkt gesetzt werden. Alte Sensor-Entitäten werden nicht mehr erstellt und können gelöscht werden; Fahrzeugdaten stehen weiterhin als Attribute der Select-Entitäten bereit.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Falls du Webhooks oder `sensor.*_vehicle_*`-Entitäten genutzt hast, passe die betroffenen Automationen entsprechend an\n5. Teste alle Automationen und andere Service-Aufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
     }
   },
   "entity": {
@@ -122,14 +126,23 @@
         "name": "Letzter Alarm"
       }
     },
-    "select": {
-      "user_status": {
-        "name": "Nutzerstatus"
-      }
-    },
     "calendar": {
       "calendar": {
         "name": "Kalenderereignis"
+      }
+    },
+    "event": {
+      "alarm": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "opened": "Geöffnet",
+              "updated": "Aktualisiert",
+              "closed": "Geschlossen"
+            }
+          }
+        }
       }
     }
   },
@@ -342,6 +355,9 @@
     "service_wrong_devices_count": {
       "message": "Der Dienst unterstützt nur die Angabe genau einer einzigen Gerät-ID. {num_devices} wurden angegeben."
     },
+    "service_wrong_alarms_count": {
+      "message": "Es muss genau ein Alarm ausgewählt werden, es sind {num_alarms}."
+    },
     "invalid_id_list_format": {
       "message": "Ungültiges Format für {field}, es muss sich um eine Liste von Ganzzahlen handeln."
     },
@@ -353,6 +369,9 @@
     },
     "invalid_vehicle_id_format": {
       "message": "Ungültiges Format für Fahrzeug-ID {vehicle}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+    },
+    "invalid_alarm_id_format": {
+      "message": "Ungültiges Format für Alarm-ID {alarm_id}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
     },
     "no_vehicles_selected": {
       "message": "Empfängerauswahl Fahrzeuge, jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."

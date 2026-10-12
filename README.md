@@ -255,10 +255,15 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 
 | **Plattform**       | **Entitäten** (Beispiele)                          | **Zweck**                          |
 |---------------------|---------------------------------------------------|------------------------------------|
-| **Steuerelemente**  | Nutzerstatus setzen                               | Statusänderung per Klick           |
-| **Sensoren**        | Alarme, Fahrzeuge, Verfügbarkeiten, Offene-Alarme-Zähler, Letzter Alarm, Diagnose-Sensoren | Datenabfrage & Monitoring |
+| **Steuerelemente**  | Nutzerstatus setzen, Fahrzeugstatus (FMS) setzen     | Statusänderung per Klick           |
+| **Sensoren**        | Verfügbarkeiten, Offene-Alarme-Zähler, Letzter Alarm, Diagnose-Sensoren | Datenabfrage & Monitoring |
+| **Events**          | Alarm-Events (geöffnet, aktualisiert, geschlossen)  | Alarm-Verfolgung in Automationen   |
 | **Device Tracker**  | Alarmpositionen, Fahrzeugpositionen               | Standortverfolgung in Karten        |
 | **Kalender**        | Termine aus Divera                                 | Integration in Kalender-Views      |
+
+> **⚠️ Hinweis zur Version 2.0:** Die bisherigen `sensor.*_vehicle_*`-Entitäten wurden in die Select-Entitäten (`select.*_vehicle_status_*`) integriert. Der Fahrzeugstatus wird jetzt als Option des Selects angezeigt und kann direkt gesetzt werden. Alte Sensor-Entitäten werden nicht mehr erstellt und können gelöscht werden; Fahrzeugdaten stehen weiterhin als Attribute der Select-Entität bereit.
+>
+> Alarme werden nicht mehr als Sensor-Entitäten (`sensor.*_alarm_*`), sondern als **Event-Entitäten** (`event.*_alarm_*`) mit den Event-Typen *geöffnet*, *aktualisiert* und *geschlossen* bereitgestellt. Sie bleiben sichtbar, bis der Alarm in Divera archiviert wird. Der Status *Letzter Alarm* wird zusätzlich über Neustarts hinweg wiederhergestellt.
 
 ---
 ---
