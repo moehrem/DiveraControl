@@ -14,7 +14,7 @@ from .const import D_CLUSTER_ID, D_COORDINATOR, D_RELATIONS_KEY, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_device_config_entry_ids(device: dr.DeviceEntry) -> tuple[str, ...]:
+def get_device_config_entry_ids(device: Any) -> tuple[str, ...]:
     """Return all config entry ids linked to a device.
 
     Home Assistant 2025.12 replaced ``DeviceEntry.config_entry_id`` with
