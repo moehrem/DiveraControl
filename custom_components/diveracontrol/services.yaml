@@ -1,8 +1,12 @@
+request_refresh:
+  target:
+    entity:
+      integration: diveracontrol
+
 post_vehicle_status:
   target:
     entity:
       integration: diveracontrol
-      domain: sensor
   fields:
     vehicle:
       required: true
@@ -11,7 +15,7 @@ post_vehicle_status:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: select
     status:
       required: false
       example: 123456
@@ -46,7 +50,6 @@ post_vehicle_status:
         number:
           min: -180
           max: 180
-
 
 post_alarm:
   target:
@@ -101,10 +104,12 @@ post_alarm:
         boolean:
     vehicle:
       required: false
-      example: 1, 2, 3, 4
+      example: 123456
       selector:
-        text:
-          multiline: false
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -269,7 +274,6 @@ post_alarm:
       selector:
         datetime:
 
-
 put_alarm:
   target:
     entity:
@@ -277,13 +281,15 @@ put_alarm:
   fields:
     alarm_id:
       required: true
-      example: 12345678
+      example: "12345678"
       selector:
-        number:
-          mode: box
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: event
     title:
       required: true
-      example: FEU
+      example: "FEU"
       selector:
         text:
           multiline: false
@@ -329,10 +335,12 @@ put_alarm:
         boolean:
     vehicle:
       required: false
-      example: 1, 2, 3, 4
+      example: 123456
       selector:
-        text:
-          multiline: false
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: select
     notification_filter_status:
       required: false
       example: false
@@ -497,8 +505,6 @@ put_alarm:
       selector:
         datetime:
 
-
-
 post_close_alarm:
   target:
     entity:
@@ -506,9 +512,12 @@ post_close_alarm:
   fields:
     alarm_id:
       required: true
-      example: 54321
+      example: 12345678
       selector:
-        number:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: event
     closed:
       required: true
       example: true
@@ -516,11 +525,35 @@ post_close_alarm:
         boolean:
     report:
       required: false
-      example: '2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz'
+      example: "2 Einsatztabschnitte gebildet, 3 C-Rohre im Einsatz"
       selector:
         text:
           multiline: true
 
+post_confirm_alarm:
+  target:
+    entity:
+      integration: diveracontrol
+  fields:
+    alarm_id:
+      required: true
+      example: 12345678
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: event
+    id:
+      required: true
+      example: 1
+      selector:
+        number:
+    note:
+      required: false
+      example: "Alarm bestätigt, Einsatz läuft"
+      selector:
+        text:
+          multiline: true
 
 post_message:
   target:
@@ -534,16 +567,18 @@ post_message:
         number:
     alarm_id:
       required: false
-      example: 54321
+      example: 12345678
       selector:
-        number:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: event
     text:
       required: false
-      example: 'Dies ist eine Testnachricht.'
+      example: "Dies ist eine Testnachricht."
       selector:
         text:
           multiline: true
-
 
 post_using_vehicle_property:
   target:
@@ -557,7 +592,7 @@ post_using_vehicle_property:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: select
     properties:
       required: false
       example: |
@@ -579,7 +614,7 @@ post_using_vehicle_crew:
         entity:
           integration: diveracontrol
           multiple: true
-          domain: sensor
+          domain: select
     mode:
       required: true
       example: add
@@ -750,3 +785,60 @@ post_news:
       selector:
         text:
           multiline: false
+
+post_user_status:
+  target:
+    entity:
+      integration: diveracontrol
+  fields:
+    id:
+      required: false
+      example: 67890
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: select
+    vehicle:
+      required: false
+      example: 123456
+      selector:
+        entity:
+          integration: diveracontrol
+          multiple: true
+          domain: select
+    note:
+      required: false
+      example: "Komme mit dem Fahrrad"
+      selector:
+        text:
+          multiline: false
+    reset_date:
+      required: false
+      example: 1717755979
+      selector:
+        datetime:
+    reset_to:
+      required: false
+      example: 456789
+      selector:
+        number:
+          min: 0
+          max: 999999
+          mode: box
+
+    alarm_skip:
+      required: false
+      example: true
+      selector:
+        boolean:
+    status_skip_statusplan:
+      required: false
+      example: true
+      selector:
+        boolean:
+    status_skip_geofence:
+      required: false
+      example: true
+      selector:
+        boolean:

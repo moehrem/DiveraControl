@@ -3,20 +3,28 @@
 from collections.abc import Callable
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import _LOGGER, HomeAssistant
 
 from .calendar_entity import DiveraCalendar
-from .const import D_UCR_ID
+from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: Callable[[list], None],  # type: ignore[no-untyped-call]
+    async_add_entities: Callable[[list], None],
 ) -> None:
     """Set up the Divera calendar entity."""
-    calendar_entity = DiveraCalendar(
-        config_entry.runtime_data,  # Coordinator
-        config_entry.data[D_UCR_ID],
+    cluster_id, coordinators, _ = get_cluster_coordinators_ucrs_from_config_hass(
+        config_entry.data, hass
     )
-    async_add_entities([calendar_entity])
+
+    calendar_entities = [
+        DiveraCalendar(coordinator) for coordinator in coordinators.values()
+    ]
+    _LOGGER.debug(
+        "Setting up %d calendar entities for cluster %s",
+        len(calendar_entities),
+        cluster_id,
+    )
+    async_add_entities(calendar_entities)

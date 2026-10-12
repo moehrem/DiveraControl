@@ -1,6 +1,7 @@
 """Service data normalizers for handling inconsistent frontend formats.
 
-This is needed as different action calls from frontend, developer tools or automations may send data
+This is needed as different action calls from frontend, developer tools or automations
+may send data
 with different format. This is to ensure a consistent format for further processing.
 
 """
@@ -338,7 +339,7 @@ class VehicleIdNormalizer(FieldNormalizer):
 
         """
         try:
-            # Entity ID format: "sensor.vehicle_123456"
+            # Entity ID format: "select.<ucr>_vehicle_status_123456"
             if "_" in value:
                 return int(value.split("_")[-1])
             # Direct vehicle ID
@@ -348,6 +349,63 @@ class VehicleIdNormalizer(FieldNormalizer):
                 translation_domain=DOMAIN,
                 translation_key="invalid_vehicle_id_format",
                 translation_placeholders={"vehicle_id": value},
+            ) from err
+
+
+class AlarmIdNormalizer(FieldNormalizer):
+    """Normalize alarm IDs from entity IDs or direct IDs."""
+
+    def normalize(self, value: str | list[str | int] | None) -> list[int]:
+        """Extract alarm IDs from entity IDs or direct IDs.
+
+        Args:
+            value: Entity ID(s) or alarm ID(s)
+
+        Returns:
+            List of alarm IDs as integers
+
+        Raises:
+            ServiceValidationError: If extraction fails
+        """
+        if not value:
+            return []
+
+        alarm_ids: list[int] = []
+        values = [value] if isinstance(value, (str, int)) else value
+        for item in values:
+            item_str = str(item)
+            if "," in item_str:
+                for sub_item in item_str.split(","):
+                    sub_item = sub_item.strip()
+                    if sub_item:
+                        alarm_ids.append(self._extract_alarm_id(sub_item))
+            else:
+                alarm_ids.append(self._extract_alarm_id(item_str))
+        return alarm_ids
+
+    def _extract_alarm_id(self, value: str) -> int:
+        """Extract alarm ID from entity ID or direct ID.
+
+        Args:
+            value: Entity ID or alarm ID as string
+
+        Returns:
+            Alarm ID as integer
+
+        Raises:
+            ServiceValidationError: If extraction fails
+        """
+        try:
+            # Entity ID format: "event.<ucr>_alarm_<alarm_id>"
+            if "_" in value:
+                return int(value.split("_")[-1])
+            # Direct alarm ID
+            return int(value)
+        except (ValueError, IndexError) as err:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_alarm_id_format",
+                translation_placeholders={"alarm_id": value},
             ) from err
 
 
@@ -422,7 +480,7 @@ class ServiceDataNormalizer:
             # Integer list fields
             "group": IntListNormalizer("group"),
             "user_cluster_relation": IntListNormalizer("user_cluster_relation"),
-            "vehicle": IntListNormalizer("vehicle"),
+            "vehicle": VehicleIdNormalizer("vehicle"),
             "crew": IntListNormalizer("crew"),
             "answers": IntListNormalizer("answers"),
             "sorting": IntListNormalizer("sorting"),
@@ -430,6 +488,7 @@ class ServiceDataNormalizer:
             "status": IntNormalizer("status"),
             # Special fields
             "vehicle_id": VehicleIdNormalizer("vehicle_id"),
+            "alarm_id": AlarmIdNormalizer("alarm_id"),
             # Datetime fields
             "ts_archive": DateTimeNormalizer("ts_archive"),
             "ts_publish": DateTimeNormalizer("ts_publish"),
@@ -473,7 +532,8 @@ _normalizer = ServiceDataNormalizer()
 def normalize_service_call_data(data: dict[str, Any]) -> dict[str, Any]:
     """Normalize service call data from various sources.
 
-    This is needed as device_actions, frontend actions and developer tools have different formats.
+    This is needed as device_actions, frontend actions and developer tools have
+    different formats.
 
     Handles inconsistencies between:
     - Developer Tools (lists for targets)

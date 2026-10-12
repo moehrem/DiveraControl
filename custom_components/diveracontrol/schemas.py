@@ -6,10 +6,10 @@ import voluptuous as vol
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
-    BooleanSelector,
-    BooleanSelectorConfig,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -17,11 +17,11 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     BASE_API_URL,
-    D_API_KEY,
+    D_ACCESSKEY,
     D_BASE_API_URL,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
-    D_USE_WEBHOOKS,
+    D_USERNAME,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
 )
@@ -41,7 +41,7 @@ def get_entry_form_schema() -> vol.Schema:
                 SelectSelectorConfig(
                     options=[
                         "login",
-                        "api_key",
+                        "accesskey",
                     ],
                     translation_key="entry_method_options",
                     multiple=False,
@@ -85,10 +85,6 @@ def get_login_form_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
             ): str,
-            vol.Required(
-                D_USE_WEBHOOKS,
-                default=defaults.get(D_USE_WEBHOOKS, False),
-            ): BooleanSelector(BooleanSelectorConfig()),
         }
     )
 
@@ -106,9 +102,9 @@ def get_api_key_form_schema(defaults: dict[str, Any]) -> vol.Schema:
 
     return vol.Schema(
         {
-            vol.Required(D_API_KEY, default=defaults.get(D_API_KEY, "")): TextSelector(
-                TextSelectorConfig(type=TextSelectorType.PASSWORD)
-            ),
+            vol.Required(
+                D_ACCESSKEY, default=defaults.get(D_ACCESSKEY, "")
+            ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
             vol.Required(
                 D_UPDATE_INTERVAL_DATA,
                 default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
@@ -120,49 +116,99 @@ def get_api_key_form_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
             ): str,
-            vol.Required(
-                D_USE_WEBHOOKS,
-                default=defaults.get(D_USE_WEBHOOKS, False),
-            ): BooleanSelector(BooleanSelectorConfig()),
         }
     )
 
 
-def get_reconfigure_form_schema(
-    interval_data: int,
-    interval_alarm: int,
-    api_key: str,
-    base_api_url: str,
-    use_webhooks: bool,
+def get_options_form_schema(defaults: dict[str, Any]) -> vol.Schema:
+    """Get the options form schema for editable cluster settings."""
+
+    return vol.Schema(
+        {
+            vol.Required(
+                D_UPDATE_INTERVAL_DATA,
+                default=defaults.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_UPDATE_INTERVAL_ALARM,
+                default=defaults.get(D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_BASE_API_URL, default=defaults.get(D_BASE_API_URL, BASE_API_URL)
+            ): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
+            ),
+        }
+    )
+
+
+def get_reconfigure_ucr_form_schema(selected_ucr: dict[str, Any]) -> vol.Schema:
+    """Get the reconfigure form schema for user cluster relations.
+
+    Args:
+        selected_ucr: Dictionary of the selected user cluster relation.
+
+    Returns:
+        vol.Schema: The form schema for reconfiguration of user cluster relations.
+    """
+
+    return vol.Schema(
+        {
+            vol.Required(
+                D_USERNAME, default=selected_ucr.get(D_USERNAME, "")
+            ): TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT)),
+            vol.Required(
+                D_ACCESSKEY, default=selected_ucr.get(D_ACCESSKEY, "")
+            ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+            vol.Required(
+                D_BASE_API_URL,
+                default=selected_ucr.get(D_BASE_API_URL, BASE_API_URL),
+            ): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.TEXT, autocomplete="url")
+            ),
+            vol.Required(
+                D_UPDATE_INTERVAL_DATA,
+                default=selected_ucr.get(D_UPDATE_INTERVAL_DATA, UPDATE_INTERVAL_DATA),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+            vol.Required(
+                D_UPDATE_INTERVAL_ALARM,
+                default=selected_ucr.get(
+                    D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
+                ),
+            ): vol.All(vol.Coerce(int), vol.Range(min=5)),
+        }
+    )
+
+
+def get_reconfigure_cluster_form_schema(
+    current_ucrs: dict[str, dict[str, Any]],
 ) -> vol.Schema:
     """Get the reconfigure form schema.
 
     Args:
-        interval_data: Data update interval in case of no alarm.
-        interval_alarm: Data update interval in case of alarm.
-        api_key: The API key to access Divera API.
-        base_api_url: The base API URL for Divera API.
-        use_webhooks: Whether to use webhooks for updates.
+        current_ucrs: Dictionary of current user cluster relations.
 
     Returns:
         vol.Schema: The form schema for reconfiguration.
 
     """
 
+    options: list[SelectOptionDict] = []
+    for ucr_id, ucr in current_ucrs.items():
+        username = str(ucr.get(D_USERNAME, "")).strip() or str(ucr_id)
+        options.append({"value": str(ucr_id), "label": username})
+
+    if not options:
+        options = [{"value": "", "label": ""}]
+
     return vol.Schema(
         {
-            vol.Required(D_API_KEY, default=api_key): TextSelector(
-                TextSelectorConfig(type=TextSelectorType.PASSWORD)
-            ),
-            vol.Required(D_UPDATE_INTERVAL_DATA, default=interval_data): vol.All(
-                vol.Coerce(int), vol.Range(min=5)
-            ),
-            vol.Required(D_UPDATE_INTERVAL_ALARM, default=interval_alarm): vol.All(
-                vol.Coerce(int), vol.Range(min=5)
-            ),
-            vol.Required(D_BASE_API_URL, default=base_api_url): str,
-            vol.Required(D_USE_WEBHOOKS, default=use_webhooks): BooleanSelector(
-                BooleanSelectorConfig()
+            vol.Required("ucr_id", default=options[0]["value"]): SelectSelector(
+                SelectSelectorConfig(
+                    options=options,
+                    multiple=False,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
             ),
         }
     )

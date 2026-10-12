@@ -1,7 +1,5 @@
 """In-memory log handler for DiveraControl diagnostics."""
 
-from __future__ import annotations
-
 from collections import deque
 import logging
 
@@ -18,7 +16,7 @@ class DiveraControlLogHandler(logging.Handler):
     """Log handler that stores recent records in memory."""
 
     def __init__(self) -> None:
-        """Initialize the handler."""
+        """Initialize the log handler with a fixed-size deque."""
         super().__init__()
         self._records: deque[logging.LogRecord] = deque(maxlen=_MAX_RECORDS)
 
@@ -35,34 +33,28 @@ class DiveraControlLogHandler(logging.Handler):
 
         return await hass.async_add_executor_job(_format_logs)
 
+
+# create a single instance of the handler to be shared across the integration
+_handler = DiveraControlLogHandler()
+_handler.setFormatter(
+    logging.Formatter("%(asctime)s %(levelname)s (%(name)s) %(message)s")
+)
+logging.getLogger(_LOGGER_NAME).addHandler(_handler)
+
+
 def async_setup_diveracontrol_log_handler(hass: HomeAssistant) -> None:
-    """Create and attach the in-memory log handler once."""
+    """Store the handler in hass.data for later access."""
     if _LOGS_KEY in hass.data:
         return
-
-    handler = DiveraControlLogHandler()
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s (%(name)s) %(message)s")
-    )
-    logging.getLogger(_LOGGER_NAME).addHandler(handler)
-    hass.data[_LOGS_KEY] = handler
+    hass.data[_LOGS_KEY] = _handler
 
 
 def async_remove_diveracontrol_log_handler(hass: HomeAssistant) -> None:
-    """Detach and remove the in-memory log handler."""
-    handler = hass.data.pop(_LOGS_KEY, None)
-    if handler is None:
-        return
-
-    logger = logging.getLogger(_LOGGER_NAME)
-    logger.removeHandler(handler)
-    handler.close()
+    """Remove the handler reference from hass.data."""
+    hass.data.pop(_LOGS_KEY, None)
 
 
 async def async_get_diveracontrol_logs(hass: HomeAssistant) -> list[str]:
     """Return recent logs from the in-memory log handler."""
-    handler = hass.data.get(_LOGS_KEY)
-    if handler is None:
-        return ["No in-memory logs available"]
-
+    handler = hass.data.get(_LOGS_KEY) or _handler
     return await handler.async_get_logs(hass)

@@ -1,265 +1,931 @@
-"""Tests for DiveraControl __init__.py."""
+"""Tests for DiveraControl __init__.py module."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.config_entries import ConfigEntry
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+)
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+    issue_registry as ir,
+)
 
 from custom_components.diveracontrol import (
+    DOMAIN,
+    PLATFORMS,
+    VERSION,
+    MINOR_VERSION,
+    PATCH_VERSION,
     async_migrate_entry,
+    async_remove_config_entry_device,
     async_setup,
     async_setup_entry,
     async_unload_entry,
 )
 from custom_components.diveracontrol.const import (
-    D_API_KEY,
+    D_ACCESSKEY,
+    D_BASE_API_URL,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
     D_COORDINATOR,
     D_INTEGRATION_VERSION,
+    D_RELATIONS_KEY,
     D_UCR_ID,
-    DOMAIN,
+    D_UPDATE_INTERVAL_ALARM,
+    D_UPDATE_INTERVAL_DATA,
+    D_USE_WEBHOOKS,
+    D_USERNAME,
 )
+from custom_components.diveracontrol.coordinator import DiveraCoordinator
 
 
-async def test_async_setup(hass: HomeAssistant) -> None:
-    """Test async_setup registers services."""
-    result = await async_setup(hass, {})
-
-    assert result is True
-    assert hass.services.has_service(DOMAIN, "post_vehicle_status")
-    assert hass.services.has_service(DOMAIN, "post_alarm")
-    assert f"{DOMAIN}_logs_handler" in hass.data
-
-
-async def test_async_migrate_entry_from_v0_9(hass: HomeAssistant) -> None:
-    """Test migration from version 0.9.x to 1.0.0."""
-    old_entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Test Cluster",
-        data={
-            D_UCR_ID: "123456",
-            D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
+@pytest.fixture
+def mock_config_entry() -> ConfigEntry:
+    """Create a mock config entry."""
+    entry = MagicMock(spec=ConfigEntry)
+    entry.data = {
+        D_CLUSTER_ID: "test_cluster_id",
+        D_CLUSTER_NAME: "Test Cluster",
+        D_BASE_API_URL: "https://api.test.com",
+        D_UPDATE_INTERVAL_DATA: 60,
+        D_UPDATE_INTERVAL_ALARM: 30,
+        D_INTEGRATION_VERSION: f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+        D_RELATIONS_KEY: {
+            "ucr1": {
+                D_ACCESSKEY: "test_accesskey_1",
+                D_USERNAME: "user1",
+            },
+            "ucr2": {
+                D_ACCESSKEY: "test_accesskey_2",
+                D_USERNAME: "user2",
+            },
         },
-        version=0,
-        minor_version=9,
-    )
-    old_entry.add_to_hass(hass)
-
-    with (
-        patch("custom_components.diveracontrol.VERSION", 1),
-        patch("custom_components.diveracontrol.MINOR_VERSION", 2),
-        patch("custom_components.diveracontrol.PATCH_VERSION", 0),
-    ):
-        result = await async_migrate_entry(hass, old_entry)
-
-        # Verify migration was successful and versions were updated to patched values
-        assert result is True
-        assert old_entry.version == 1
-        assert old_entry.minor_version == 2
+    }
+    entry.entry_id = "test_entry_id"
+    entry.version = VERSION
+    entry.minor_version = MINOR_VERSION
+    entry.title = "Test Cluster"
+    return entry
 
 
-async def test_async_migrate_entry_from_v0_8_succeeds(hass: HomeAssistant) -> None:
-    """Test migration from version 0.8.x succeeds (now supported)."""
-    old_entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Test Cluster",
-        data={
-            D_UCR_ID: "123456",
-            D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-        version=0,
-        minor_version=8,
-    )
-    old_entry.add_to_hass(hass)
-
-    with (
-        patch("custom_components.diveracontrol.VERSION", 1),
-        patch("custom_components.diveracontrol.MINOR_VERSION", 2),
-        patch("custom_components.diveracontrol.PATCH_VERSION", 0),
-    ):
-        result = await async_migrate_entry(hass, old_entry)
-
-    assert result is True
-    assert old_entry.version == 1
-    assert old_entry.minor_version == 2
-    assert D_INTEGRATION_VERSION not in old_entry.data
+@pytest.fixture
+def mock_hass() -> HomeAssistant:
+    """Create a mock Home Assistant instance."""
+    hass = MagicMock(spec=HomeAssistant)
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=None)
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass.config_entries.async_update_entry = MagicMock()
+    hass.config_entries.async_reload = AsyncMock(return_value=None)
+    return hass
 
 
-@pytest.mark.parametrize(
-    ("exception", "expected_exception"),
-    [
-        (TimeoutError("Connection timeout"), ConfigEntryNotReady),
-        (ConnectionError("Connection failed"), ConfigEntryNotReady),
-        (ConfigEntryAuthFailed("Auth failed"), ConfigEntryAuthFailed),
-        (Exception("Unexpected error"), ConfigEntryNotReady),
-    ],
-)
-async def test_async_setup_entry_failures(
-    hass: HomeAssistant,
-    exception: Exception,
-    expected_exception: type[Exception],
-) -> None:
-    """Test async_setup_entry handles various exceptions correctly."""
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            D_UCR_ID: "123456",
-            D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-    )
+class TestPlatforms:
+    """Test PLATFORMS constant."""
 
-    with (
-        patch("custom_components.diveracontrol.DiveraAPI") as mock_api_class,
-        patch(
-            "custom_components.diveracontrol.DiveraCoordinator"
-        ) as mock_coordinator_class,
-    ):
-        mock_api = mock_api_class.return_value
-        mock_coordinator = mock_coordinator_class.return_value
-
-        # Setup the exception to be raised during coordinator refresh
-        mock_coordinator.async_config_entry_first_refresh.side_effect = exception
-
-        # Test that the expected exception is raised
-        with pytest.raises(expected_exception):
-            await async_setup_entry(hass, config_entry)
+    def test_platforms_defined(self) -> None:
+        """Test that all platforms are defined."""
+        assert Platform.CALENDAR in PLATFORMS
+        assert Platform.DEVICE_TRACKER in PLATFORMS
+        assert Platform.SELECT in PLATFORMS
+        assert Platform.SENSOR in PLATFORMS
+        assert Platform.EVENT in PLATFORMS
+        assert len(PLATFORMS) == 5
 
 
-async def test_async_setup_entry_success(hass: HomeAssistant) -> None:
-    """Test async_setup_entry succeeds with valid configuration."""
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            D_UCR_ID: "123456",
-            D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-    )
+class TestAsyncSetup:
+    """Test async_setup function."""
 
-    with (
-        patch("custom_components.diveracontrol.DiveraAPI") as mock_api_class,
-        patch(
-            "custom_components.diveracontrol.DiveraCoordinator"
-        ) as mock_coordinator_class,
-        patch("custom_components.diveracontrol.async_register_services"),
-        patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward,
-        patch.object(config_entry, "async_on_unload") as mock_async_on_unload,
-    ):
-        mock_api = mock_api_class.return_value
-        mock_coordinator = mock_coordinator_class.return_value
+    @pytest.mark.asyncio
+    async def test_async_setup_success(self, hass: HomeAssistant) -> None:
+        """Test successful async_setup."""
+        with (
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ) as mock_log_setup,
+            patch(
+                "custom_components.diveracontrol.async_register_services"
+            ) as mock_register_services,
+        ):
+            result = await async_setup(hass, {})
+            assert result is True
+            mock_log_setup.assert_called_once_with(hass)
+            mock_register_services.assert_called_once_with(hass, DOMAIN)
 
-        # Setup successful coordinator refresh
+
+class TestAsyncSetupEntry:
+    """Test async_setup_entry function."""
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_success(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test successful async_setup_entry with valid config."""
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
-        mock_forward.return_value = None
 
-        result = await async_setup_entry(hass, config_entry)
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    {"ucr1": mock_config_entry.data[D_RELATIONS_KEY]["ucr1"]},
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
+                new_callable=AsyncMock,
+            ) as mock_forward,
+        ):
+            result = await async_setup_entry(hass, mock_config_entry)
+            assert result is True
+            mock_forward.assert_called_once_with(mock_config_entry, PLATFORMS)
+            assert DOMAIN in hass.data
+            assert "test_cluster_id" in hass.data[DOMAIN]
 
-        assert result is True
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_no_coordinators(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test async_setup_entry fails when no coordinators can be created."""
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=("test_cluster_id", {}, {}),
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+        ):
+            with pytest.raises(ConfigEntryNotReady):
+                await async_setup_entry(hass, mock_config_entry)
 
-        # Verify API and coordinator were created with correct parameters
-        mock_api_class.assert_called_once_with(
-            hass,
-            "123456",
-            "test_key",
-            "",
-        )
-        mock_coordinator_class.assert_called_once_with(
-            hass,
-            mock_api,
-            config_entry,
-        )
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_invalid_relation_data(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test async_setup_entry with invalid relation data type - skips invalid entries."""
+        mock_config_entry.data[D_RELATIONS_KEY] = {
+            "ucr1": "not_a_dict",
+            "ucr2": {D_ACCESSKEY: "valid_key", D_USERNAME: "valid_user"},
+        }
 
-        # Verify coordinator was stored in runtime_data and hass.data
-        assert config_entry.runtime_data == mock_coordinator
-        assert hass.data[DOMAIN]["123456"][D_COORDINATOR] == mock_coordinator
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(return_value=None)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 
-        # Verify platforms were forwarded
-        mock_forward.assert_called_once_with(
-            config_entry, ["calendar", "device_tracker", "sensor"]
-        )
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await async_setup_entry(hass, mock_config_entry)
+            assert result is True
 
-        # Verify cleanup was registered
-        mock_async_on_unload.assert_called_once_with(mock_api.close)
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_missing_username(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test async_setup_entry with missing username in relation data."""
+        mock_config_entry.data[D_RELATIONS_KEY] = {
+            "ucr1": {D_ACCESSKEY: "test_accesskey_1"}
+        }
 
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(return_value=None)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 
-async def test_async_unload_entry_success(hass: HomeAssistant) -> None:
-    """Test async_unload_entry succeeds."""
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            D_UCR_ID: "123456",
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await async_setup_entry(hass, mock_config_entry)
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_coordinator_setup_failure(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test async_setup_entry when all coordinators fail setup."""
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: "test_cluster_id",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-    )
+            D_BASE_API_URL: "https://api.test.com",
+            D_UPDATE_INTERVAL_DATA: 60,
+            D_UPDATE_INTERVAL_ALARM: 30,
+            D_RELATIONS_KEY: {
+                "ucr1": {D_ACCESSKEY: "test_key", D_USERNAME: "user1"},
+            },
+        }
+        mock_config_entry.entry_id = "test_entry_id"
 
-    # Setup hass.data structure
-    hass.data[f"{DOMAIN}_logs_handler"] = MagicMock()
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["123456"] = {D_COORDINATOR: MagicMock()}
-
-    with patch.object(
-        hass.config_entries, "async_unload_platforms", return_value=True
-    ) as mock_unload:
-        result = await async_unload_entry(hass, config_entry)
-
-        assert result is True
-        mock_unload.assert_called_once_with(
-            config_entry, ["calendar", "device_tracker", "sensor"]
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(
+            side_effect=ConfigEntryNotReady("Not ready")
         )
 
-        # Verify data was cleaned up
-        assert DOMAIN not in hass.data
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+        ):
+            with pytest.raises(ConfigEntryNotReady):
+                await async_setup_entry(hass, mock_config_entry)
 
-
-async def test_async_unload_entry_failure(hass: HomeAssistant) -> None:
-    """Test async_unload_entry fails when platform unload fails."""
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            D_UCR_ID: "123456",
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_all_coordinators_fail(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test async_setup_entry when all coordinators fail setup - same as above."""
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: "test_cluster_id",
             D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-    )
+            D_BASE_API_URL: "https://api.test.com",
+            D_UPDATE_INTERVAL_DATA: 60,
+            D_UPDATE_INTERVAL_ALARM: 30,
+            D_RELATIONS_KEY: {
+                "ucr1": {D_ACCESSKEY: "test_key", D_USERNAME: "user1"},
+            },
+        }
+        mock_config_entry.entry_id = "test_entry_id"
 
-    with patch.object(
-        hass.config_entries, "async_unload_platforms", return_value=False
-    ):
-        result = await async_unload_entry(hass, config_entry)
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(
+            side_effect=ConfigEntryNotReady("Not ready")
+        )
 
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+        ):
+            with pytest.raises(ConfigEntryNotReady):
+                await async_setup_entry(hass, mock_config_entry)
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_refresh_failure(self, hass: HomeAssistant) -> None:
+        """Test async_setup_entry when all coordinators fail refresh."""
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: "test_cluster_id",
+            D_CLUSTER_NAME: "Test Cluster",
+            D_BASE_API_URL: "https://api.test.com",
+            D_UPDATE_INTERVAL_DATA: 60,
+            D_UPDATE_INTERVAL_ALARM: 30,
+            D_RELATIONS_KEY: {
+                "ucr1": {D_ACCESSKEY: "test_key", D_USERNAME: "user1"},
+            },
+        }
+        mock_config_entry.entry_id = "test_entry_id"
+
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(return_value=None)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=ConfigEntryAuthFailed("Auth failed")
+        )
+
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+        ):
+            with pytest.raises(ConfigEntryNotReady):
+                await async_setup_entry(hass, mock_config_entry)
+
+    @pytest.mark.asyncio
+    async def test_async_setup_entry_empty_cluster_name(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test async_setup_entry with empty cluster name."""
+        mock_config_entry.data[D_CLUSTER_NAME] = ""
+
+        mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator._async_setup = AsyncMock(return_value=None)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
+
+        with (
+            patch(
+                "custom_components.diveracontrol.get_cluster_coordinators_ucrs_from_config_hass",
+                return_value=(
+                    "test_cluster_id",
+                    {},
+                    mock_config_entry.data[D_RELATIONS_KEY],
+                ),
+            ),
+            patch(
+                "custom_components.diveracontrol.DiveraCoordinator",
+                return_value=mock_coordinator,
+            ),
+            patch(
+                "custom_components.diveracontrol.async_setup_diveracontrol_log_handler"
+            ),
+            patch.object(
+                hass.config_entries,
+                "async_forward_entry_setups",
+                new_callable=AsyncMock,
+            ),
+        ):
+            result = await async_setup_entry(hass, mock_config_entry)
+            assert result is True
+
+
+class TestAsyncUnloadEntry:
+    """Test async_unload_entry function."""
+
+    @pytest.fixture
+    def mock_hass_unload(self) -> HomeAssistant:
+        """Create a mock Home Assistant instance for unload tests."""
+        hass = MagicMock(spec=HomeAssistant)
+        hass.data = {}
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+        hass.config_entries._entries = {}
+        return hass
+
+    @pytest.mark.asyncio
+    async def test_async_unload_entry_success(
+        self, mock_hass_unload: HomeAssistant
+    ) -> None:
+        """Test successful async_unload_entry."""
+        cluster_id = "test_cluster_id"
+        mock_hass_unload.data = {
+            DOMAIN: {
+                cluster_id: {D_COORDINATOR: {"ucr1": MagicMock(), "ucr2": MagicMock()}}
+            }
+        }
+
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: cluster_id,
+            D_CLUSTER_NAME: "Test Cluster",
+        }
+
+        with patch.object(
+            mock_hass_unload.config_entries,
+            "async_unload_platforms",
+            new_callable=AsyncMock,
+        ) as mock_unload_platforms:
+            mock_unload_platforms.return_value = True
+
+            result = await async_unload_entry(mock_hass_unload, mock_config_entry)
+            assert result is True
+            assert cluster_id not in mock_hass_unload.data.get(
+                DOMAIN, {}
+            ), f"Expected {cluster_id} not in {mock_hass_unload.data.get(DOMAIN, {})}"
+            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
+
+    @pytest.mark.asyncio
+    async def test_async_unload_entry_platforms_failure(
+        self, mock_hass_unload: HomeAssistant
+    ) -> None:
+        """Test async_unload_entry when unloading platforms fails."""
+        cluster_id = "test_cluster_id"
+        mock_hass_unload.data = {DOMAIN: {cluster_id: {D_COORDINATOR: {}}}}
+
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: cluster_id,
+            D_CLUSTER_NAME: "Test Cluster",
+        }
+
+        with patch.object(
+            mock_hass_unload.config_entries,
+            "async_unload_platforms",
+            new_callable=AsyncMock,
+        ) as mock_unload_platforms:
+            mock_unload_platforms.return_value = False
+
+            result = await async_unload_entry(mock_hass_unload, mock_config_entry)
+            assert result is False
+            assert cluster_id in mock_hass_unload.data.get(
+                DOMAIN, {}
+            ), f"Expected {cluster_id} in {mock_hass_unload.data.get(DOMAIN, {})}"
+
+    @pytest.mark.asyncio
+    async def test_async_unload_entry_last_cluster(
+        self, mock_hass_unload: HomeAssistant
+    ) -> None:
+        """Test async_unload_entry when removing last cluster."""
+        cluster_id = "test_cluster_id"
+        mock_hass_unload.data = {DOMAIN: {cluster_id: {D_COORDINATOR: {}}}}
+
+        mock_config_entry = MagicMock(spec=ConfigEntry)
+        mock_config_entry.data = {
+            D_CLUSTER_ID: cluster_id,
+            D_CLUSTER_NAME: "Test Cluster",
+        }
+
+        with (
+            patch.object(
+                mock_hass_unload.config_entries,
+                "async_unload_platforms",
+                new_callable=AsyncMock,
+            ) as mock_unload_platforms,
+            patch(
+                "custom_components.diveracontrol.async_remove_diveracontrol_log_handler"
+            ) as mock_remove_log_handler,
+        ):
+            mock_unload_platforms.return_value = True
+
+            result = await async_unload_entry(mock_hass_unload, mock_config_entry)
+            assert result is True
+            assert (
+                DOMAIN not in mock_hass_unload.data
+            ), f"Expected DOMAIN not in {mock_hass_unload.data}"
+            mock_remove_log_handler.assert_called_once_with(mock_hass_unload)
+
+
+class TestAsyncRemoveConfigEntryDevice:
+    """Test async_remove_config_entry_device function."""
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_success(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test successful device removal."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [(DOMAIN, "ucr1")]
+
+        with (
+            patch.object(
+                hass.config_entries, "async_update_entry", return_value=None
+            ) as mock_update_entry,
+            patch.object(
+                hass.config_entries, "async_reload", new_callable=AsyncMock
+            ) as mock_reload,
+        ):
+            result = await async_remove_config_entry_device(
+                hass, mock_config_entry, device_entry
+            )
+            assert result is True
+            mock_update_entry.assert_called_once()
+            mock_reload.assert_called_once_with("test_entry_id")
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_no_domain_identifier(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test device removal when device has no DOMAIN identifier."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [("other_domain", "device1")]
+
+        result = await async_remove_config_entry_device(
+            hass, mock_config_entry, device_entry
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_cluster_id_match(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test device removal when ucr_id matches cluster_id."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [(DOMAIN, "test_cluster_id")]
+
+        result = await async_remove_config_entry_device(
+            hass, mock_config_entry, device_entry
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_ucr_not_in_relations(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test device removal when ucr_id is not in relations."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [(DOMAIN, "unknown_ucr")]
+
+        result = await async_remove_config_entry_device(
+            hass, mock_config_entry, device_entry
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_invalid_relations_type(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test device removal when relations is not a dict."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [(DOMAIN, "ucr1")]
+        mock_config_entry.data[D_RELATIONS_KEY] = "not_a_dict"
+
+        result = await async_remove_config_entry_device(
+            hass, mock_config_entry, device_entry
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_async_remove_config_entry_device_last_relation(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test device removal when it is the last relation."""
+        device_entry = MagicMock(spec=dr.DeviceEntry)
+        device_entry.identifiers = [(DOMAIN, "ucr1")]
+        mock_config_entry.data[D_RELATIONS_KEY] = {
+            "ucr1": mock_config_entry.data[D_RELATIONS_KEY]["ucr1"]
+        }
+
+        result = await async_remove_config_entry_device(
+            hass, mock_config_entry, device_entry
+        )
         assert result is False
 
 
-async def test_async_migrate_entry_v1_2_0(hass: HomeAssistant) -> None:
-    """Test migration to version 1.2.0 adds integration version."""
-    old_entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Test Cluster",
-        data={
-            D_UCR_ID: "123456",
-            D_CLUSTER_NAME: "Test Cluster",
-            D_API_KEY: "test_key",
-        },
-        version=1,
-        minor_version=1,  # Before 1.2.0
-    )
-    old_entry.add_to_hass(hass)
+class TestRemoveOldEntityEntries:
+    """Test _remove_old_entity_entries function."""
 
-    with (
-        patch("custom_components.diveracontrol.VERSION", 1),
-        patch("custom_components.diveracontrol.MINOR_VERSION", 2),
-        patch("custom_components.diveracontrol.PATCH_VERSION", 0),
-    ):
-        result = await async_migrate_entry(hass, old_entry)
+    def test_remove_old_entity_entries_success(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test successful removal of old entity entries."""
+        from custom_components.diveracontrol import _remove_old_entity_entries
 
-        assert result is True
-        assert old_entry.version == 1
-        assert old_entry.minor_version == 2
-        assert D_INTEGRATION_VERSION in old_entry.data
-        assert old_entry.data[D_INTEGRATION_VERSION] == "1.2.0"
+        mock_entity = MagicMock()
+        mock_entity.entity_id = "sensor.test_entity"
+        mock_entity.unique_id = "test_unique_id"
+        mock_entity.config_entry_id = mock_config_entry.entry_id
+
+        mock_entity_registry = MagicMock()
+        mock_entity_registry.entities = {"sensor.test_entity": mock_entity}
+        mock_entity_registry.async_remove = MagicMock()
+
+        with patch(
+            "custom_components.diveracontrol.er.async_get",
+            return_value=mock_entity_registry,
+        ):
+            _remove_old_entity_entries(hass, mock_config_entry)
+            mock_entity_registry.async_remove.assert_called_once_with(
+                "sensor.test_entity"
+            )
+
+    def test_remove_old_entity_entries_exception(
+        self, hass: HomeAssistant, mock_config_entry: ConfigEntry
+    ) -> None:
+        """Test _remove_old_entity_entries with exception."""
+        from custom_components.diveracontrol import _remove_old_entity_entries
+
+        with patch(
+            "custom_components.diveracontrol.er.async_get",
+            side_effect=Exception("Test error"),
+        ):
+            _remove_old_entity_entries(hass, mock_config_entry)
+
+
+class TestMigrations:
+    """Test migration functions."""
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_no_migration_needed(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration when no migration is needed."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={},
+            version=VERSION,
+            minor_version=MINOR_VERSION,
+        )
+        entry.add_to_hass(hass)
+        assert await async_migrate_entry(hass, entry) is True
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_success(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 with valid API key."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
+
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
+
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        assert D_RELATIONS_KEY in entry.data
+        assert entry.data[D_RELATIONS_KEY]["ucr1"][D_ACCESSKEY] == "key1"
+        assert entry.data[D_CLUSTER_ID] == "test_cluster"
+        # unique_id must be aligned to the cluster_id convention of v2.0.0
+        assert entry.unique_id == "test_cluster"
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_api_failure(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 when API key validation fails."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "invalid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
+
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=({"base": "invalid_accesskey"}, {})
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is False
+
+        assert entry.version == 1
+        assert entry.minor_version == 4
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_failed_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_no_matching_cluster(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 when no matching cluster is found."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "unknown_ucr",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="unknown_ucr",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
+
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is False
+
+        assert entry.version == 1
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_failed_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_v2_0_0_offline_fallback(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration to v2.0.0 falls back to offline migration when API is unreachable."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_BASE_API_URL: "https://www.divera247.com",
+                D_INTEGRATION_VERSION: "1.4.1",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=4,
+        )
+        entry.add_to_hass(hass)
+
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=({"base": "cannot_connect"}, {})
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
+
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        # offline migration keeps the stored accesskey and ucr_id
+        assert entry.data[D_RELATIONS_KEY]["ucr1"][D_ACCESSKEY] == "valid_api_key"
+        assert entry.data[D_CLUSTER_ID] == "test_cluster"
+        assert entry.unique_id == "test_cluster"
+        issue_registry = ir.async_get(hass)
+        assert any(
+            issue.translation_key == "migration_offline_v2_0_0"
+            for issue in issue_registry.issues.values()
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_migrate_entry_from_v1_0_full_chain(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test migration chain from version 1.0 applies all migration steps."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title="Test Cluster",
+            data={
+                "api_key": "valid_api_key",
+                D_CLUSTER_ID: "test_cluster",
+                D_CLUSTER_NAME: "Test Cluster",
+                D_UCR_ID: "ucr1",
+                D_UPDATE_INTERVAL_ALARM: 30,
+                D_UPDATE_INTERVAL_DATA: 60,
+            },
+            unique_id="ucr1",
+            version=1,
+            minor_version=0,
+        )
+        entry.add_to_hass(hass)
+
+        mock_api_client = AsyncMock()
+        mock_api_client.request_access = AsyncMock(
+            return_value=(
+                {},
+                {
+                    "test_cluster": {
+                        D_CLUSTER_ID: "test_cluster",
+                        D_CLUSTER_NAME: "Test Cluster",
+                        D_RELATIONS_KEY: {
+                            "ucr1": {
+                                D_ACCESSKEY: "key1",
+                                D_USERNAME: "user1",
+                            }
+                        },
+                    }
+                },
+            )
+        )
+        with patch(
+            "custom_components.diveracontrol.DiveraAPIClient",
+            return_value=mock_api_client,
+        ):
+            assert await async_migrate_entry(hass, entry) is True
+
+        assert entry.version == VERSION
+        assert entry.minor_version == MINOR_VERSION
+        assert D_RELATIONS_KEY in entry.data
+        assert D_BASE_API_URL in entry.data
+        assert entry.unique_id == "test_cluster"

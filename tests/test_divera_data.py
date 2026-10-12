@@ -345,9 +345,7 @@ class TestUpdateData:
         raw_ucr_data = {
             "success": True,
             D_DATA: {
-                D_ALARM: {
-                    "items": "invalid_format"  # Should be dict, not string
-                }
+                D_ALARM: {"items": "invalid_format"}  # Should be dict, not string
             },
         }
 
@@ -362,9 +360,7 @@ class TestUpdateData:
 
         raw_ucr_data = {
             "success": True,
-            D_DATA: {
-                D_ALARM: {}  # No items key
-            },
+            D_DATA: {D_ALARM: {}},  # No items key
         }
 
         result = await update_data(mock_api, raw_ucr_data, cluster_data)
@@ -378,11 +374,7 @@ class TestUpdateData:
 
         raw_ucr_data = {
             "success": True,
-            D_DATA: {
-                D_ALARM: {
-                    "items": {}  # Empty items dict
-                }
-            },
+            D_DATA: {D_ALARM: {"items": {}}},  # Empty items dict
         }
 
         result = await update_data(mock_api, raw_ucr_data, cluster_data)

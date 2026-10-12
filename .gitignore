@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+snapshots/fixtures/*/
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+
+# Home Assistant
+.storage/
+home-assistant_v2*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Local run artifacts
+*.log
+*.zip
+coverage.xml
+.coverage
+htmlcov/
+tests.ods
+DiveraControl.code-workspace

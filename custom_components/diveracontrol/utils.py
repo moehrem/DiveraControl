@@ -1,84 +1,50 @@
 """Contain several helper methods for DiveraControl integration."""
 
-from datetime import timedelta
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.translation import async_get_translations
 
-from .const import (
-    BASE_API_URL,
-    D_ALARM,
-    D_CLUSTER,
-    D_CLUSTER_NAME,
-    D_COORDINATOR,
-    D_OPEN_ALARMS,
-    D_UPDATE_INTERVAL_ALARM,
-    D_UPDATE_INTERVAL_DATA,
-    D_VEHICLE,
-    DOMAIN,
-    MANUFACTURER,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    VERSION,
-)
+from .const import D_CLUSTER_ID, D_COORDINATOR, D_RELATIONS_KEY, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_device_info(cluster_name: str) -> DeviceInfo:
-    """Return device information, used in sensor and tracker base classes."""
-    return {
-        "identifiers": {(DOMAIN, cluster_name)},
-        "name": cluster_name,
-        "manufacturer": MANUFACTURER,
-        "model": DOMAIN,
-        "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-        "entry_type": DeviceEntryType.SERVICE,
-        "configuration_url": f"{BASE_API_URL}session/login.html",
-    }
+def get_device_config_entry_ids(device: Any) -> tuple[str, ...]:
+    """Return all config entry ids linked to a device.
 
-
-def _get_coordinator_from_device(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
-    """Get coordinator data dictionary for a device.
+    Home Assistant 2025.12 replaced ``DeviceEntry.config_entry_id`` with
+    ``primary_config_entry`` and a ``config_entries`` list. This helper works
+    with both the old and the new API.
 
     Args:
-        hass: Home Assistant instance.
-        device_id: Device ID.
+        device: Device registry entry.
 
     Returns:
-        Integration data dictionary containing 'api' and 'coordinator'.
-
-    Raises:
-        HomeAssistantError: If device or integration data not found.
+        Tuple of config entry ids linked to the device.
     """
-    device_registry = dr.async_get(hass)
-    device = device_registry.async_get(device_id)
-
-    if not device or not device.config_entries:
-        raise HomeAssistantError(f"Device not found: {device_id}")
-
-    config_entry_id = next(iter(device.config_entries), None)
-    if not config_entry_id:
-        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
-
-    entry = hass.config_entries.async_get_entry(config_entry_id)
-    if not entry or entry.domain != DOMAIN:
-        raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
-
-    return entry.runtime_data
+    entry_id = getattr(device, "config_entry_id", None)
+    if entry_id:
+        return (entry_id,)
+    primary = getattr(device, "primary_config_entry", None)
+    if primary:
+        return (
+            primary,
+            *(e for e in getattr(device, "config_entries", ()) if e and e != primary),
+        )
+    return ()
 
 
-def get_coordinator_key_from_device(
+def get_ucr_data_from_device(
     hass: HomeAssistant,
     device_id: str,
     key: str | None = None,
 ) -> Any:
-    """Get the DiveraCoordinator instance for a device.
+    """Get ucr data of coordinator for a device.
 
     Args:
         hass: Home Assistant instance.
@@ -86,223 +52,64 @@ def get_coordinator_key_from_device(
         key: Key to retrieve from coordinator data.
 
     Returns:
-        The associated DiveraCoordinator instance.
+        The associated ucr data of the coordinator.
 
     Raises:
         HomeAssistantError: If device or coordinator is not found.
     """
-    coordinator = _get_coordinator_from_device(hass, device_id)
+    # Get device from registry
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
+
+    if not device or not get_device_config_entry_ids(device):
+        raise HomeAssistantError(
+            f"Device not found or has no config entries: {device_id}"
+        )
+
+    # Get config entry (prefer an entry belonging to this integration)
+    entry = None
+    for config_entry_id in get_device_config_entry_ids(device):
+        candidate = hass.config_entries.async_get_entry(config_entry_id)
+        if candidate and candidate.domain == DOMAIN:
+            entry = candidate
+            break
+
+    if entry is None:
+        raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
+
+    # Get cluster_id
+    cluster_id = entry.data.get(D_CLUSTER_ID)
+    if not cluster_id:
+        raise HomeAssistantError(
+            f"Cluster ID not found in config entry for device: {device_id}"
+        )
+
+    # Get ucr_id from device identifiers
+    ucr_id = next(
+        (ident for dom, ident in device.identifiers if dom == DOMAIN),
+        None,
+    )
+    if not ucr_id:
+        raise HomeAssistantError(
+            f"UCR ID not found in device identifiers for device: {device_id}"
+        )
+
+    # Get coordinator
+    coordinator = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {}).get(ucr_id)
+    )
+
+    if coordinator is None:
+        raise HomeAssistantError(f"Coordinator not found for device: {device_id}")
 
     if key is None:
         return coordinator
 
     if not hasattr(coordinator, key):
         raise HomeAssistantError(
-            f"Key {key} not found in coordinator for device: {device_id}"
+            f"Key '{key}' not found in coordinator for device: {device_id}"
         )
-
     return getattr(coordinator, key)
-
-
-async def handle_entity(
-    hass: HomeAssistant,
-    data: dict[str, Any],
-    service: str,
-    ucr_id: str,
-    entity_id: int | str,
-) -> None:
-    """Update entity data in coordinator after service call.
-
-    Args:
-        hass: Home Assistant instance
-        data: Service call with data
-        service: Service name that was called
-        ucr_id: User cluster relation ID
-        entity_id: Entity ID to update
-
-    Raises:
-        HomeAssistantError: If service is unknown or coordinator not found
-
-    """
-    entity_id_str = str(entity_id)
-    coordinator = hass.data.get(DOMAIN, {}).get(ucr_id, {}).get(D_COORDINATOR)
-
-    if not coordinator:
-        msg = await get_translation(
-            hass,
-            "exceptions",
-            "coordinator_not_found.message",
-            {"ucr_id": ucr_id},
-        )
-        raise HomeAssistantError(msg)
-
-    # Get current coordinator data
-    coord_data = coordinator.data.copy()
-
-    match service:
-        case "put_alarm" | "post_close_alarm":
-            # Update alarm data
-            alarm_items = coord_data.get(D_ALARM, {}).get("items", {})
-            if entity_id_str not in alarm_items:
-                _LOGGER.warning(
-                    "Alarm %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            alarm_data = alarm_items[entity_id_str]
-
-            # Update only relevant fields from service call
-            for key, value in data.items():
-                if key in ("device_id", "alarm_id"):
-                    continue
-                if key in alarm_data:
-                    alarm_data[key] = value
-
-        case "post_vehicle_status":
-            # Update vehicle FMS status
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data = vehicle_items[entity_id_str]
-
-            # Update other vehicle fields
-            for key, value in data.items():
-                if key in ("device_id", "vehicle_id", "status", "status_id"):
-                    continue
-                if key in vehicle_data:
-                    vehicle_data[key] = value
-
-        case "post_using_vehicle_property":
-            # Update vehicle properties
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data = vehicle_items[entity_id_str]
-
-            # Update properties object
-            properties = data.get("properties", {})
-            if properties:
-                if "properties" not in vehicle_data:
-                    vehicle_data["properties"] = {}
-                vehicle_data["properties"].update(properties)
-
-        case "post_using_vehicle_crew":
-            # Update vehicle crew
-            vehicle_items = coord_data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
-            if entity_id_str not in vehicle_items:
-                _LOGGER.warning(
-                    "Vehicle %s not found in coordinator data for service %s",
-                    entity_id_str,
-                    service,
-                )
-                return
-
-            vehicle_data_dict: dict[str, Any] = vehicle_items[entity_id_str]
-            mode: str | None = data.get("mode")
-            new_crew: list[int] = data.get("crew", [])
-
-            if "crew" not in vehicle_data_dict:
-                vehicle_data_dict["crew"] = []
-
-            # extract IDs for easier handling: iterate and cast each item
-            current_crew: set[int] = set()
-            for item in vehicle_data_dict.get("crew", []):
-                if isinstance(item, dict):
-                    raw_id = item.get("id")
-                else:
-                    raw_id = item
-                if raw_id is None:
-                    continue
-                try:
-                    crew_id = int(raw_id)
-                except (ValueError, TypeError):
-                    # skip malformed entries
-                    continue
-                current_crew.add(crew_id)
-
-            match mode:
-                case "add":
-                    current_crew.update(new_crew)
-                case "remove":
-                    current_crew.difference_update(new_crew)
-                case "reset":
-                    current_crew.clear()
-                case _:
-                    _LOGGER.warning("Unknown crew mode: %s", mode)
-
-            # convert to Divera format
-            vehicle_data_dict["crew"] = [
-                {"id": crew_id} for crew_id in sorted(current_crew)
-            ]
-
-        case _:
-            # Unknown service
-            msg = await get_translation(
-                hass,
-                "exceptions",
-                "unknown_service.message",
-                {"service": service},
-            )
-            _LOGGER.error(msg)
-            raise HomeAssistantError(msg)
-
-    # Update coordinator with modified data
-    coordinator.async_set_updated_data(coord_data)
-    _LOGGER.debug(
-        "Updated coordinator data for %s after %s service call",
-        entity_id_str,
-        service,
-    )
-
-
-def set_update_interval(
-    cluster_data: dict[str, Any],
-    interval_data: dict[str, Any],
-    old_interval: timedelta | None,
-) -> timedelta:
-    """Set update interval based on open alarms.
-
-    Args:
-        cluster_data: Cluster data of coordinator.
-        interval_data: Dictionary containing update interval settings.
-        old_interval: Previous update interval.
-
-    Returns:
-        New update interval.
-    """
-    open_alarms = cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
-
-    # Determine new interval
-    new_interval = (
-        interval_data[D_UPDATE_INTERVAL_ALARM]
-        if open_alarms > 0
-        else interval_data[D_UPDATE_INTERVAL_DATA]
-    )
-
-    # Log only if interval changed
-    if old_interval != new_interval:
-        _LOGGER.debug(
-            "Update interval changed to %s for unit '%s' (open alarms: %d)",
-            new_interval,
-            cluster_data.get(D_CLUSTER_NAME, "Unknown"),
-            open_alarms,
-        )
-
-    return new_interval
 
 
 async def get_translation(
@@ -340,3 +147,26 @@ async def get_translation(
             )
 
     return translation_str
+
+
+def get_cluster_coordinators_ucrs_from_config_hass(
+    config_data: Mapping[str, Any], hass: HomeAssistant
+) -> tuple[str, dict[str, Any], dict[str, Any]]:
+    """Get cluster_id, coordinators and UCR data from config entry.
+
+    Args:
+        config_data: Config entry data.
+        hass: Home Assistant instance.
+
+    Returns:
+        Tuple containing cluster_id, coordinators dict and list of DiveraCoordinators.
+
+    """
+
+    cluster_id: str = config_data.get(D_CLUSTER_ID, "")
+    coordinators: dict[str, Any] = (
+        hass.data.get(DOMAIN, {}).get(cluster_id, {}).get(D_COORDINATOR, {})
+    )
+    ucrs: dict[str, Any] = config_data.get(D_RELATIONS_KEY, {})
+
+    return cluster_id, coordinators, ucrs

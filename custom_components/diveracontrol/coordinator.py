@@ -1,4 +1,4 @@
-"""Coordinator for myDivera integration."""
+"""Coordinator for DiveraControl integration."""
 
 from datetime import timedelta
 import logging
@@ -9,16 +9,20 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    D_ACCESSKEY,
+    D_ALARM,
+    D_BASE_API_URL,
+    D_CLUSTER_ID,
     D_CLUSTER_NAME,
-    D_UCR_ID,
+    D_RELATIONS_KEY,
     D_UPDATE_INTERVAL_ALARM,
     D_UPDATE_INTERVAL_DATA,
+    D_USERNAME,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
 )
 from .divera_api import DiveraAPI
 from .divera_data import update_data
-from .utils import set_update_interval
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,27 +33,45 @@ class DiveraCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        api: "DiveraAPI",
         config_entry: ConfigEntry,
+        ucr_id: str,
     ) -> None:
         """Initialize DiveraControl coordinator.
 
+        Each coordinator instance is associated with one user cluster relation (ucr) and
+        handles data fetching and updates for that relation.
+        The coordinator uses the access key from the relation data to authenticate with
+        the Divera API and fetch relevant data.
+
+        Relevant data is always fetched based on the ucr_id. But update intervals and
+        base url are shared on cluster level, so they are stored in the main config
+        entry and
+        not in the relation data. This means that if you have multiple ucrs for the same
+        cluster, they will share the same update intervals and base url.
+
         Args:
             hass (HomeAssistant): Home Assistant instance.
-            api (DiveraAPI): Divera API instance.
-            config_entry (dict): Configuration entry for the integration.
+            config_entry (ConfigEntry): Configuration entry for the integration.
+            ucr_id (str): User cluster relation ID - basically the Divera user
+            identification number.
 
         Returns:
             None
 
         """
 
-        self.api = api
+        self.api: DiveraAPI | None = None
 
+        self.cluster_id: str = config_entry.data.get(D_CLUSTER_ID, "")
         self.cluster_name: str = config_entry.data.get(D_CLUSTER_NAME, "")
-        self.ucr_id: str = config_entry.data.get(D_UCR_ID, "")
 
-        self.interval_data = {
+        self.ucr_id: str = ucr_id
+        self.ucr_data: dict[str, Any] = config_entry.data.get(D_RELATIONS_KEY, {}).get(
+            str(ucr_id), {}
+        )
+        self.user_name: str = self.ucr_data.get(D_USERNAME, "")
+
+        self.interval_data: dict[str, timedelta] = {
             D_UPDATE_INTERVAL_ALARM: timedelta(
                 seconds=config_entry.data.get(
                     D_UPDATE_INTERVAL_ALARM, UPDATE_INTERVAL_ALARM
@@ -70,32 +92,90 @@ class DiveraCoordinator(DataUpdateCoordinator):
             config_entry=config_entry,
         )
 
-    async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from Divera API.
+    async def _async_setup(self) -> None:
+        """Perform initial setup tasks for the coordinator.
+
+        This method is called during the coordinator's initialization phase and is
+        responsible for
+        performing any necessary setup tasks.
 
         Returns:
-            cluster_data (dict): The updated data dictionary with the latest Divera information.
+            None
 
         Raises:
-            UpdateFailed: If there is an error fetching data from the API.
+            UpdateFailed: If there is an error during setup, an UpdateFailed exception
+            will be raised with a descriptive error message.
 
         """
 
-        try:
-            # read data from Divera API
-            raw_ucr_data = await self.api.get_ucr_data()
-            new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
+        _accesskey = self.ucr_data.get(D_ACCESSKEY)
+        # No fallback to BASE_API_URL, url should be present.
+        # If not for whatever reason: enforce error in next step.
+        config_entry = self.config_entry
+        assert config_entry is not None
+        _base_url = config_entry.data.get(D_BASE_API_URL)
 
-            # dynamically change update interval
-            self.update_interval = set_update_interval(
-                new_cluster_data, self.interval_data, self.update_interval
+        if not _accesskey or not _base_url:
+            raise UpdateFailed(
+                f"Missing relation data for user {self.user_name} (ucr_id "
+                f"{self.ucr_id}) in config entry data"
             )
 
-            _LOGGER.debug(
-                "Successfully updated data for unit '%s'",
-                self.cluster_name,
+        try:
+            self.api = DiveraAPI(
+                self.hass,
+                self.ucr_id,
+                _accesskey,
+                _base_url,
             )
         except Exception as err:
-            raise UpdateFailed(f"Error fetching data: {err}") from err
-        else:
+            raise UpdateFailed(f"Error setting up API: {err}") from err
+
+        if self.api is None:
+            raise UpdateFailed(
+                f"API client could not be initialized for cluster "
+                f"'{self.cluster_name}' and user '{self.user_name}'"
+            )
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from API and update coordinator data.
+
+        Returns:
+            dict[str, Any]: Updated data fetched from the API.
+
+        """
+
+        if self.api is None:
+            await self._async_setup()
+            if self.api is None:
+                raise UpdateFailed(
+                    f"API client is not initialized for cluster '{self.cluster_name}' "
+                    f"and user '{self.user_name}'"
+                )
+
+        try:
+            raw_ucr_data = await self.api.get_pull_all()
+            new_cluster_data = await update_data(self.api, raw_ucr_data, self.data)
+
+            # change update interval based on open alarms
+            # open_alarms = new_cluster_data.get(D_ALARM, {}).get(D_OPEN_ALARMS, 0)
+            open_alarms = len(new_cluster_data.get(D_ALARM, {}).get("items", {}))
+            new_interval = (
+                self.interval_data[D_UPDATE_INTERVAL_ALARM]
+                if open_alarms > 0
+                else self.interval_data[D_UPDATE_INTERVAL_DATA]
+            )
+
+            if self.update_interval != new_interval:
+                self.update_interval = new_interval
+                _LOGGER.debug(
+                    "Update interval changed to %s for unit '%s' (open alarms: %d)",
+                    new_interval,
+                    self.cluster_name,
+                    open_alarms,
+                )
+
             return new_cluster_data
+
+        except Exception as err:
+            raise UpdateFailed(f"Error fetching data: {err}") from err

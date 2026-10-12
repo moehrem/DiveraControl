@@ -11,6 +11,7 @@ from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
 from homeassistant.core import Context, HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, selector
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -18,7 +19,6 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
     SelectOptionDict,
 )
-from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     DOMAIN,
@@ -26,19 +26,27 @@ from .const import (
     PERM_MANAGEMENT,
     PERM_MESSAGES,
     PERM_NEWS,
+    PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_coordinator_key_from_device, get_translation
+from .utils import (
+    get_device_config_entry_ids,
+    get_translation,
+    get_ucr_data_from_device,
+)
 
 ACTION_TYPES: tuple[str, ...] = (
+    "request_refresh",
     "post_vehicle_status",
     "post_alarm",
     "put_alarm",
     "post_close_alarm",
+    "post_confirm_alarm",
     "post_message",
     "post_using_vehicle_property",
     "post_using_vehicle_crew",
     "post_news",
+    "post_user_status",
 )
 
 ACTION_SCHEMA = vol.Schema(
@@ -146,10 +154,10 @@ async def _get_selector_options(
         ]
 
     # For dynamic options, get coordinator data
-    coor_data: dict[str, Any] = get_coordinator_key_from_device(hass, device_id, "data")
+    coor_data: dict[str, Any] = get_ucr_data_from_device(hass, device_id, "data")
 
-    if not device_id:
-        return []
+    # if not device_id:
+    #     return []
 
     # Navigate data path
     for key in data_path.split("."):
@@ -183,30 +191,34 @@ async def async_get_actions(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entries:
+    if not device or not get_device_config_entry_ids(device):
         return []
 
     try:
-        api = get_coordinator_key_from_device(hass, device_id, "api")
+        api = get_ucr_data_from_device(hass, device_id, "api")
     except HomeAssistantError:
         return []
 
     permissions = api.permissions
 
-    action_types: list[str] = []
+    action_types: list[str] = ["request_refresh"]
 
     try:
         permissions.check(PERM_MANAGEMENT)
-        action_types = [
-            "post_vehicle_status",
-            "post_alarm",
-            "put_alarm",
-            "post_close_alarm",
-            "post_message",
-            "post_using_vehicle_property",
-            "post_using_vehicle_crew",
-            "post_news",
-        ]
+        action_types.extend(
+            [
+                "post_vehicle_status",
+                "post_alarm",
+                "put_alarm",
+                "post_close_alarm",
+                "post_confirm_alarm",
+                "post_message",
+                "post_using_vehicle_property",
+                "post_using_vehicle_crew",
+                "post_news",
+                "post_user_status",
+            ]
+        )
     except HomeAssistantError:
         try:
             permissions.check(PERM_STATUS_VEHICLE)
@@ -221,7 +233,9 @@ async def async_get_actions(
             pass
         try:
             permissions.check(PERM_ALARM)
-            action_types.extend(["post_alarm", "put_alarm", "post_close_alarm"])
+            action_types.extend(
+                ["post_alarm", "put_alarm", "post_close_alarm", "post_confirm_alarm"]
+            )
         except HomeAssistantError:
             pass
         try:
@@ -232,6 +246,11 @@ async def async_get_actions(
         try:
             permissions.check(PERM_NEWS)
             action_types.append("post_news")
+        except HomeAssistantError:
+            pass
+        try:
+            permissions.check(PERM_STATUS_USER)
+            action_types.extend(["post_user_status"])
         except HomeAssistantError:
             pass
 
@@ -304,23 +323,27 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Required("vehicle"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=vehicle_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if vehicle_options
-                    else vol.Coerce(int),
-                    vol.Optional("status"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=fms_status_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        if vehicle_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("status"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=fms_status_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if fms_status_options
-                    else vol.Coerce(int),
+                        if fms_status_options
+                        else vol.Coerce(int)
+                    ),
                     vol.Optional("status_id"): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
@@ -374,14 +397,16 @@ async def async_get_action_capabilities(
 
         alarm_selector: dict[Any, Any] = (
             {
-                vol.Required("alarm_id"): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=alarm_options,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
+                vol.Required("alarm_id"): (
+                    selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=alarm_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
                     )
+                    if alarm_options
+                    else vol.Coerce(int)
                 )
-                if alarm_options
-                else vol.Coerce(int)
             }
             if action_type == "put_alarm"
             else {}
@@ -398,53 +423,63 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional("alarmcode_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=alarmcode_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Optional("alarmcode_id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=alarmcode_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if alarmcode_options
-                    else str,  # fallback: list of commeseparated string
+                        if alarmcode_options
+                        else str
+                    ),  # fallback: list of commeseparated string
                     vol.Optional("foreign_id"): str,
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Optional("group"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=group_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                        if group_options
+                        else str
+                    ),  # Comma-separated list
+                    vol.Optional("user_cluster_relation"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_cluster_relation_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
+                        if user_cluster_relation_options
+                        else str
+                    ),  # Comma-separated list als Fallback
                     vol.Optional("notification_filter_vehicle"): bool,
-                    vol.Optional("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Optional("vehicle"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=vehicle_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if vehicle_options
-                    else str,  # Comma-separated list
+                        if vehicle_options
+                        else str
+                    ),  # Comma-separated list
                     vol.Optional("notification_filter_status"): bool,
-                    vol.Optional("status"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_status_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Optional("status"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_status_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if user_status_options
-                    else str,  # Comma-separated list
+                        if user_status_options
+                        else str
+                    ),  # Comma-separated list
                     vol.Optional("priority"): bool,
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
@@ -508,6 +543,41 @@ async def async_get_action_capabilities(
             )
         }
 
+    if action_type == "post_confirm_alarm":
+        alarm_options = await _get_selector_options(
+            hass, device_id, "alarm.items", "{title} ({id})"
+        )
+        user_status_options = await _get_selector_options(
+            hass, device_id, "cluster.status", "{name}"
+        )
+
+        return {
+            "extra_fields": vol.Schema(
+                {
+                    vol.Required("alarm_id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=alarm_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        )
+                        if alarm_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Required("id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_status_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        )
+                        if user_status_options
+                        else vol.Coerce(int)
+                    ),
+                }
+            )
+        }
+
     if action_type == "post_close_alarm":
         alarm_options = await _get_selector_options(
             hass, device_id, "alarm.items", "{title} ({id})"
@@ -516,14 +586,16 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("alarm_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=alarm_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Required("alarm_id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=alarm_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if alarm_options
-                    else vol.Coerce(int),
+                        if alarm_options
+                        else vol.Coerce(int)
+                    ),
                     vol.Optional("closed"): bool,
                     vol.Optional("report"): str,
                 }
@@ -541,22 +613,26 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Optional("message_channel_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=message_channel_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Optional("message_channel_id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=message_channel_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if message_channel_options
-                    else vol.Coerce(int),
-                    vol.Optional("alarm_id"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=alarm_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        if message_channel_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("alarm_id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=alarm_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if alarm_options
-                    else vol.Coerce(int),
+                        if alarm_options
+                        else vol.Coerce(int)
+                    ),
                     vol.Optional("text"): str,
                 }
             )
@@ -570,14 +646,16 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Required("vehicle"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=vehicle_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if vehicle_options
-                    else str,
+                        if vehicle_options
+                        else str
+                    ),
                     vol.Optional("properties"): selector.ObjectSelector(),
                 }
             )
@@ -597,29 +675,33 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("vehicle"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=vehicle_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Required("vehicle"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=vehicle_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if vehicle_options
-                    else str,  # Comma-separated list
+                        if vehicle_options
+                        else str
+                    ),  # Comma-separated list
                     vol.Required("mode"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=mode_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional("crew"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=crew_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Optional("crew"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=crew_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if crew_options
-                    else str,  # Comma-separated list of user IDs
+                        if crew_options
+                        else str
+                    ),  # Comma-separated list of user IDs
                 }
             )
         }
@@ -651,24 +733,28 @@ async def async_get_action_capabilities(
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional("user_cluster_relation"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=user_cluster_relation_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                    vol.Optional("user_cluster_relation"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_cluster_relation_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if user_cluster_relation_options
-                    else str,  # Comma-separated list als Fallback
-                    vol.Optional("group"): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=group_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
+                        if user_cluster_relation_options
+                        else str
+                    ),  # Comma-separated list als Fallback
+                    vol.Optional("group"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=group_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
                         )
-                    )
-                    if group_options
-                    else str,  # Comma-separated list
+                        if group_options
+                        else str
+                    ),  # Comma-separated list
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
                     vol.Optional("survey"): bool,
@@ -682,32 +768,83 @@ async def async_get_action_capabilities(
                     vol.Optional("ts_archive"): selector.DateTimeSelector(),
                     # survey-specific fields
                     vol.Optional("newssurvey_title"): str,
-                    vol.Optional(
-                        "newssurvey_show_result_count"
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=newssurvey_show_result_count_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                    vol.Optional("newssurvey_show_result_count"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=newssurvey_show_result_count_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if newssurvey_show_result_count_options
-                    else vol.Coerce(int),
-                    vol.Optional(
-                        "newssurvey_show_result_names"
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=newssurvey_show_result_names_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        if newssurvey_show_result_count_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("newssurvey_show_result_names"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=newssurvey_show_result_names_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
                         )
-                    )
-                    if newssurvey_show_result_names_options
-                    else vol.Coerce(int),
+                        if newssurvey_show_result_names_options
+                        else vol.Coerce(int)
+                    ),
                     vol.Optional("newssurvey_multiple_answers"): bool,
                     vol.Optional("newssurvey_custom_answers"): bool,
                     vol.Optional("newssurvey_response_until"): bool,
                     vol.Optional("newssurvey_ts_response"): selector.DateTimeSelector(),
                     vol.Optional("newssurvey_answers"): selector.ObjectSelector(),
                     vol.Optional("newssurvey_sorting"): selector.ObjectSelector(),
+                }
+            )
+        }
+
+    if action_type == "post_user_status":
+        user_status_options = await _get_selector_options(
+            hass, device_id, "cluster.status", "{name}"
+        )
+        vehicle_options = await _get_selector_options(
+            hass, device_id, "cluster.vehicle", "{name} / {shortname}"
+        )
+
+        return {
+            "extra_fields": vol.Schema(
+                {
+                    vol.Required("id"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_status_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        )
+                        if user_status_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("vehicle"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=vehicle_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                multiple=True,
+                            )
+                        )
+                        if vehicle_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("note"): str,
+                    vol.Optional("reset_date"): selector.DateTimeSelector(),
+                    vol.Optional("reset_to"): (
+                        selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=user_status_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        )
+                        if user_status_options
+                        else vol.Coerce(int)
+                    ),
+                    vol.Optional("alarm_skip"): bool,
+                    vol.Optional("status_skip_statusplan"): bool,
+                    vol.Optional("status_skip_geofence"): bool,
                 }
             )
         }

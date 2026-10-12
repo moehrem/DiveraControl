@@ -2,13 +2,7 @@
   "title": "DiveraControl",
   "config": {
     "step": {
-      "user": {
-        "title": "Einrichtung von DiveraControl",
-        "description": "Bitte wähle eine Option zur Konfiguration aus.",
-        "data": {
-          "method": "Methode"
-        }
-      },
+      "user": {},
       "login": {
         "title": "Benutzeranmeldung",
         "description": "Bitte gib einen Nutzernamen und Passwort ein. Die Logindaten werden nur für die initiale Datenabfrage genutzt und nicht gespeichert.\nStelle außerdem das Intervall für Datenabfragen außerhalb und während laufender Alarme ein.",
@@ -17,19 +11,17 @@
           "password": "Passwort",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-          "base_api_url": "Basis-API-URL",
-          "use_webhooks": "Webhook verwenden"
+          "base_api_url": "Basis-API-URL"
         }
       },
-      "api_key": {
+      "accesskey": {
         "title": "Eingabe des API-Schlüssel",
         "description": "Falls die Anmeldung fehlschlägt oder ein Systemnutzer angemeldet werden soll, kann hier alternativ der API-Schlüssel des Nutzers eingegeben werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-          "base_api_url": "Basis-API-URL",
-          "use_webhooks": "Webhook verwenden"
+          "base_api_url": "Basis-API-URL"
         }
       },
       "multi_cluster": {
@@ -39,31 +31,22 @@
           "clusters": "Einheiten"
         }
       },
-      "webhook_info": {
-        "title": "Webhook-Einrichtung",
-        "description": "Webhook-Unterstützung ist aktiviert. Öffne Divera, gehe zu: 'Verwaltung' -> 'Schnittstellen' -> 'Datenübergabe'\nWähle dort 'Webhooks' und gib folgende URL ein:\n\n{webhook_url}\n\nFormat: POST application/json\nInhalt: Ohne Inhalt\n\nFahre fort, nachdem du die URL in Divera gespeichert hast."
-      },
-      "webhook_error": {
-        "title": "Fehler bei Webhook-Einrichtung",
-        "description": "Dein Home Assistant ist derzeit nicht über eine externe URL erreichbar, die für Webhooks benötigt wird. Weitere Informationen findest du hier: {remote_docs_url}\n\nDie Option 'Webhooks' wird deaktiviert und das Setup fortgesetzt. Sobald dein Home Assistant über eine gültige externe URL verfügt, kannst du die Option über die Neukonfiguration wieder aktivieren."
-      },
       "reconfigure": {
         "title": "Änderung der Konfiguration für DiveraControl",
         "description": "Mit Änderung des API-Schlüssels kann ein anderer User zur Einheit hinterlegt werden. Außerdem können die beiden Intervalle neu konfiguriert werden.",
         "data": {
-          "api_key": "API-Schlüssel",
+          "accesskey": "API-Schlüssel",
           "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
           "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
-          "base_api_url": "Basis-API-URL",
-          "use_webhooks": "Webhook verwenden"
+          "base_api_url": "Basis-API-URL"
         }
       }
     },
     "error": {
-      "cannot_auth": "Ungültiger Benutzername oder Passwort.",
+      "invalid_credentials": "Ungültiger Benutzername oder Passwort.",
       "cannot_connect": "Keine Verbindung zu Divera möglich. Ist die Basis-URL korrekt? Ist Divera im Browser erreichbar?",
       "no_external_url": "Keine externe URL konfiguriert.",
-      "no_ucr": "Keine verbundenen Einheiten gefunden.",
+      "no_data": "Keine Daten erhalten, bitte überprüfe die Protokolle auf Details.",
       "unknown": "Unbekannter Fehler"
     },
     "abort": {
@@ -74,36 +57,100 @@
       "missing_entry_id": "Hub-ID konnte nicht ermittelt werden.",
       "hub_not_found": "Hub wurde nicht gefunden.",
       "reconfigure_successful": "Neukonfiguration erfolgreich.",
-      "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen.",
+      "merge_successful": "Neuauthentifizierung erfolgreich."
+    }
+  },
+  "options": {
+    "abort": {
+      "no_ucr": "Für diese Einheit sind keine Nutzer verfügbar."
+    },
+    "step": {
+      "init": {
+        "title": "Einheit neu konfigurieren",
+        "description": "Wähle aus, welche Einstellungen für {cluster_name} neu konfiguriert werden sollen.",
+        "menu_options": {
+          "cluster_settings": "Einheitseinstellungen",
+          "user_select": "Benutzereinstellungen"
+        }
+      },
+      "cluster_settings": {
+        "title": "Einheitseinstellungen für {cluster_name}",
+        "description": "Die unten stehenden Einstellungen können angepasst werden. Die Änderungen werden nach dem Speichern sofort übernommen, die Integration wird neu geladen.",
+        "data": {
+          "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+          "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+          "base_api_url": "Basis-API-URL"
+        }
+      },
+      "user_select": {
+        "title": "Benutzereinstellungen für {cluster_name} auswählen",
+        "description": "Wähle den Benutzer aus, dessen Einstellungen aktualisiert werden sollen.",
+        "data": {
+          "ucr_id": "Benutzer"
+        }
+      },
+      "user_api_key": {
+        "title": "API-Schlüssel für {username} aktualisieren",
+        "description": "Setze einen neuen API-Schlüssel für den Benutzer {username} in {cluster_name}.",
+        "data": {
+          "accesskey": "API-Schlüssel"
+        }
+      }
     }
   },
   "issues": {
     "breaking_changes_v1_2_0": {
       "title": "Aktion erforderlich: **{cluster_name}**",
-      "description": "Sie haben DiveraControl für **{cluster_name}** von Version 1.1 oder früher auf Version 1.2.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 1.2.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
+    "migration_failed_v2_0_0": {
+      "title": "Migration fehlgeschlagen: **{cluster_name}**",
+      "description": "Die Migration von **{cluster_name}** auf Version 2.0.0 ist fehlgeschlagen. **Die Integration ist damit nicht mehr nutzbar!** Bitte überprüfe die Protokolle für Details und konfiguriere die Integration bei Bedarf neu. Am einfachsten ist es, die Integration zu entfernen und neu zu installieren. \n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du daher anschließend tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Serviceaufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
+    "migration_offline_v2_0_0": {
+      "title": "Migration offline abgeschlossen: **{cluster_name}**",
+      "description": "Die Konfiguration von **{cluster_name}** wurde auf Version 2.0.0 migriert, da die Divera-API während der Migration nicht erreichbar war. Die Integration bleibt mit den gespeicherten Zugangsdaten funktionsfähig.\n\n**Bitte beachten:** Einige Cluster-Informationen (z. B. alle Benutzer des Clusters) konnten nicht aktualisiert werden. Sobald die Divera-API wieder erreichbar ist, kannst du das Setup bei Bedarf über die Integrationsoptionen vervollständigen.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Teste alle Automationen und andere Service-Aufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
+    },
+    "breaking_changes_v2_0_0": {
+      "title": "Aktion erforderlich: **{cluster_name}**",
+      "description": "Du hast DiveraControl für **{cluster_name}** auf Version 2.0.0 aktualisiert.\n\n**Wichtig:** Diese Version enthält Breaking Changes in allen Service-Aufrufen und Geräteaktionen.\n\n**Entfernte Funktionen und Entitäten:**\n- Der Webhook-Modus (`use_webhooks`) wurde entfernt. Die Integration nutzt jetzt ausschließlich Polling.\n- Die `sensor.*_vehicle_*`-Entitäten wurden in die Select-Entitäten (`select.*_vehicle_status_*`) integriert. Der Fahrzeugstatus wird jetzt als Option des Selects angezeigt und kann direkt gesetzt werden. Alte Sensor-Entitäten werden nicht mehr erstellt und können gelöscht werden; Fahrzeugdaten stehen weiterhin als Attribute der Select-Entitäten bereit.\n\n**Was du tun musst:**\n1. Überprüfe alle Automationen, die DiveraControl-Services nutzen\n2. Kontrolliere alle Geräteaktionen in deinen Automationen\n3. Aktualisiere die Parameternamen gemäß dem neuen Schema.\n4. Falls du Webhooks oder `sensor.*_vehicle_*`-Entitäten genutzt hast, passe die betroffenen Automationen entsprechend an\n5. Teste alle Automationen und andere Service-Aufrufe, um die Funktionalität sicherzustellen.\n\n**Hinweis:** Diese Benachrichtigung bleibt bestehen, bis du sie nach der Überprüfung deiner Automationen schließt."
     }
   },
   "entity": {
     "sensor": {
       "open_alarms": {
         "name": "Offene Alarme"
+      },
+      "last_alarm": {
+        "name": "Letzter Alarm"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Kalenderereignis"
+      }
+    },
+    "event": {
+      "alarm": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "opened": "Geöffnet",
+              "updated": "Aktualisiert",
+              "closed": "Geschlossen"
+            }
+          }
+        }
       }
     }
-  },
-  "common": {
-    "usergroup_message": "Die Einheit {cluster_name} (ID {ucr_id}) wurde erfolgreich erstellt.",
-    "usergroup_4": "Der angemeldete Nutzer ist ein Standardnutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_5": "Der angemeldete Nutzer ist ein Monitorbenutzer. Die Zugriffsberechtigungen hängen von den Divera-Berechtigungen ab, einige Daten könnten daher nicht verfügbar sein.",
-    "usergroup_8": "Der angemeldete Nutzer ist ein Nutzer mit Adminrechten und hat Zugriff auf alle Daten.",
-    "usergroup_14": "Der angemeldete Nutzer ist der Standard-API-Nutzer. Ein Zugriff ist daher nicht möglich auf:\n- Alarmdaten\n- News\n- Termine\n- Dashboards",
-    "usergroup_19": "Der angemeldete Nutzer ist ein Systemnutzer und wird deshalb keinen Zugriff haben auf:\n- Alarmdaten\n- News\n- Termine",
-    "usergroup_unknown": "Es wurde ein Nutzer aus einer unbekannten Nutzergruppe {usergroup_id} angemeldet. Abhängig von erteilten Berechtigungen sind möglicherweise sind nicht alle Daten verfügbar."
   },
   "selector": {
     "entry_method_options": {
       "options": {
         "login": "Benutzeranmeldung",
-        "api_key": "API-Schlüssel"
+        "accesskey": "API-Schlüssel"
       }
     },
     "notification_type_options": {
@@ -130,17 +177,25 @@
     }
   },
   "device_automation": {
+    "trigger_type": {
+      "new_alarm": "Neuer Alarm eingegangen",
+      "all_alarms_closed": "Alle Alarme geschlossen"
+    },
     "action_type": {
+      "request_refresh": "Datenaktualisierung anfordern",
       "post_vehicle_status": "Fahrzeugstatus und -daten ändern",
       "post_alarm": "Alarm erstellen",
       "put_alarm": "Alarm ändern",
       "post_close_alarm": "Alarm öffnen/schließen",
+      "post_confirm_alarm": "Alarm bestätigen",
       "post_message": "Nachricht senden",
       "post_using_vehicle_property": "Fahrzeugeigenschaften ändern",
       "post_using_vehicle_crew": "Fahrzeugbesatzung ändern",
-      "post_news": "Mitteilung erstellen"
+      "post_news": "Mitteilung erstellen",
+      "post_user_status": "Nutzerstatus setzen"
     },
     "extra_fields": {
+      "id": "Nutzerstatus",
       "vehicle": "Fahrzeug",
       "status": "Status",
       "status_id": "FMS-Status-ID (1-10; 10 = Notruf)",
@@ -194,6 +249,12 @@
       "remarks": "Hinweise",
       "message_channel": "Nachrichtenkanal erstellen",
       "user_status": "Nutzerstatus",
+      "note": "Notiz",
+      "reset_date": "Zurücksetzen am",
+      "reset_to": "Zurücksetzen auf Status",
+      "status_skip_statusplan": "Statusplan bis 'Rücksetzzeitpunkt' ignorieren",
+      "status_skip_geofence": "Geofence bis 'Rücksetzzeitpunkt' ignorieren",
+      "alarm_skip": "Statusänderung bei offenem Alarm ignorieren",
       "destination": "Ziel",
       "destination_address": "Zieladresse",
       "destination_lat": "Ziel-Breitengrad",
@@ -225,11 +286,17 @@
     "no_alarm_id": {
       "message": "Keine Alarm-ID angegeben."
     },
+    "no_status_id": {
+      "message": "Keine Status-ID angegeben."
+    },
     "api_put_alarm_failed": {
       "message": "Aktualisierung des Alarms {alarm_id} fehlgeschlagen. Fehler: {err}"
     },
     "api_post_close_alarm_failed": {
       "message": "Öffnen/Schließen des Alarms {alarm_id} fehlgeschlagen."
+    },
+    "api_post_confirm_alarm_failed": {
+      "message": "Bestätigung des Alarms {alarm_id} fehlgeschlagen. Fehler: {err}"
     },
     "both_message_channel_and_alarm_id": {
       "message": "Entweder Nachrichtenkanal-ID oder Alarm-ID muss angegeben werden, nicht beides."
@@ -288,6 +355,9 @@
     "service_wrong_devices_count": {
       "message": "Der Dienst unterstützt nur die Angabe genau einer einzigen Gerät-ID. {num_devices} wurden angegeben."
     },
+    "service_wrong_alarms_count": {
+      "message": "Es muss genau ein Alarm ausgewählt werden, es sind {num_alarms}."
+    },
     "invalid_id_list_format": {
       "message": "Ungültiges Format für {field}, es muss sich um eine Liste von Ganzzahlen handeln."
     },
@@ -299,6 +369,9 @@
     },
     "invalid_vehicle_id_format": {
       "message": "Ungültiges Format für Fahrzeug-ID {vehicle}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
+    },
+    "invalid_alarm_id_format": {
+      "message": "Ungültiges Format für Alarm-ID {alarm_id}, es muss sich um eine Ganzzahl oder eine durch Kommas getrennte Liste von Ganzzahlen handeln."
     },
     "no_vehicles_selected": {
       "message": "Empfängerauswahl Fahrzeuge, jedoch wurden keine Fahrzeuge ausgewählt. Bitte wähle mindestens ein Fahrzeug aus."
@@ -320,16 +393,29 @@
     },
     "invalid_number_of_vehicles": {
       "message": "Ungültige Anzahl von Fahrzeugen angegeben. Es muss genau ein Fahrzeug angegeben werden, es wurden {num_vehicles} angegeben."
+    },
+    "api_request_refresh_failed": {
+      "message": "Aktualisieren der Divera-Daten fehlgeschlagen: {err}"
     }
   },
   "services": {
+    "request_refresh": {
+      "name": "Datenaktualisierung anfordern",
+      "description": "Löst für das ausgewählte Gerät (Nutzer) eine sofortige Aktualisierung aller Divera-Daten aus.",
+      "fields": {
+        "device": {
+          "name": "Gerät",
+          "description": "(Erforderlich) Geräte-ID des DiveraControl-Geräts, für das die Daten aktualisiert werden sollen."
+        }
+      }
+    },
     "post_vehicle_status": {
       "name": "Fahrzeugstatus und -daten ändern",
       "description": "Aktualisiert den Fahrzeugstatus und -daten in Divera 24/7.",
       "fields": {
         "vehicle": {
-          "name": "Fahrzeug-ID",
-          "description": "(Erforderlich) ID des Ziel-Fahrzeugs."
+          "name": "Fahrzeug",
+          "description": "(Erforderlich) Sensoren des bzw der Ziel-Fahrzeug(e)."
         },
         "status": {
           "name": "Status",
@@ -504,8 +590,8 @@
       "description": "Ändert einen bestehenden Alarm in Divera 24/7.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm ID",
-          "description": "(Erforderlich) Alarm ID des Alarms, der geändert werden soll."
+          "name": "Alarm",
+          "description": "(Erforderlich) Sensor des Alarms, der geändert werden soll."
         },
         "title": {
           "name": "Stichwort",
@@ -654,8 +740,8 @@
       "description": "Öffnet oder schließt einen bestehenden Alarm und übermittelt optional einen Bericht.",
       "fields": {
         "alarm_id": {
-          "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu öffnenden oder zu schließenden Alarms. Nur genau eine ID zulässig!"
+          "name": "Alarm",
+          "description": "(Erforderlich) Sensor des zu öffnenden oder zu schließenden Alarms."
         },
         "closed": {
           "name": "Geschlossen",
@@ -667,17 +753,35 @@
         }
       }
     },
+    "post_confirm_alarm": {
+      "name": "Alarm bestätigen",
+      "description": "Bestätigt einen bestehenden Alarm mit einer Status-ID und optionalen Notizen.",
+      "fields": {
+        "alarm_id": {
+          "name": "Alarm-ID",
+          "description": "(Erforderlich) ID des zu bestätigenden Alarms. Nur genau eine ID zulässig!"
+        },
+        "id": {
+          "name": "Nutzerstatus",
+          "description": "(Erforderlich) Zu setzender Nutzerstatus."
+        },
+        "note": {
+          "name": "Notiz",
+          "description": "(Optional) Notiz zur Bestätigung des Alarms."
+        }
+      }
+    },
     "post_message": {
       "name": "Nachricht senden",
-      "description": "Sendet eine Nachricht an einen Kanal oder den dem Alarm zugeordneten Kanal.",
+      "description": "Sendet eine Nachricht an einen freien Kanal oder den dem Alarm zugeordneten Kanal.",
       "fields": {
         "message_channel_id": {
           "name": "Nachrichtenkanal-ID",
           "description": "(Entweder) ID des Kanals, in den die Nachricht gesendet wird."
         },
         "alarm_id": {
-          "name": "Alarm-ID",
-          "description": "(Oder) Alarm-ID, dessen Nachrichtenkanal verwendet werden soll."
+          "name": "Alarm",
+          "description": "(Oder) Sensor des Alarms, dessen Nachrichtenkanal verwendet werden soll."
         },
         "text": {
           "name": "Nachricht",
@@ -840,6 +944,74 @@
         "newssurvey_sorting": {
           "name": "Sortierung",
           "description": "(Optional) Liste mit der kommagetrennten Sortierdefinition."
+        }
+      }
+    },
+    "post_user_status": {
+      "name": "Nutzerstatus setzen",
+      "description": "Setzt den Nutzerstatus eines Nutzers.",
+      "fields": {
+        "id": {
+          "name": "Nutzerstatus",
+          "description": "(Erforderlich) Zu setzender Nutzerstatus."
+        },
+        "vehicle": {
+          "name": "Fahrzeug",
+          "description": "(Optional) Fahrzeug, dem der Nutzer zugewiesen werden soll - Zuordnung erlischt bei erneutem Statuswechsel."
+        },
+        "note": {
+          "name": "Notiz",
+          "description": "(Optional) Freitext zur Statusmeldung - Erlischt bei erneutem Statuswechsel."
+        },
+        "reset_date": {
+          "name": "Zurücksetzen am",
+          "description": "(Optional) Zeitpunkt, an dem der Status zurückgesetzt werden soll."
+        },
+        "reset_to": {
+          "name": "Zurücksetzen auf Status",
+          "description": "(Optional) Folgestatus bei Zurücksetzen."
+        },
+        "alarm_skip": {
+          "name": "Statusänderung bei offenem Alarm ignorieren",
+          "description": "(Optional) Ignoriert alle Statusänderungen, wenn gerade ein Einsatz anliegt."
+        },
+        "status_skip_statusplan": {
+          "name": "Statusplan ignorieren",
+          "description": "(Optional) Ignoriert alle geplanten Statusänderungen für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
+        },
+        "status_skip_geofence": {
+          "name": "Geofence ignorieren",
+          "description": "(Optional) Ignoriert Geofences für den Nutzer bis zum angegebenen Rücksetzzeitpunkt."
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "user_relation": {
+      "entry_type": "Nutzerverwaltung",
+      "initiate_flow": {
+        "user": "Nutzer hinzufügen"
+      },
+      "abort": {
+        "add_user_via_cluster": "Das direkte Hinzufügen von Nutzern wird nicht unterstützt. Bitte stattdessen einen 'Hub hinzufügen', gewählte Benutzer werden dann automatisch zur bestehenden Einheit hinzugefügt.",
+        "already_configured": "Dieser Nutzer ist für die Einheit bereits konfiguriert.",
+        "merge_successful": "Nutzer wurde erfolgreich zur Einheit hinzugefügt.",
+        "no_new_hubs_found": "Für die angegebenen Zugangsdaten wurden keine neuen Einheiten gefunden.",
+        "no_client_session": "Es konnte keine Client-Sitzung aufgebaut werden.",
+        "reconfigure_successful": "Neukonfiguration erfolgreich.",
+        "unknown_step": "Unbekannter Konfigurationsschritt, Einrichtung abgebrochen."
+      },
+      "step": {
+        "reconfigure": {
+          "title": "Nutzer neu konfigurieren",
+          "description": "Ändere den API-Schlüssel, um die Zugangsdaten zu aktualisieren. Die Abfrageintervalle können ebenfalls angepasst werden.",
+          "data": {
+            "username": "Benutzername",
+            "accesskey": "API-Schlüssel",
+            "update_interval_data": "Abfrageintervall außerhalb von Alarmen (Sekunden)",
+            "update_interval_alarm": "Abfrageintervall während offener Alarme (Sekunden)",
+            "base_api_url": "Basis-API-URL"
+          }
         }
       }
     }

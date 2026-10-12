@@ -17,14 +17,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get Version from manifest.json
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' custom_components/diveracontrol/manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build HACS ZIP
         run: |
           mkdir -p dist
           cd custom_components/diveracontrol
-          zip -r ../../dist/DiveraControl.zip . \
+          zip -r ../../dist/DiveraControl-${{ steps.version.outputs.version }}.zip . \
             -x "*/__pycache__/*" "*.pyc"
 
-      - name: Upload asset to release
+      - name: Generate Changelog
+        run: |
+          git log --oneline --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0)..HEAD > CHANGELOG.md
+
+      - name: Upload Asset to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/DiveraControl.zip
+          files: |
+            dist/DiveraControl-${{ steps.version.outputs.version }}.zip
+            CHANGELOG.md
