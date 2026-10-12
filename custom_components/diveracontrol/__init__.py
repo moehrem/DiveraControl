@@ -43,7 +43,10 @@ from .const import (
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPIClient
 from .service import async_register_services
-from .utils import get_cluster_coordinators_ucrs_from_config_hass
+from .utils import (
+    get_cluster_coordinators_ucrs_from_config_hass,
+    get_device_config_entry_ids,
+)
 
 PLATFORMS: list[Platform] = [
     Platform.CALENDAR,
@@ -504,7 +507,7 @@ def _remove_old_entity_entries(
                 and identifier[1] in config_entry.data.get(D_RELATIONS_KEY, {})
                 for identifier in d.identifiers
             )
-            or not d.config_entry_id  # Orphaned devices
+            or not get_device_config_entry_ids(d)  # Orphaned devices
         ]
 
         # 3. Zusammenführen und Duplikate vermeiden
@@ -521,7 +524,7 @@ def _remove_old_entity_entries(
                 "Migration: removing old device %s (name=%s, config_entry_id=%s)",
                 device.id,
                 device.name_by_user or device.name,
-                device.config_entry_id,
+                get_device_config_entry_ids(device) or None,
             )
             dev_reg.async_remove_device(device.id)
 
