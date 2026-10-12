@@ -14,6 +14,30 @@ from .const import D_CLUSTER_ID, D_COORDINATOR, D_RELATIONS_KEY, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
+def get_device_config_entry_ids(device: dr.DeviceEntry) -> tuple[str, ...]:
+    """Return all config entry ids linked to a device.
+
+    Home Assistant 2025.12 replaced ``DeviceEntry.config_entry_id`` with
+    ``primary_config_entry`` and a ``config_entries`` list. This helper works
+    with both the old and the new API.
+
+    Args:
+        device: Device registry entry.
+
+    Returns:
+        Tuple of config entry ids linked to the device.
+    """
+    entry_id = getattr(device, "config_entry_id", None)
+    if entry_id:
+        return (entry_id,)
+    primary = getattr(device, "primary_config_entry", None)
+    if primary:
+        return (primary, *(
+            e for e in getattr(device, "config_entries", ()) if e and e != primary
+        ))
+    return ()
+
+
 def get_ucr_data_from_device(
     hass: HomeAssistant,
     device_id: str,
@@ -36,18 +60,20 @@ def get_ucr_data_from_device(
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
 
-    if not device or not device.config_entry_id:
+    if not device or not get_device_config_entry_ids(device):
         raise HomeAssistantError(
             f"Device not found or has no config entries: {device_id}"
         )
 
-    # Get config entry
-    config_entry_id = device.config_entry_id
-    if not config_entry_id:
-        raise HomeAssistantError(f"Config entry not found for device: {device_id}")
+    # Get config entry (prefer an entry belonging to this integration)
+    entry = None
+    for config_entry_id in get_device_config_entry_ids(device):
+        candidate = hass.config_entries.async_get_entry(config_entry_id)
+        if candidate and candidate.domain == DOMAIN:
+            entry = candidate
+            break
 
-    entry = hass.config_entries.async_get_entry(config_entry_id)
-    if not entry or entry.domain != DOMAIN:
+    if entry is None:
         raise HomeAssistantError(f"Invalid config entry for device: {device_id}")
 
     # Get cluster_id
