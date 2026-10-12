@@ -32,9 +32,10 @@ def get_device_config_entry_ids(device: dr.DeviceEntry) -> tuple[str, ...]:
         return (entry_id,)
     primary = getattr(device, "primary_config_entry", None)
     if primary:
-        return (primary, *(
-            e for e in getattr(device, "config_entries", ()) if e and e != primary
-        ))
+        return (
+            primary,
+            *(e for e in getattr(device, "config_entries", ()) if e and e != primary),
+        )
     return ()
 
 

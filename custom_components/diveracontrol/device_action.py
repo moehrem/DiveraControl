@@ -29,7 +29,11 @@ from .const import (
     PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
 )
-from .utils import get_device_config_entry_ids, get_translation, get_ucr_data_from_device
+from .utils import (
+    get_device_config_entry_ids,
+    get_translation,
+    get_ucr_data_from_device,
+)
 
 ACTION_TYPES: tuple[str, ...] = (
     "request_refresh",
