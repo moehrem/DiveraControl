@@ -189,6 +189,7 @@ async def test_alarm_feed_event_lifecycle(hass: HomeAssistant) -> None:
 
     assert feed.unique_id == "123456_alarm_feed"
     assert feed.event_types == ["opened", "updated", "closed"]
+    assert feed.entity_registry_visible_default is False
 
     events = []
     feed.async_write_ha_state = MagicMock()

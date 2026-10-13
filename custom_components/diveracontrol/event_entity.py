@@ -25,6 +25,7 @@ class DiveraAlarmFeedEvent(BaseDiveraEntity, EventEntity):
 
     _attr_event_types = ["opened", "updated", "closed"]
     _attr_translation_key = "alarm_feed"
+    _attr_entity_registry_visible_default = False
 
     def __init__(self, coordinator: DiveraCoordinator) -> None:
         """Init class DiveraAlarmFeedEvent."""
