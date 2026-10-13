@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import DiveraCoordinator
 from .const import D_ALARM, DOMAIN
-from .event_entity import DiveraAlarmEvent
+from .event_entity import DiveraAlarmEvent, DiveraAlarmFeedEvent
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
 
 
@@ -92,6 +92,7 @@ async def async_setup_entry(
         config_entry.data, hass
     )
     for coordinator in coordinators.values():
+        async_add_entities([DiveraAlarmFeedEvent(coordinator)])
         alarm_event_manager = DiveraAlarmEventManager(coordinator, async_add_entities)
         alarm_event_manager.start()
         config_entry.async_on_unload(alarm_event_manager.stop)

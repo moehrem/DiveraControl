@@ -132,6 +132,18 @@
       }
     },
     "event": {
+      "alarm_feed": {
+        "name": "Alarmereignisse",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "opened": "Ge\u00f6ffnet",
+              "updated": "Aktualisiert",
+              "closed": "Geschlossen"
+            }
+          }
+        }
+      },
       "alarm": {
         "name": "Alarm",
         "state_attributes": {
