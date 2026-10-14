@@ -12,6 +12,7 @@ from custom_components.diveracontrol.const import (
     D_CLUSTER_NAME,
     D_RELATIONS_KEY,
     DOMAIN,
+    MINOR_VERSION,
     VERSION,
 )
 from custom_components.diveracontrol import (
@@ -160,8 +161,9 @@ class TestMigration:
             domain=DOMAIN,
             data={},
             version=VERSION,
-            minor_version=0,
+            minor_version=MINOR_VERSION,
         )
+        config_entry.add_to_hass(hass)
 
         result = await async_migrate_entry(hass, config_entry)
         assert result is True
