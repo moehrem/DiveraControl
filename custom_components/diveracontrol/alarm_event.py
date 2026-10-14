@@ -126,10 +126,15 @@ class DiveraAlarmEventBusManager:
 
         for alarm_id in self._known_alarm_ids & current_ids:
             alarm_details = alarm_items[alarm_id]
-            if alarm_id not in self._closed_alarm_ids:
-                if alarm_details.get("closed", False):
+            if alarm_details.get("closed", False):
+                if alarm_id not in self._closed_alarm_ids:
                     self._closed_alarm_ids.add(alarm_id)
                     self._fire_event("alarm_closed", alarm_id, alarm_details)
+            else:
+                if alarm_id in self._closed_alarm_ids:
+                    # alarm was closed and has been reopened
+                    self._closed_alarm_ids.discard(alarm_id)
+                    self._fire_event("alarm_updated", alarm_id, alarm_details)
                 elif alarm_details != self._last_alarm_data.get(alarm_id):
                     self._last_alarm_data[alarm_id] = dict(alarm_details)
                     self._fire_event("alarm_updated", alarm_id, alarm_details)
