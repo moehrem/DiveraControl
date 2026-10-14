@@ -52,6 +52,20 @@ D_ACCESSKEY = "accesskey"
 D_ENTRY_ID = "config_entry_id"
 D_UCR = "ucr"
 D_UCR_ID = "ucr_id"
+
+# internal event bus event for alarm lifecycle transitions
+ALARM_EVENT_TYPE = f"{DOMAIN}_alarm_event"
+ATTR_ALARM_EVENT_TYPE = "alarm_event_type"
+ATTR_ALARM_ID = "alarm_id"
+ATTR_ALARM_DATA = "alarm_data"
+
+# alarm lifecycle trigger types
+TRIGGER_ALARM_ALL_CLOSED = "alarm_all_closed"
+TRIGGER_ALARM_OPENED = "alarm_opened"
+TRIGGER_ALARM_UPDATED = "alarm_updated"
+TRIGGER_ALARM_CLOSED = "alarm_closed"
+
+# data keys
 D_CLUSTER_ID = "cluster_id"
 D_INTEGRATION_VERSION = "integration_version"
 D_CLUSTER_NAME = "cluster_name"

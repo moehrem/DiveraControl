@@ -3,24 +3,21 @@
 import asyncio
 import logging
 
-# IMPORTANT: import log_handler BEFORE any other module that uses logging
-# to ensure the handler is registered in time
-from .log_handler import (
-    async_remove_diveracontrol_log_handler,
-    async_setup_diveracontrol_log_handler,
-)
-
-# pylint: disable=wrong-import-order
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import (
     device_registry as dr,
+)
+from homeassistant.helpers import (
     entity_registry as er,
+)
+from homeassistant.helpers import (
     issue_registry as ir,
 )
 
+from .alarm_event import DiveraAlarmEventBusManager
 from .const import (
     BASE_API_URL,
     D_ACCESSKEY,
@@ -42,6 +39,13 @@ from .const import (
 )
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPIClient
+
+# IMPORTANT: import log_handler BEFORE any other module that uses logging
+# to ensure the handler is registered in time
+from .log_handler import (
+    async_remove_diveracontrol_log_handler,
+    async_setup_diveracontrol_log_handler,
+)
 from .service import async_register_services
 from .utils import (
     get_cluster_coordinators_ucrs_from_config_hass,
@@ -348,6 +352,10 @@ async def async_setup_entry(
         D_COORDINATOR: coordinators,
     }
 
+    for ucr_coordinator in coordinators.values():
+        alarm_event_manager = DiveraAlarmEventBusManager(hass, ucr_coordinator)
+        alarm_event_manager.start()
+        config_entry.async_on_unload(alarm_event_manager.stop)
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     _LOGGER.debug(
@@ -863,16 +871,16 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             hass.config_entries.async_update_entry(
                 config_entry,
                 data=updated_data,
-                version=current_version,
-                minor_version=current_minor_version,
+                version=VERSION,
+                minor_version=MINOR_VERSION,
                 unique_id=new_unique_id,
             )
         else:
             hass.config_entries.async_update_entry(
                 config_entry,
                 data=updated_data,
-                version=current_version,
-                minor_version=current_minor_version,
+                version=VERSION,
+                minor_version=MINOR_VERSION,
             )
 
     _LOGGER.debug(
