@@ -243,3 +243,81 @@ async def test_alarm_reopened_fires_updated(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
     assert events[-1] == "alarm_updated"
     assert events.count("alarm_updated") == 1
+
+
+async def test_alarm_archived_open_fires_all_closed(hass: HomeAssistant) -> None:
+    """Test that archiving the last open alarm fires alarm_all_closed."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    config_entry = MockConfigEntry(domain=DOMAIN, data={D_UCR_ID: "123456"})
+    config_entry.add_to_hass(hass)
+    registry = dr.async_get(hass)
+    registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, "123456")},
+        name="Test Device",
+    )
+    events = []
+    hass.bus.async_listen(
+        ALARM_EVENT_TYPE, lambda e: events.append(e.data[ATTR_ALARM_EVENT_TYPE])
+    )
+
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {"a1": {"title": "T", "closed": False}}}},
+    )
+    manager = DiveraAlarmEventBusManager(hass, coordinator)
+    manager._handle_coordinator_update()
+    await hass.async_block_till_done()
+    assert events == ["alarm_opened"]
+
+    # alarm a1 is archived in Divera while still open
+    coordinator.data = {D_ALARM: {"items": {}}}
+    manager._handle_coordinator_update()
+    await hass.async_block_till_done()
+    assert events == ["alarm_opened", "alarm_all_closed"]
+    assert manager._known_alarm_ids == set()
+
+
+async def test_alarm_returning_from_archive_fires_opened(
+    hass: HomeAssistant,
+) -> None:
+    """Test that an archived alarm returning is treated as a new alarm."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    config_entry = MockConfigEntry(domain=DOMAIN, data={D_UCR_ID: "123456"})
+    config_entry.add_to_hass(hass)
+    registry = dr.async_get(hass)
+    registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, "123456")},
+        name="Test Device",
+    )
+    events = []
+    hass.bus.async_listen(
+        ALARM_EVENT_TYPE, lambda e: events.append(e.data[ATTR_ALARM_EVENT_TYPE])
+    )
+
+    coordinator = _mock_coordinator(
+        hass,
+        {D_ALARM: {"items": {"a1": {"title": "T", "closed": True}}}},
+    )
+    manager = DiveraAlarmEventBusManager(hass, coordinator)
+    manager._handle_coordinator_update()
+    await hass.async_block_till_done()
+    assert events == []
+
+    # alarm is archived in Divera
+    coordinator.data = {D_ALARM: {"items": {}}}
+    manager._handle_coordinator_update()
+    await hass.async_block_till_done()
+    assert events == []
+    assert manager._known_alarm_ids == set()
+
+    # archived alarm returns as an open alarm
+    coordinator.data = {
+        D_ALARM: {"items": {"a1": {"title": "T back", "closed": False}}}
+    }
+    manager._handle_coordinator_update()
+    await hass.async_block_till_done()
+    assert events == ["alarm_opened"]

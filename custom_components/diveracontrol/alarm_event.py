@@ -115,6 +115,14 @@ class DiveraAlarmEventBusManager:
 
         had_open_alarms = bool(self._known_alarm_ids - self._closed_alarm_ids)
 
+        # forget alarms that were archived in Divera; if one of them
+        # returns later it is treated as a new alarm
+        archived_ids = self._known_alarm_ids - current_ids
+        for archived_id in archived_ids:
+            self._known_alarm_ids.discard(archived_id)
+            self._closed_alarm_ids.discard(archived_id)
+            self._last_alarm_data.pop(archived_id, None)
+
         for alarm_id in current_ids - self._known_alarm_ids:
             alarm_details = alarm_items[alarm_id]
             self._known_alarm_ids.add(alarm_id)
