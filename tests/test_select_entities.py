@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 
 from homeassistant.core import HomeAssistant
 
+from custom_components.diveracontrol.divera_permissions import DiveraPermissions
+
 from custom_components.diveracontrol.const import (
     D_CLUSTER,
     D_STATUS,
@@ -15,8 +17,16 @@ from custom_components.diveracontrol.select_entity import (
 )
 
 
-def _mock_coordinator(hass: HomeAssistant, data: dict) -> MagicMock:
-    """Create a lightweight coordinator mock for entity tests."""
+def _mock_coordinator(
+    hass: HomeAssistant,
+    data: dict,
+    permissions: DiveraPermissions | None = None,
+) -> MagicMock:
+    """Create a lightweight coordinator mock for entity tests.
+
+    By default a management permission set is attached so write access is
+    granted; tests for permission gating pass a restricted instance.
+    """
     coordinator = MagicMock()
     coordinator.hass = hass
     coordinator.data = data
@@ -26,6 +36,13 @@ def _mock_coordinator(hass: HomeAssistant, data: dict) -> MagicMock:
     coordinator.user_name = "Test User"
     coordinator.last_update_success = True
     coordinator.async_add_listener = MagicMock(return_value=lambda: None)
+    if permissions is None:
+        permissions = DiveraPermissions()
+        permissions.ucr_id = "123456"
+        permissions.replace_permissions_from_ucr_data(
+            {"data": {"user": {"access": {"management": True}}}}
+        )
+    coordinator.api.permissions = permissions
     return coordinator
 
 
@@ -135,4 +152,227 @@ def test_vehicle_select_manager_adds_and_removes_entities(
     manager._handle_coordinator_update()
     assert manager._known_ids == {"v2"}
 
+    manager.stop()
+
+
+def _permissions(access: dict) -> DiveraPermissions:
+    """Create a DiveraPermissions instance from a raw access block."""
+    permissions = DiveraPermissions()
+    permissions.ucr_id = "123456"
+    permissions.replace_permissions_from_ucr_data(
+        {"data": {"user": {"access": access}}}
+    )
+    return permissions
+
+
+def test_vehicle_select_manager_gates_on_permissions(hass: HomeAssistant) -> None:
+    """Test that the vehicle select manager only creates writable selects."""
+    from custom_components.diveracontrol.select import DiveraVehicleSelectManager
+
+    vehicle_data = {D_CLUSTER: {D_VEHICLE: {"v1": {}, "v2": {}}}}
+
+    # full write access: all vehicles become selects
+    coordinator = _mock_coordinator(
+        hass,
+        dict(vehicle_data),
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_vehicle": True,
+                "status_actions": {"vehicle_all": True, "vehicle_ids": []},
+            }
+        ),
+    )
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+    manager.start()
+    assert {entity.vehicle_id for entity in added} == {"v1", "v2"}
+    manager.stop()
+
+    # restricted to v1: only v1 becomes a select
+    coordinator = _mock_coordinator(
+        hass,
+        dict(vehicle_data),
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_vehicle": True,
+                "status_actions": {"vehicle_all": False, "vehicle_ids": ["v1"]},
+            }
+        ),
+    )
+    added.clear()
+    manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+    manager.start()
+    assert {entity.vehicle_id for entity in added} == {"v1"}
+    manager.stop()
+
+    # no vehicle write permission at all: no selects are created
+    coordinator = _mock_coordinator(
+        hass,
+        dict(vehicle_data),
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_vehicle": False,
+                "status_actions": {"vehicle_all": False, "vehicle_ids": []},
+            }
+        ),
+    )
+    added.clear()
+    manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+    manager.start()
+    assert added == []
+    manager.stop()
+
+
+def test_vehicle_status_sensor_manager_creates_readonly_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Test that vehicles without write access get a read-only sensor."""
+    from custom_components.diveracontrol.sensor_entity import (
+        DiveraVehicleStatusSensorManager,
+    )
+
+    vehicle_data = {
+        D_CLUSTER: {
+            D_VEHICLE: {
+                "v1": {
+                    "shortname": "LF",
+                    "name": "16-1",
+                    "fmsstatus_id": 2,
+                },
+                "v2": {"shortname": "MZF", "name": "14-1", "fmsstatus_id": 3},
+            },
+            "fms_status": {
+                "items": {
+                    "2": {"number": 2, "name": "Einsatzbereit über Funk"},
+                    "3": {"number": 3, "name": "Auf Anfahrt"},
+                }
+            },
+        }
+    }
+
+    coordinator = _mock_coordinator(
+        hass,
+        vehicle_data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_vehicle": False,
+                "status_actions": {"vehicle_all": False, "vehicle_ids": []},
+            }
+        ),
+    )
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraVehicleStatusSensorManager(coordinator, async_add_entities)
+    manager.start()
+    assert {entity.vehicle_id for entity in added} == {"v1", "v2"}
+    sensor = next(entity for entity in added if entity.vehicle_id == "v1")
+    assert sensor.state == "2 - Einsatzbereit über Funk"
+    assert sensor.extra_state_attributes["vehicle_id"] == "v1"
+    manager.stop()
+
+
+def test_user_status_sensor_created_without_write_permission(
+    hass: HomeAssistant,
+) -> None:
+    """Test the read-only user status sensor."""
+    from custom_components.diveracontrol.sensor_entity import (
+        DiveraUserStatusSensor,
+        DiveraUserStatusSensorManager,
+    )
+
+    data = {
+        D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}, "2": {"name": "5 Minuten"}}},
+        "status": {"status_id": 2, "note": "", "vehicle": 0},
+    }
+    coordinator = _mock_coordinator(
+        hass,
+        data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": False,
+                "status_actions": {"set_all": False, "set_ids": []},
+            }
+        ),
+    )
+    sensor = DiveraUserStatusSensor(coordinator, "user_status")
+    assert sensor.state == "5 Minuten"
+    assert sensor.extra_state_attributes["status_id"] == 2
+
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraUserStatusSensorManager(coordinator, async_add_entities)
+    manager.start()
+    assert len(added) == 1
+    manager.stop()
+
+    # with write permission no read-only sensor is created
+    coordinator = _mock_coordinator(
+        hass,
+        data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": True,
+                "status_actions": {"set_all": True, "set_ids": []},
+            }
+        ),
+    )
+    added.clear()
+    manager = DiveraUserStatusSensorManager(coordinator, async_add_entities)
+    manager.start()
+    assert added == []
+    manager.stop()
+
+
+def test_availability_sensor_manager_gates_on_status_permission(
+    hass: HomeAssistant,
+) -> None:
+    """Test that availability sensors are only created with status access."""
+    from custom_components.diveracontrol.sensor_entity import (
+        DiveraAvailabilitySensorManager,
+    )
+
+    data = {D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}}}}
+
+    # status permission granted: sensor is created
+    coordinator = _mock_coordinator(
+        hass,
+        dict(data),
+        permissions=_permissions({"status": True}),
+    )
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraAvailabilitySensorManager(coordinator, async_add_entities)
+    manager.start()
+    assert len(added) == 1
+    manager.stop()
+
+    # status permission denied: no sensor is created
+    coordinator = _mock_coordinator(
+        hass,
+        dict(data),
+        permissions=_permissions({"status": False}),
+    )
+    added.clear()
+    manager = DiveraAvailabilitySensorManager(coordinator, async_add_entities)
+    manager.start()
+    assert added == []
     manager.stop()

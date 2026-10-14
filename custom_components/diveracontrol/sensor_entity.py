@@ -17,6 +17,7 @@ from .const import (
     D_OPEN_ALARMS,
     D_LAST_ALARM,
     D_STATUS,
+    D_VEHICLE,
     DOMAIN,
     I_AVAILABILITY,
     I_CLOSED_ALARM,
@@ -24,9 +25,11 @@ from .const import (
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
     I_PERSON,
+    I_VEHICLE,
     I_FIRESTATION,
 )
 from .coordinator import DiveraCoordinator
+from .divera_permissions import DiveraPermissions
 from .entity import BaseDiveraEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +37,23 @@ _LOGGER = logging.getLogger(__name__)
 type EntityFactory[T: BaseDiveraEntity] = Callable[[DiveraCoordinator, str], T]
 type IdReader = Callable[[dict[str, Any]], set[str]]
 type UniqueIdBuilder = Callable[[str, str], str]
+
+
+def _coordinator_permissions(coordinator: DiveraCoordinator) -> DiveraPermissions:
+    """Return the permission handler of a coordinator, tolerating mocks.
+
+    Args:
+        coordinator: Coordinator whose permissions are requested.
+
+    Returns:
+        DiveraPermissions: The coordinator's permission handler or a fresh
+        (empty, fail-open for reads) instance when unavailable.
+    """
+    permissions = getattr(coordinator, "api", None)
+    permissions = getattr(permissions, "permissions", None)
+    if isinstance(permissions, DiveraPermissions):
+        return permissions
+    return DiveraPermissions()
 
 
 class DiveraSensorManager:
@@ -139,12 +159,62 @@ def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
     return DiveraSensorManager(
         coordinator=coordinator,
         async_add_entities=async_add_entities,
-        get_current_ids=lambda data: set(
-            data.get(D_CLUSTER, {}).get(D_STATUS, {}).keys()
+        get_current_ids=lambda data: (
+            set()
+            if not _coordinator_permissions(coordinator).has_status_permission()
+            else set(data.get(D_CLUSTER, {}).get(D_STATUS, {}).keys())
         ),
         build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_availability_{item_id}",
         entity_factory=DiveraAvailabilitySensor,
         label="availability",
+    )
+
+
+def DiveraVehicleStatusSensorManager(  # pylint: disable=invalid-name
+    coordinator: DiveraCoordinator,
+    async_add_entities: AddEntitiesCallback,
+) -> DiveraSensorManager:
+    """Create a DiveraSensorManager for read-only vehicle status sensors.
+
+    Only vehicles the user may not write the FMS status for get a sensor;
+    vehicles with write permission are handled by the select platform.
+    """
+    return DiveraSensorManager(
+        coordinator=coordinator,
+        async_add_entities=async_add_entities,
+        get_current_ids=lambda data: {
+            item_id
+            for item_id in data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
+            if not _coordinator_permissions(coordinator).can_write_vehicle_status(
+                item_id
+            )
+        },
+        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_status_{item_id}",
+        entity_factory=DiveraVehicleStatusSensor,
+        label="vehicle status sensor",
+    )
+
+
+def DiveraUserStatusSensorManager(  # pylint: disable=invalid-name
+    coordinator: DiveraCoordinator,
+    async_add_entities: AddEntitiesCallback,
+) -> DiveraSensorManager:
+    """Create a DiveraSensorManager for a read-only user status sensor.
+
+    The sensor is only created when the user may not set their own status;
+    users with write permission get the select entity instead.
+    """
+    return DiveraSensorManager(
+        coordinator=coordinator,
+        async_add_entities=async_add_entities,
+        get_current_ids=lambda data: (
+            set()
+            if _coordinator_permissions(coordinator).can_write_user_status()
+            else {"user_status"}
+        ),
+        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_{item_id}",
+        entity_factory=DiveraUserStatusSensor,
+        label="user status sensor",
     )
 
 
@@ -356,3 +426,126 @@ class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
                 else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
+
+
+class DiveraVehicleStatusSensor(BaseDiveraEntity):
+    """Read-only sensor for the FMS status of a single vehicle.
+
+    Created instead of a select entity when the user lacks the Divera
+    permission to set the vehicle status, so the current status is still
+    visible without implying write access.
+    """
+
+    def __init__(self, coordinator: DiveraCoordinator, vehicle_id: str) -> None:
+        """Init class DiveraVehicleStatusSensor."""
+        super().__init__(coordinator)
+
+        self.vehicle_id = vehicle_id
+
+        # static entity attributes
+        self._attr_has_entity_name = False
+        self._attr_unique_id = f"{self.ucr_id}_vehicle_status_{self.vehicle_id}"
+        self.entity_id = f"sensor.{self.ucr_id}_vehicle_status_{self.vehicle_id}"
+        self._attr_icon = I_VEHICLE
+
+    def _get_vehicle_data(self) -> dict[str, Any] | None:
+        """Get vehicle data safely, return None if vehicle doesn't exist."""
+        vehicle_items = self.coordinator.data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
+        return vehicle_items.get(self.vehicle_id)
+
+    def _get_fms_status_items(self) -> dict[str, dict[str, Any]]:
+        """Get FMS status items keyed by status id (fmsstatus_id)."""
+        items = (
+            self.coordinator.data.get(D_CLUSTER, {})
+            .get("fms_status", {})
+            .get("items", {})
+        )
+        return {str(item_id): item for item_id, item in items.items()}
+
+    def _status_label(self, status_id: Any) -> str:
+        """Return the display label for a FMS status id."""
+        if status_id is None:
+            return "Unknown"
+        item = self._get_fms_status_items().get(str(status_id))
+        if item is None:
+            return str(status_id)
+        return f"{item.get('number')} - {item.get('name')}"
+
+    @property
+    def name(self) -> str:
+        """Return name of the vehicle."""
+        if vehicle_data := self._get_vehicle_data():
+            _shortname = vehicle_data.get("shortname", "Unknown")
+            _veh_name = vehicle_data.get("name", "Unknown")
+            return f"{_shortname} / {_veh_name}"
+        return "Unknown Vehicle"
+
+    @property
+    def available(self) -> bool:
+        """Return availability of the vehicle."""
+        if super().available and self._get_vehicle_data() is not None:
+            return True
+        return False
+
+    @property
+    def state(self) -> str:
+        """Return the current FMS status label."""
+        if vehicle_data := self._get_vehicle_data():
+            return self._status_label(vehicle_data.get("fmsstatus_id"))
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes of the vehicle."""
+        if vehicle_data := self._get_vehicle_data():
+            return {"vehicle_id": self.vehicle_id, **vehicle_data}
+        return {}
+
+
+class DiveraUserStatusSensor(BaseDiveraEntity):
+    """Read-only sensor for the user's own status.
+
+    Created instead of a select entity when the user lacks the Divera
+    permission to set their own status.
+    """
+
+    def __init__(self, coordinator: DiveraCoordinator, item_id: str) -> None:
+        """Init class DiveraUserStatusSensor."""
+        super().__init__(coordinator)
+
+        # static entity attributes
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "user_status"
+        self._attr_unique_id = f"{self.ucr_id}_user_status"
+        self.entity_id = f"sensor.{self.ucr_id}_user_status"
+        self._attr_icon = I_PERSON
+
+    def _get_status_items(self) -> dict[str, dict[str, Any]]:
+        """Get user status mapping from coordinator data."""
+        statuses = self.coordinator.data.get(D_CLUSTER, {}).get(D_STATUS, {})
+        return {str(key): value for key, value in statuses.items()}
+
+    def _status_label(self, status_id: Any) -> str:
+        """Return the display label for a status id."""
+        if status_id is None:
+            return "Unknown"
+        status = self._get_status_items().get(str(status_id))
+        if status is None:
+            return str(status_id)
+        return str(status.get("name", status_id))
+
+    @property
+    def state(self) -> str:
+        """Return the current user status label."""
+        status_id = self.coordinator.data.get("status", {}).get("status_id")
+        return self._status_label(status_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes of the user status."""
+        status_data = self.coordinator.data.get("status", {})
+        return {
+            "status_id": status_data.get("status_id"),
+            "note": status_data.get("note", ""),
+            "vehicle": status_data.get("vehicle", 0),
+        }

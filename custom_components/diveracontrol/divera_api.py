@@ -55,7 +55,6 @@ from .const import (
     PERM_ALARM,
     PERM_MESSAGES,
     PERM_NEWS,
-    PERM_STATUS_USER,
     PERM_STATUS_VEHICLE,
     UPDATE_INTERVAL_ALARM,
     UPDATE_INTERVAL_DATA,
@@ -868,9 +867,14 @@ class DiveraAPI(DiveraAPIClient):
             payload: Dictionary of data to send to Divera-API.
 
         Raises:
-            HomeAssistantError: If user lacks PERM_STATUS_VEHICLE permission.
+            HomeAssistantError: If the user may not write the status of the
+                given vehicle.
         """
-        self.permissions.check(PERM_STATUS_VEHICLE)
+        if not self.permissions.can_write_vehicle_status(vehicle_id):
+            raise HomeAssistantError(
+                f"Permission to set the status of vehicle {vehicle_id} denied "
+                f"for cluster '{self.ucr_id}'"
+            )
         _LOGGER.debug(
             "Posting vehicle status for vehicle %s, cluster %s", vehicle_id, self.ucr_id
         )
@@ -888,11 +892,7 @@ class DiveraAPI(DiveraAPIClient):
 
         Returns:
             DiveraAPIResponse: JSON response from the API.
-
-        Raises:
-            HomeAssistantError: If user lacks PERM_STATUS_VEHICLE permission.
         """
-        self.permissions.check(PERM_STATUS_VEHICLE)
         _LOGGER.debug("Getting vehicle properties for vehicle %s", vehicle_id)
         return await self._api_request(
             f"{BASE_API_V2_URL}{API_USING_VEHICLE_PROP}/get/{vehicle_id}",
@@ -1008,9 +1008,12 @@ class DiveraAPI(DiveraAPIClient):
             payload: Dictionary of data to send to Divera-API.
 
         Raises:
-            HomeAssistantError: If user lacks PERM_STATUS_USER permission.
+            HomeAssistantError: If the user may not write their own status.
         """
-        self.permissions.check(PERM_STATUS_USER)
+        if not self.permissions.can_write_user_status():
+            raise HomeAssistantError(
+                f"Permission to set the user status denied for cluster '{self.ucr_id}'"
+            )
         _LOGGER.debug("Posting user status update for cluster %s", self.ucr_id)
         await self._api_request(
             f"{BASE_API_V2_URL}{API_USER_STATUS}", "POST", payload=payload
