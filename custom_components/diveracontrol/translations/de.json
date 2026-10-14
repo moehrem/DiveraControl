@@ -132,18 +132,6 @@
       }
     },
     "event": {
-      "alarm_feed": {
-        "name": "Alarmereignisse",
-        "state_attributes": {
-          "event_type": {
-            "state": {
-              "opened": "Ge\u00f6ffnet",
-              "updated": "Aktualisiert",
-              "closed": "Geschlossen"
-            }
-          }
-        }
-      },
       "alarm": {
         "name": "Alarm",
         "state_attributes": {
@@ -191,7 +179,10 @@
   "device_automation": {
     "trigger_type": {
       "new_alarm": "Neuer Alarm eingegangen",
-      "all_alarms_closed": "Alle Alarme geschlossen"
+      "all_alarms_closed": "Alle Alarme geschlossen",
+      "alarm_opened": "Alarm geöffnet",
+      "alarm_updated": "Alarm aktualisiert",
+      "alarm_closed": "Alarm geschlossen"
     },
     "action_type": {
       "request_refresh": "Datenaktualisierung anfordern",

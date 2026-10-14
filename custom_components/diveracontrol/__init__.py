@@ -40,6 +40,7 @@ from .const import (
     PATCH_VERSION,
     VERSION,
 )
+from .alarm_event import DiveraAlarmEventBusManager
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPIClient
 from .service import async_register_services
@@ -348,6 +349,10 @@ async def async_setup_entry(
         D_COORDINATOR: coordinators,
     }
 
+    for ucr_coordinator in coordinators.values():
+        alarm_event_manager = DiveraAlarmEventBusManager(hass, ucr_coordinator)
+        alarm_event_manager.start()
+        config_entry.async_on_unload(alarm_event_manager.stop)
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     _LOGGER.debug(

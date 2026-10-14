@@ -130,6 +130,8 @@ class TestAsyncSetupEntry:
     ) -> None:
         """Test successful async_setup_entry with valid config."""
         mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator.ucr_id = "ucr1"
+        mock_coordinator.data = {"alarm": {}}
         mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 
@@ -189,6 +191,8 @@ class TestAsyncSetupEntry:
         }
 
         mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator.ucr_id = "ucr1"
+        mock_coordinator.data = {"alarm": {}}
         mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 
@@ -227,6 +231,8 @@ class TestAsyncSetupEntry:
         }
 
         mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator.ucr_id = "ucr1"
+        mock_coordinator.data = {"alarm": {}}
         mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 
@@ -358,6 +364,8 @@ class TestAsyncSetupEntry:
         mock_config_entry.entry_id = "test_entry_id"
 
         mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator.ucr_id = "ucr1"
+        mock_coordinator.data = {"alarm": {}}
         mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
             side_effect=ConfigEntryAuthFailed("Auth failed")
@@ -391,6 +399,8 @@ class TestAsyncSetupEntry:
         mock_config_entry.data[D_CLUSTER_NAME] = ""
 
         mock_coordinator = AsyncMock(spec=DiveraCoordinator)
+        mock_coordinator.ucr_id = "ucr1"
+        mock_coordinator.data = {"alarm": {}}
         mock_coordinator._async_setup = AsyncMock(return_value=None)
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(return_value=None)
 

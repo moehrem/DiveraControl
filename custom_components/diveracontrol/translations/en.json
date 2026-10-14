@@ -136,18 +136,6 @@
       }
     },
     "event": {
-      "alarm_feed": {
-        "name": "Alarm events",
-        "state_attributes": {
-          "event_type": {
-            "state": {
-              "opened": "Opened",
-              "updated": "Updated",
-              "closed": "Closed"
-            }
-          }
-        }
-      },
       "alarm": {
         "name": "Alarm",
         "state_attributes": {
@@ -195,7 +183,10 @@
   "device_automation": {
     "trigger_type": {
       "new_alarm": "New alarm received",
-      "all_alarms_closed": "All alarms closed"
+      "all_alarms_closed": "All alarms closed",
+      "alarm_opened": "Alarm opened",
+      "alarm_updated": "Alarm updated",
+      "alarm_closed": "Alarm closed"
     },
     "action_type": {
       "request_refresh": "Request data refresh",

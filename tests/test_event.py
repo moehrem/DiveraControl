@@ -11,10 +11,7 @@ from custom_components.diveracontrol.const import (
     I_OPEN_ALARM_NOPRIO,
 )
 from custom_components.diveracontrol.event import DiveraAlarmEventManager
-from custom_components.diveracontrol.event_entity import (
-    DiveraAlarmEvent,
-    DiveraAlarmFeedEvent,
-)
+from custom_components.diveracontrol.event_entity import DiveraAlarmEvent
 
 
 def _mock_coordinator(hass: HomeAssistant, data: dict) -> MagicMock:
@@ -174,61 +171,3 @@ async def test_alarm_event_does_not_refire_triggered_after_restart(
 
     assert alarm.state is None
     assert alarm._fired_initial_event is True
-
-
-async def test_alarm_feed_event_lifecycle(hass: HomeAssistant) -> None:
-    """Test that the static alarm feed fires opened/updated/closed events."""
-    coordinator = _mock_coordinator(
-        hass,
-        {D_ALARM: {"items": {"a1": {"title": "Alarm Title", "closed": False}}}},
-    )
-    feed = DiveraAlarmFeedEvent(coordinator)
-    feed.hass = hass
-    feed.platform = MagicMock()
-    feed.entity_id = "event.123456_alarm_feed"
-
-    assert feed.unique_id == "123456_alarm_feed"
-    assert feed.event_types == ["opened", "updated", "closed"]
-    assert feed.entity_registry_visible_default is False
-
-    events = []
-    feed.async_write_ha_state = MagicMock()
-    feed._trigger_event = MagicMock(side_effect=lambda t, d: events.append((t, d)))
-
-    feed._handle_coordinator_update()
-    assert events == [("opened", {"title": "Alarm Title", "closed": False})]
-
-    coordinator.data = {
-        D_ALARM: {
-            "items": {
-                "a1": {"title": "Alarm Title Updated", "closed": False},
-            }
-        }
-    }
-    feed._handle_coordinator_update()
-    assert events[-1][0] == "updated"
-    assert events[-1][1] == {"title": "Alarm Title Updated", "closed": False}
-
-    coordinator.data = {
-        D_ALARM: {"items": {"a1": {"title": "Alarm Title Updated", "closed": True}}}
-    }
-    feed._handle_coordinator_update()
-    assert events[-1][0] == "closed"
-
-
-def test_alarm_feed_event_no_spurious_events(hass: HomeAssistant) -> None:
-    """Test that the feed fires nothing for alarms already closed on setup."""
-    coordinator = _mock_coordinator(
-        hass,
-        {D_ALARM: {"items": {"a1": {"title": "Old", "closed": True}}}},
-    )
-    feed = DiveraAlarmFeedEvent(coordinator)
-    feed.hass = hass
-    feed.platform = MagicMock()
-    feed.entity_id = "event.123456_alarm_feed"
-
-    fired = []
-    feed._trigger_event = MagicMock(side_effect=lambda t, d: fired.append((t, d)))
-
-    feed._handle_coordinator_update()
-    assert fired == []

@@ -17,17 +17,38 @@ from homeassistant.const import (
     CONF_PLATFORM,
     CONF_TYPE,
 )
+from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import (
+    ALARM_EVENT_TYPE,
+    ATTR_ALARM_EVENT_TYPE,
+    DOMAIN,
+    TRIGGER_ALARM_CLOSED,
+    TRIGGER_ALARM_OPENED,
+    TRIGGER_ALARM_UPDATED,
+)
 
 TRIGGER_TYPE_NEW_ALARM = "new_alarm"
 TRIGGER_TYPE_ALL_ALARMS_CLOSED = "all_alarms_closed"
 
-TRIGGER_TYPES = {TRIGGER_TYPE_NEW_ALARM, TRIGGER_TYPE_ALL_ALARMS_CLOSED}
+TRIGGER_TYPE_ALARM_OPENED = TRIGGER_ALARM_OPENED
+TRIGGER_TYPE_ALARM_UPDATED = TRIGGER_ALARM_UPDATED
+TRIGGER_TYPE_ALARM_CLOSED = TRIGGER_ALARM_CLOSED
+
+LIFECYCLE_TRIGGER_TYPES = {
+    TRIGGER_TYPE_ALARM_OPENED,
+    TRIGGER_TYPE_ALARM_UPDATED,
+    TRIGGER_TYPE_ALARM_CLOSED,
+}
+
+TRIGGER_TYPES = {
+    TRIGGER_TYPE_NEW_ALARM,
+    TRIGGER_TYPE_ALL_ALARMS_CLOSED,
+} | LIFECYCLE_TRIGGER_TYPES
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
@@ -63,10 +84,20 @@ async def async_get_triggers(
         CONF_ENTITY_ID: entity_entry.id,
     }
 
-    return [
+    triggers = [
         {**base_trigger, CONF_TYPE: TRIGGER_TYPE_NEW_ALARM},
         {**base_trigger, CONF_TYPE: TRIGGER_TYPE_ALL_ALARMS_CLOSED},
     ]
+    triggers.extend(
+        {
+            CONF_PLATFORM: "device",
+            CONF_DOMAIN: DOMAIN,
+            CONF_DEVICE_ID: device_id,
+            CONF_TYPE: trigger_type,
+        }
+        for trigger_type in LIFECYCLE_TRIGGER_TYPES
+    )
+    return triggers
 
 
 async def async_attach_trigger(
@@ -77,6 +108,21 @@ async def async_attach_trigger(
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
     trigger_type = config[CONF_TYPE]
+
+    if trigger_type in LIFECYCLE_TRIGGER_TYPES:
+        event_config = event_trigger.TRIGGER_SCHEMA(
+            {
+                event_trigger.CONF_PLATFORM: "event",
+                event_trigger.CONF_EVENT_TYPE: ALARM_EVENT_TYPE,
+                event_trigger.CONF_EVENT_DATA: {
+                    CONF_DEVICE_ID: config[CONF_DEVICE_ID],
+                    ATTR_ALARM_EVENT_TYPE: trigger_type.removeprefix("alarm_"),
+                },
+            }
+        )
+        return await event_trigger.async_attach_trigger(
+            hass, event_config, action, trigger_info, platform_type="device"
+        )
 
     if (
         trigger_type == TRIGGER_TYPE_NEW_ALARM
