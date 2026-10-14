@@ -39,9 +39,7 @@ def DiveraVehicleSelectManager(  # pylint: disable=invalid-name
         get_current_ids=lambda data: {
             item_id
             for item_id in data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
-            if _coordinator_permissions(coordinator).can_write_vehicle_status(
-                item_id
-            )
+            if _coordinator_permissions(coordinator).can_write_vehicle_status(item_id)
         },
         build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_vehicle_status_{item_id}",
         entity_factory=DiveraVehicleStatusSelect,
