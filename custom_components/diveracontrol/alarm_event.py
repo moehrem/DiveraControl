@@ -7,8 +7,8 @@ alarm id and the full alarm data, so automations can react to them via
 device triggers without any event entity.
 """
 
-from collections.abc import Callable
 import logging
+from collections.abc import Callable
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
@@ -136,4 +136,4 @@ class DiveraAlarmEventBusManager:
 
         has_open_alarms = bool(self._known_alarm_ids - self._closed_alarm_ids)
         if had_open_alarms and not has_open_alarms:
-            self._fire_derived_event("all_alarms_closed")
+            self._fire_derived_event("alarm_all_closed")
