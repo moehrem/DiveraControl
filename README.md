@@ -250,7 +250,7 @@ Zu jedem Auslöser stehen in der Automation die **Alarmdaten** (z. B. Titel, Pri
 
 ---
 #### ⚠️ Wichtige Hinweise zu Aktionen
-- **Lokale Aktualisierung:** Ändern bestehende Daten (z. B. Fahrzeugposition) diese **sofort lokal** in Home Assistant. Keine Wartezeit auf Divera-Sync!
+- **Lokale Aktualisierung:** Änderungen bestehender Daten (z. B. Fahrzeugposition) werden **sofort lokal** in Home Assistant umgesetzt. Keine Wartezeit auf Divera-Sync!
 - **Neue Datensätze:** Werden **zuerst in Divera erstellt** und dann mit Home Assistant synchronisiert.
 - **Berechtigungen:** Aktionen sind **technisch für alle Nutzer verfügbar**, werden aber **vor Ausführung geprüft** und bei fehlenden Rechten abgebrochen.
 
@@ -267,12 +267,6 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 | **Device Tracker**  | Alarmpositionen, Fahrzeugpositionen               | Standortverfolgung in Karten        |
 | **Kalender**        | Termine aus Divera                                 | Integration in Kalender-Views      |
 
-> **⚠️ Hinweis zur Version 2.0:** Die bisherigen `sensor.*_vehicle_*`-Entitäten wurden in die Select-Entitäten (`select.*_vehicle_status_*`) integriert. Der Fahrzeugstatus wird jetzt als Option des Selects angezeigt und kann direkt gesetzt werden. Alte Sensor-Entitäten werden nicht mehr erstellt und können gelöscht werden; Fahrzeugdaten stehen weiterhin als Attribute der Select-Entität bereit.
->
-> Alarme werden nicht mehr als Sensor-Entitäten (`sensor.*_alarm_*`), sondern als **Event-Entitäten** (`event.*_alarm_*`) mit den Event-Typen *geöffnet*, *aktualisiert* und *geschlossen* bereitgestellt. Sie bleiben sichtbar, bis der Alarm in Divera archiviert wird. Der Status *Letzter Alarm* wird zusätzlich über Neustarts hinweg wiederhergestellt.
->
-> Zusätzlich stellt die Integration **Geräte-Auslöser** für den gesamten Alarm-Lebenszyklus bereit (Alarm geöffnet/aktualisiert/geschlossen, Alle Alarme geschlossen). Diese sind nicht als "Ziel" in Automationen wählbar, sondern werden über den Auslösertyp "Gerät" ausgewählt – unabhängig davon, ob bereits Alarm-Entitäten existieren.
-
 ---
 ---
 ## ⁉️ Fehleranalyse
@@ -284,7 +278,7 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 
 > **⚠️ Wichtig:**
 > - In Diagnosedaten wird **nur `accesskey` maskiert**.
-> - **Alle anderen Daten** (Nutzerdaten, Alarminhalte, etc.) sind **unverschlüsselt** enthalten.
+> - **Alle anderen Daten** (Nutzerdaten, Alarminhalte inkl. Patienteninformationen, Klarnamen von Einsatzkräften, etc.) sind **unverschlüsselt** enthalten.
 > - **Nie ungefiltert weitergeben!**
 
 ---
@@ -308,6 +302,15 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 > **Vorteil:** Keine regelmäßigen Abfragen mehr nötig – Updates erfolgen **on-demand**.
 
 > **Hinweis:** Es handelt sich **nicht um ein eigenes Webhook-Feature der Integration**, sondern um den generischen Webhook-Trigger von Home Assistant in Kombination mit der Aktion *"Datenaktualisierung anfordern"*.
+
+### 🔁 Alarmstatus als AUslöser für Automationen
+
+**Problem:** Alarme sind dynamische Ereignisse, sodass Automationen nicht auf konkrete Alarme (Entitäten) reagieren können.
+**Lösung:** Nutze Alarmereignisse als Auslöser für Automationen. DiveraControl feuert verschiedene Ereignisse, abhängig vom Status des Alarms, Details [siehe hier](https://github.com/moehrem/DiveraControl/tree/vibe/alarm-feed-event#-ausl%C3%B6ser).
+
+#### 🔧 Einrichtung
+1. **Gerät als Auslöser** einer Automation in Home Assistant einrichten. **Wichtig:** Das Gerät muss "Nach Typ" ausgewählt werden, da sonst die Auslöser nicht angezeigt werden!
+2. **Auslöser** wählen.
 
 ---
 
