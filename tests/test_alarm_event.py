@@ -56,25 +56,29 @@ async def test_alarm_event_bus_lifecycle(hass: HomeAssistant) -> None:
 
     manager = DiveraAlarmEventBusManager(hass, coordinator)
     manager._handle_coordinator_update()
+    await hass.async_block_till_done()
 
-    assert len(events) == 1
-    assert events[0][0] == ALARM_EVENT_TYPE
-    assert events[0][1][ATTR_ALARM_EVENT_TYPE] == "opened"
-    assert events[0][1][ATTR_ALARM_ID] == "a1"
-    assert events[0][1][ATTR_ALARM_DATA]["title"] == "Alarm Title"
-    assert events[0][1]["device_id"] == device.id
+    types = [data[ATTR_ALARM_EVENT_TYPE] for _, data in events]
+    assert types == ["opened", "new_alarm"]
+    opened = events[0][1]
+    assert opened[ATTR_ALARM_ID] == "a1"
+    assert opened[ATTR_ALARM_DATA]["title"] == "Alarm Title"
+    assert opened["device_id"] == device.id
 
     coordinator.data = {
         D_ALARM: {"items": {"a1": {"title": "Alarm Title Updated", "closed": False}}}
     }
     manager._handle_coordinator_update()
+    await hass.async_block_till_done()
     assert events[-1][1][ATTR_ALARM_EVENT_TYPE] == "updated"
 
     coordinator.data = {
         D_ALARM: {"items": {"a1": {"title": "Alarm Title Updated", "closed": True}}}
     }
     manager._handle_coordinator_update()
-    assert events[-1][1][ATTR_ALARM_EVENT_TYPE] == "closed"
+    await hass.async_block_till_done()
+    types = [data[ATTR_ALARM_EVENT_TYPE] for _, data in events]
+    assert types[-2:] == ["closed", "all_alarms_closed"]
 
 
 async def test_alarm_event_bus_no_spurious_events(hass: HomeAssistant) -> None:
@@ -153,3 +157,47 @@ async def test_device_trigger_list_includes_lifecycle_triggers(
         TRIGGER_ALARM_UPDATED,
         TRIGGER_ALARM_CLOSED,
     }
+
+
+async def test_attach_lifecycle_trigger(hass: HomeAssistant) -> None:
+    """Test that attaching a lifecycle device trigger listens on the bus."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.diveracontrol.device_trigger import async_attach_trigger
+
+    config_entry = MockConfigEntry(domain=DOMAIN, data={D_UCR_ID: "123456"})
+    config_entry.add_to_hass(hass)
+    registry = dr.async_get(hass)
+    device = registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, "123456")},
+        name="Test Device",
+    )
+
+    calls = []
+
+    async def action(*args, **kwargs):
+        calls.append("called")
+
+    remove = await async_attach_trigger(
+        hass,
+        {
+            "platform": "device",
+            "domain": DOMAIN,
+            "device_id": device.id,
+            "type": "alarm_opened",
+        },
+        action,
+        {"trigger_data": {}, "variables": {}},
+    )
+    hass.bus.async_fire(
+        ALARM_EVENT_TYPE,
+        {
+            "device_id": device.id,
+            ATTR_ALARM_EVENT_TYPE: "opened",
+            ATTR_ALARM_ID: "a1",
+        },
+    )
+    await hass.async_block_till_done()
+    assert calls == ["called"]
+    remove()

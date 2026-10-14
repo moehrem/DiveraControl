@@ -5,21 +5,15 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-from homeassistant.components.homeassistant.triggers import (
-    numeric_state as numeric_state_trigger,
-)
+from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.const import (
-    CONF_ABOVE,
-    CONF_BELOW,
     CONF_DEVICE_ID,
     CONF_DOMAIN,
-    CONF_ENTITY_ID,
     CONF_PLATFORM,
     CONF_TYPE,
 )
-from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
@@ -52,7 +46,6 @@ TRIGGER_TYPES = {
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
-        vol.Required(CONF_ENTITY_ID): cv.entity_id_or_uuid,
         vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
     }
 )
@@ -75,29 +68,15 @@ async def async_get_triggers(
     if not entries:
         return []
 
-    entity_entry = entries[0]
-
-    base_trigger = {
-        CONF_PLATFORM: "device",
-        CONF_DOMAIN: DOMAIN,
-        CONF_DEVICE_ID: device_id,
-        CONF_ENTITY_ID: entity_entry.id,
-    }
-
-    triggers = [
-        {**base_trigger, CONF_TYPE: TRIGGER_TYPE_NEW_ALARM},
-        {**base_trigger, CONF_TYPE: TRIGGER_TYPE_ALL_ALARMS_CLOSED},
-    ]
-    triggers.extend(
+    return [
         {
             CONF_PLATFORM: "device",
             CONF_DOMAIN: DOMAIN,
             CONF_DEVICE_ID: device_id,
             CONF_TYPE: trigger_type,
         }
-        for trigger_type in LIFECYCLE_TRIGGER_TYPES
-    )
-    return triggers
+        for trigger_type in TRIGGER_TYPES
+    ]
 
 
 async def async_attach_trigger(
@@ -109,42 +88,22 @@ async def async_attach_trigger(
     """Attach a trigger."""
     trigger_type = config[CONF_TYPE]
 
-    if trigger_type in LIFECYCLE_TRIGGER_TYPES:
-        event_config = event_trigger.TRIGGER_SCHEMA(
-            {
-                event_trigger.CONF_PLATFORM: "event",
-                event_trigger.CONF_EVENT_TYPE: ALARM_EVENT_TYPE,
-                event_trigger.CONF_EVENT_DATA: {
-                    CONF_DEVICE_ID: config[CONF_DEVICE_ID],
-                    ATTR_ALARM_EVENT_TYPE: trigger_type.removeprefix("alarm_"),
-                },
-            }
-        )
-        return await event_trigger.async_attach_trigger(
-            hass, event_config, action, trigger_info, platform_type="device"
-        )
+    event_data = {CONF_DEVICE_ID: config[CONF_DEVICE_ID]}
+    if trigger_type in (
+        LIFECYCLE_TRIGGER_TYPES
+        | {TRIGGER_TYPE_NEW_ALARM, TRIGGER_TYPE_ALL_ALARMS_CLOSED}
+    ):
+        event_data[ATTR_ALARM_EVENT_TYPE] = trigger_type.removeprefix("alarm_")
 
-    if (
-        trigger_type == TRIGGER_TYPE_NEW_ALARM
-    ):  # TRIGGER_TYPE_NEW_ALARM to fire when the number of open alarms raises
-        numeric_state_config = {
-            CONF_PLATFORM: "numeric_state",
-            CONF_ENTITY_ID: config[CONF_ENTITY_ID],
-            CONF_ABOVE: 0,
-            "from": "any",
+    event_config = event_trigger.TRIGGER_SCHEMA(
+        {
+            event_trigger.CONF_PLATFORM: "event",
+            event_trigger.CONF_EVENT_TYPE: ALARM_EVENT_TYPE,
+            event_trigger.CONF_EVENT_DATA: event_data,
         }
-    else:  # TRIGGER_TYPE_ALL_ALARMS_CLOSED
-        numeric_state_config = {
-            CONF_PLATFORM: "numeric_state",
-            CONF_ENTITY_ID: config[CONF_ENTITY_ID],
-            CONF_BELOW: 1,
-        }
-
-    numeric_state_config = await numeric_state_trigger.async_validate_trigger_config(
-        hass, numeric_state_config
     )
-    return await numeric_state_trigger.async_attach_trigger(
-        hass, numeric_state_config, action, trigger_info, platform_type="device"
+    return await event_trigger.async_attach_trigger(
+        hass, event_config, action, trigger_info, platform_type="device"
     )
 
 

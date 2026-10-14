@@ -90,11 +90,31 @@ class DiveraAlarmEventBusManager:
             },
         )
 
+    def _fire_derived_event(self, event_type: str) -> None:
+        """Fire a derived alarm event on the event bus."""
+        device_id = self._get_device_id()
+        if device_id is None:
+            _LOGGER.debug(
+                "No device found for ucr %s, skipping alarm event",
+                self._ucr_id,
+            )
+            return
+        self.hass.bus.async_fire(
+            ALARM_EVENT_TYPE,
+            {
+                "device_id": device_id,
+                ATTR_ALARM_EVENT_TYPE: event_type,
+            },
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Fire events for all alarms changed since the last update."""
         alarm_items = self.coordinator.data.get(D_ALARM, {}).get("items", {})
         current_ids = set(alarm_items.keys())
+
+        had_open_alarms = bool(self._known_alarm_ids - self._closed_alarm_ids)
+        new_open_alarm = False
 
         for alarm_id in current_ids - self._known_alarm_ids:
             alarm_details = alarm_items[alarm_id]
@@ -104,6 +124,7 @@ class DiveraAlarmEventBusManager:
                 continue
             self._last_alarm_data[alarm_id] = dict(alarm_details)
             self._fire_event("opened", alarm_id, alarm_details)
+            new_open_alarm = True
 
         for alarm_id in self._known_alarm_ids & current_ids:
             alarm_details = alarm_items[alarm_id]
@@ -114,3 +135,9 @@ class DiveraAlarmEventBusManager:
                 elif alarm_details != self._last_alarm_data.get(alarm_id):
                     self._last_alarm_data[alarm_id] = dict(alarm_details)
                     self._fire_event("updated", alarm_id, alarm_details)
+
+        has_open_alarms = bool(self._known_alarm_ids - self._closed_alarm_ids)
+        if new_open_alarm:
+            self._fire_derived_event("new_alarm")
+        if had_open_alarms and not has_open_alarms:
+            self._fire_derived_event("all_alarms_closed")
