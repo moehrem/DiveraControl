@@ -4,6 +4,13 @@
   </a>
 </p>
 
+<p align="center">
+  <a href="https://www.divera247.com">
+    <img src="https://help.divera247.com/download/attachments/137068970/DIVERA247-Logo-Horizontal-Red-Black-RGB_1.png?version=1&modificationDate=1781185774529&api=v2" alt="Divera 24/7">
+  </a>
+</p>
+
+
 ---
 
 [![English](https://img.shields.io/badge/🇬🇧%20-English-blue)](README.en.md)
