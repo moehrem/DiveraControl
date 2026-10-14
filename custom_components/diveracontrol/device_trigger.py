@@ -77,9 +77,10 @@ async def async_attach_trigger(
     """Attach a trigger."""
     trigger_type = config[CONF_TYPE]
 
-    event_data = {CONF_DEVICE_ID: config[CONF_DEVICE_ID]}
-    if trigger_type in LIFECYCLE_TRIGGER_TYPES:
-        event_data[ATTR_ALARM_EVENT_TYPE] = trigger_type.removeprefix("alarm_")
+    event_data = {
+        CONF_DEVICE_ID: config[CONF_DEVICE_ID],
+        ATTR_ALARM_EVENT_TYPE: trigger_type,
+    }
 
     event_config = event_trigger.TRIGGER_SCHEMA(
         {

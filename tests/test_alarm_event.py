@@ -59,7 +59,7 @@ async def test_alarm_event_bus_lifecycle(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     types = [data[ATTR_ALARM_EVENT_TYPE] for _, data in events]
-    assert types == ["opened"]
+    assert types == ["alarm_opened"]
     opened = events[0][1]
     assert opened[ATTR_ALARM_ID] == "a1"
     assert opened[ATTR_ALARM_DATA]["title"] == "Alarm Title"
@@ -70,7 +70,7 @@ async def test_alarm_event_bus_lifecycle(hass: HomeAssistant) -> None:
     }
     manager._handle_coordinator_update()
     await hass.async_block_till_done()
-    assert events[-1][1][ATTR_ALARM_EVENT_TYPE] == "updated"
+    assert events[-1][1][ATTR_ALARM_EVENT_TYPE] == "alarm_updated"
 
     coordinator.data = {
         D_ALARM: {"items": {"a1": {"title": "Alarm Title Updated", "closed": True}}}
@@ -78,7 +78,7 @@ async def test_alarm_event_bus_lifecycle(hass: HomeAssistant) -> None:
     manager._handle_coordinator_update()
     await hass.async_block_till_done()
     types = [data[ATTR_ALARM_EVENT_TYPE] for _, data in events]
-    assert types[-2:] == ["closed", "all_alarms_closed"]
+    assert types[-2:] == ["alarm_closed", "all_alarms_closed"]
 
 
 async def test_alarm_event_bus_no_spurious_events(hass: HomeAssistant) -> None:
@@ -115,7 +115,7 @@ async def test_alarm_event_bus_skips_without_device(hass: HomeAssistant) -> None
     hass.bus.async_listen(ALARM_EVENT_TYPE, lambda e: fired.append(e.data))
 
     manager = DiveraAlarmEventBusManager(hass, coordinator)
-    manager._fire_event("opened", "a1", {"title": "X"})
+    manager._fire_event("alarm_opened", "a1", {"title": "X"})
     assert fired == []
 
 
@@ -193,7 +193,7 @@ async def test_attach_lifecycle_trigger(hass: HomeAssistant) -> None:
         ALARM_EVENT_TYPE,
         {
             "device_id": device.id,
-            ATTR_ALARM_EVENT_TYPE: "opened",
+            ATTR_ALARM_EVENT_TYPE: "alarm_opened",
             ATTR_ALARM_ID: "a1",
         },
     )
