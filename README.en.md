@@ -264,7 +264,7 @@ Each trigger provides the **alarm data** (e.g. title, priority, address) as trig
 ---
 
 #### ⚠️ Important Notes on Actions
-- **Local Update:** Changing existing data (e.g., vehicle position) updates it **immediately locally** in Home Assistant. No waiting for Divera sync!
+- **Local Update:** Changes to existing data (e.g., vehicle position) are applied **immediately locally** in Home Assistant. No waiting for Divera sync!
 - **New Data Records:** Are **first created in Divera** and then synchronized with Home Assistant.
 - **Permissions:** Actions are **technically available to all users**, but **checked before execution** and aborted if permissions are missing.
 
@@ -282,12 +282,6 @@ The integration **dynamically creates entities** per unit:
 | **Device Tracker** | Alarm positions, vehicle positions | Location tracking on maps |
 | **Calendar** | Appointments from Divera | Integration into calendar views |
 
-> **⚠️ Version 2.0 note:** The former `sensor.*_vehicle_*` entities have been merged into the select entities (`select.*_vehicle_status_*`). The vehicle status is now shown as the select's current option and can be set directly. The old sensor entities are no longer created and can be removed; vehicle data remains available as attributes of the select entity.
->
-> Alarms are no longer provided as sensor entities (`sensor.*_alarm_*`) but as **event entities** (`event.*_alarm_*`) with the event types *opened*, *updated* and *closed*. They remain visible until the alarm is archived in Divera. The *last alarm* state is additionally restored across restarts.
->
-> In addition, the integration provides **device triggers** for the whole alarm lifecycle (alarm opened/updated/closed, all alarms closed). They are not selectable as a "target" in automations but via the trigger type "Device" – independent of existing alarm entities.
-
 ---
 ---
 
@@ -300,7 +294,7 @@ The integration **dynamically creates entities** per unit:
 
 > **⚠️ Important:**
 > - In diagnostic data, **only `accesskey` is masked**.
-> - **All other data** (user data, alarm contents, etc.) are **unencrypted**.
+> - **All other data** (user data, alarm contents including patient information, real names of emergency personnel, etc.) are **unencrypted**.
 > - **Never share unfiltered!**
 
 ---
@@ -326,6 +320,16 @@ The integration **dynamically creates entities** per unit:
 > **Advantage:** No more regular polling required – updates occur **on-demand**.
 
 > **Note:** This is **not a dedicated webhook feature of the integration**, but the generic Home Assistant webhook trigger combined with the *"Request data update"* action.
+
+### 🔁 Alarm Status as Trigger for Automations
+
+**Problem:** Alarms are dynamic events, so automations cannot react to specific alarms (entities).
+**Solution:** Use alarm events as triggers for automations. DiveraControl fires various events depending on the alarm's status, details [see here](https://github.com/moehrem/DiveraControl/tree/vibe/alarm-feed-event#%EF%B8%8F-trigger).
+
+#### 🔧 Setup
+1. Set up a **device as trigger** for an automation in Home Assistant. **Important:** The device must be selected "by type", otherwise the triggers are not displayed!
+2. Select the **trigger**.
+
 
 ---
 
