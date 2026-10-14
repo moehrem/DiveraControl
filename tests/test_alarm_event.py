@@ -59,7 +59,7 @@ async def test_alarm_event_bus_lifecycle(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     types = [data[ATTR_ALARM_EVENT_TYPE] for _, data in events]
-    assert types == ["opened", "new_alarm"]
+    assert types == ["opened"]
     opened = events[0][1]
     assert opened[ATTR_ALARM_ID] == "a1"
     assert opened[ATTR_ALARM_DATA]["title"] == "Alarm Title"
@@ -151,7 +151,6 @@ async def test_device_trigger_list_includes_lifecycle_triggers(
     triggers = await async_get_triggers(hass, device.id)
     types = {t["type"] for t in triggers}
     assert types == {
-        "new_alarm",
         "all_alarms_closed",
         TRIGGER_ALARM_OPENED,
         TRIGGER_ALARM_UPDATED,
