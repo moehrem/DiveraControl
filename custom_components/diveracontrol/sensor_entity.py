@@ -423,7 +423,9 @@ class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
 
@@ -514,11 +516,11 @@ class DiveraUserStatusSensor(BaseDiveraEntity):
         super().__init__(coordinator)
 
         # static entity attributes
-        self._attr_has_entity_name = True
-        self._attr_translation_key = "user_status"
+        # self._attr_translation_key = "user_status"
         self._attr_unique_id = f"{self.ucr_id}_user_status"
         self.entity_id = f"sensor.{self.ucr_id}_user_status"
-        self._attr_icon = I_PERSON
+        self._attr_has_entity_name = True
+        self._attr_icon = I_AVAILABILITY
 
     def _get_status_items(self) -> dict[str, dict[str, Any]]:
         """Get user status mapping from coordinator data."""

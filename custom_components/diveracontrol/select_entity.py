@@ -21,9 +21,6 @@ from .entity import BaseDiveraEntity
 class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     """Select entity to set the user status."""
 
-    _attr_has_entity_name = True
-    _attr_icon = I_AVAILABILITY
-
     def __init__(self, coordinator: DiveraCoordinator) -> None:
         """Initialize user status select entity."""
         super().__init__(coordinator)
@@ -31,6 +28,8 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         self._selected_status_id: str | None = None
         self.entity_id = f"select.{self.ucr_id}_user_status"
         self._attr_unique_id = f"{self.ucr_id}_user_status"
+        self._attr_has_entity_name = True
+        self._attr_icon = I_AVAILABILITY
 
     def _get_status_items(self) -> dict[str, dict[str, Any]]:
         """Get user status mapping from coordinator data."""
@@ -103,13 +102,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
 
         self._selected_status_id = status_id
         self.async_write_ha_state()
-
-    # def select_option(self, option: str) -> None:
-    #     """Select option fallback for sync context.
-
-    #     Home Assistant should call `async_select_option` for this entity.
-    #     """
-    #     raise NotImplementedError
 
 
 class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
