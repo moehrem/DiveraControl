@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import voluptuous as vol
-
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.homeassistant.triggers import event as event_trigger
 from homeassistant.const import (
@@ -24,29 +23,19 @@ from .const import (
     TRIGGER_ALARM_CLOSED,
     TRIGGER_ALARM_OPENED,
     TRIGGER_ALARM_UPDATED,
+    TRIGGER_ALL_ALARMS_CLOSED,
 )
 
-TRIGGER_TYPE_NEW_ALARM = "new_alarm"
-TRIGGER_TYPE_ALL_ALARMS_CLOSED = "all_alarms_closed"
-
-TRIGGER_TYPE_ALARM_OPENED = TRIGGER_ALARM_OPENED
-TRIGGER_TYPE_ALARM_UPDATED = TRIGGER_ALARM_UPDATED
-TRIGGER_TYPE_ALARM_CLOSED = TRIGGER_ALARM_CLOSED
-
 LIFECYCLE_TRIGGER_TYPES = {
-    TRIGGER_TYPE_ALARM_OPENED,
-    TRIGGER_TYPE_ALARM_UPDATED,
-    TRIGGER_TYPE_ALARM_CLOSED,
+    TRIGGER_ALARM_OPENED,
+    TRIGGER_ALARM_UPDATED,
+    TRIGGER_ALARM_CLOSED,
+    TRIGGER_ALL_ALARMS_CLOSED,
 }
-
-TRIGGER_TYPES = {
-    TRIGGER_TYPE_NEW_ALARM,
-    TRIGGER_TYPE_ALL_ALARMS_CLOSED,
-} | LIFECYCLE_TRIGGER_TYPES
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
-        vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
+        vol.Required(CONF_TYPE): vol.In(LIFECYCLE_TRIGGER_TYPES),
     }
 )
 
@@ -75,7 +64,7 @@ async def async_get_triggers(
             CONF_DEVICE_ID: device_id,
             CONF_TYPE: trigger_type,
         }
-        for trigger_type in TRIGGER_TYPES
+        for trigger_type in LIFECYCLE_TRIGGER_TYPES
     ]
 
 
@@ -89,10 +78,7 @@ async def async_attach_trigger(
     trigger_type = config[CONF_TYPE]
 
     event_data = {CONF_DEVICE_ID: config[CONF_DEVICE_ID]}
-    if trigger_type in (
-        LIFECYCLE_TRIGGER_TYPES
-        | {TRIGGER_TYPE_NEW_ALARM, TRIGGER_TYPE_ALL_ALARMS_CLOSED}
-    ):
+    if trigger_type in LIFECYCLE_TRIGGER_TYPES:
         event_data[ATTR_ALARM_EVENT_TYPE] = trigger_type.removeprefix("alarm_")
 
     event_config = event_trigger.TRIGGER_SCHEMA(

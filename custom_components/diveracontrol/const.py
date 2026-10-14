@@ -60,9 +60,13 @@ ATTR_ALARM_ID = "alarm_id"
 ATTR_ALARM_DATA = "alarm_data"
 
 # alarm lifecycle trigger types
+TRIGGER_NEW_ALARM = "new_alarm"
+TRIGGER_ALL_ALARMS_CLOSED = "all_alarms_closed"
 TRIGGER_ALARM_OPENED = "alarm_opened"
 TRIGGER_ALARM_UPDATED = "alarm_updated"
 TRIGGER_ALARM_CLOSED = "alarm_closed"
+
+# data keys
 D_CLUSTER_ID = "cluster_id"
 D_INTEGRATION_VERSION = "integration_version"
 D_CLUSTER_NAME = "cluster_name"

@@ -3,24 +3,21 @@
 import asyncio
 import logging
 
-# IMPORTANT: import log_handler BEFORE any other module that uses logging
-# to ensure the handler is registered in time
-from .log_handler import (
-    async_remove_diveracontrol_log_handler,
-    async_setup_diveracontrol_log_handler,
-)
-
-# pylint: disable=wrong-import-order
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import (
     device_registry as dr,
+)
+from homeassistant.helpers import (
     entity_registry as er,
+)
+from homeassistant.helpers import (
     issue_registry as ir,
 )
 
+from .alarm_event import DiveraAlarmEventBusManager
 from .const import (
     BASE_API_URL,
     D_ACCESSKEY,
@@ -40,9 +37,15 @@ from .const import (
     PATCH_VERSION,
     VERSION,
 )
-from .alarm_event import DiveraAlarmEventBusManager
 from .coordinator import DiveraCoordinator
 from .divera_api import DiveraAPIClient
+
+# IMPORTANT: import log_handler BEFORE any other module that uses logging
+# to ensure the handler is registered in time
+from .log_handler import (
+    async_remove_diveracontrol_log_handler,
+    async_setup_diveracontrol_log_handler,
+)
 from .service import async_register_services
 from .utils import (
     get_cluster_coordinators_ucrs_from_config_hass,
