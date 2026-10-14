@@ -60,7 +60,7 @@ ATTR_ALARM_ID = "alarm_id"
 ATTR_ALARM_DATA = "alarm_data"
 
 # alarm lifecycle trigger types
-TRIGGER_ALARM_ALL_CLOSED = "all_alarms_closed"
+TRIGGER_ALARM_ALL_CLOSED = "alarm_all_closed"
 TRIGGER_ALARM_OPENED = "alarm_opened"
 TRIGGER_ALARM_UPDATED = "alarm_updated"
 TRIGGER_ALARM_CLOSED = "alarm_closed"

@@ -182,7 +182,7 @@
   },
   "device_automation": {
     "trigger_type": {
-      "all_alarms_closed": "All alarms closed",
+      "alarm_all_closed": "All alarms closed",
       "alarm_opened": "Alarm opened",
       "alarm_updated": "Alarm updated",
       "alarm_closed": "Alarm closed"
