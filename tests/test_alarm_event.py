@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.diveracontrol.alarm_event import DiveraAlarmEventBusManager
@@ -112,3 +113,43 @@ async def test_alarm_event_bus_skips_without_device(hass: HomeAssistant) -> None
     manager = DiveraAlarmEventBusManager(hass, coordinator)
     manager._fire_event("opened", "a1", {"title": "X"})
     assert fired == []
+
+
+async def test_device_trigger_list_includes_lifecycle_triggers(
+    hass: HomeAssistant,
+) -> None:
+    """Test that async_get_triggers returns the lifecycle triggers."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.diveracontrol.const import (
+        TRIGGER_ALARM_CLOSED,
+        TRIGGER_ALARM_OPENED,
+        TRIGGER_ALARM_UPDATED,
+    )
+    from custom_components.diveracontrol.device_trigger import async_get_triggers
+
+    config_entry = MockConfigEntry(domain=DOMAIN, data={D_UCR_ID: "123456"})
+    config_entry.add_to_hass(hass)
+    registry = dr.async_get(hass)
+    device = registry.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={(DOMAIN, "123456")},
+        name="Test Device",
+    )
+    er.async_get(hass).async_get_or_create(
+        "sensor",
+        DOMAIN,
+        "123456_open_alarms",
+        config_entry=config_entry,
+        device_id=device.id,
+    )
+
+    triggers = await async_get_triggers(hass, device.id)
+    types = {t["type"] for t in triggers}
+    assert types == {
+        "new_alarm",
+        "all_alarms_closed",
+        TRIGGER_ALARM_OPENED,
+        TRIGGER_ALARM_UPDATED,
+        TRIGGER_ALARM_CLOSED,
+    }
