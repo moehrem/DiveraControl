@@ -376,3 +376,115 @@ def test_availability_sensor_manager_gates_on_status_permission(
     manager.start()
     assert added == []
     manager.stop()
+
+
+def test_user_status_select_manager_is_dynamic(hass: HomeAssistant) -> None:
+    """Test that the user status select reacts to permission changes."""
+    from custom_components.diveracontrol.select import (
+        DiveraUserStatusSelectManager,
+    )
+
+    data = {D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}}}}
+
+    # with write permission the select is created
+    coordinator = _mock_coordinator(
+        hass,
+        dict(data),
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": True,
+                "status_actions": {"set_all": True, "set_ids": []},
+            }
+        ),
+    )
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    manager = DiveraUserStatusSelectManager(coordinator, async_add_entities)
+    manager.start()
+    assert len(added) == 1
+    assert manager._known_ids == {"user_status"}
+
+    # permission revoked at runtime: the select is removed again
+    coordinator.api.permissions = _permissions(
+        {
+            "status": False,
+            "status_manual": False,
+            "status_actions": {"set_all": True, "set_ids": []},
+        }
+    )
+    manager._handle_coordinator_update()
+    assert manager._known_ids == set()
+
+    # permission re-granted: the select comes back
+    coordinator.api.permissions = _permissions(
+        {
+            "status": True,
+            "status_manual": True,
+            "status_actions": {"set_all": True, "set_ids": []},
+        }
+    )
+    manager._handle_coordinator_update()
+    assert manager._known_ids == {"user_status"}
+    assert len(added) == 2
+    manager.stop()
+
+
+def test_no_permission_dataset_denies_all_status_writes(hass: HomeAssistant) -> None:
+    """Regression test with the Divera dataset of a user without permissions.
+
+    Divera delivers misleading status_actions defaults (set_all/vehicle_all
+    true) even when all status access flags are false; none of these may
+    grant write access.
+    """
+    from custom_components.diveracontrol.select import (
+        DiveraUserStatusSelectManager,
+        DiveraVehicleSelectManager,
+    )
+
+    no_permission_access = {
+        "messages": False,
+        "alarm": False,
+        "news": False,
+        "status": False,
+        "status_manual": False,
+        "status_planer": False,
+        "status_geofence": False,
+        "status_vehicle": False,
+        "status_actions": {
+            "set_all": True,
+            "set_ids": [],
+            "vehicle_all": True,
+            "vehicle_ids": [],
+        },
+        "management": False,
+    }
+    permissions = _permissions(no_permission_access)
+    assert not permissions.can_write_user_status()
+    assert not permissions.can_write_vehicle_status("113090")
+    assert not permissions.has_status_permission()
+
+    data = {
+        D_CLUSTER: {
+            D_VEHICLE: {
+                "113090": {"shortname": "MZF", "name": "86-14-01", "fmsstatus_id": 2}
+            },
+            D_STATUS: {"91768": {"name": "10 Minuten"}},
+        }
+    }
+    coordinator = _mock_coordinator(hass, data, permissions=permissions)
+    added: list = []
+
+    def async_add_entities(entities, update_before_add=False):
+        added.extend(entities)
+
+    user_manager = DiveraUserStatusSelectManager(coordinator, async_add_entities)
+    user_manager.start()
+    vehicle_manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
+    vehicle_manager.start()
+    assert added == []
+    user_manager.stop()
+    vehicle_manager.stop()

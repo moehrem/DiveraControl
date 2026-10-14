@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from .const import D_CLUSTER, D_VEHICLE, DOMAIN
+from .const import D_CLUSTER, D_VEHICLE
 from .divera_permissions import DiveraPermissions
 from .select_entity import DiveraUserStatusSelect, DiveraVehicleStatusSelect
 from .sensor_entity import DiveraSensorManager
@@ -50,6 +50,31 @@ def DiveraVehicleSelectManager(  # pylint: disable=invalid-name
     )
 
 
+def DiveraUserStatusSelectManager(  # pylint: disable=invalid-name
+    coordinator,
+    async_add_entities,
+) -> DiveraSensorManager:
+    """Create a DiveraSensorManager for the user status select.
+
+    The select is only maintained while the user may write their own
+    status; on permission loss the registry entry is removed dynamically
+    and the read-only sensor platform takes over.
+    """
+    return DiveraSensorManager(
+        coordinator=coordinator,
+        async_add_entities=async_add_entities,
+        get_current_ids=lambda data: (
+            {"user_status"}
+            if _coordinator_permissions(coordinator).can_write_user_status()
+            else set()
+        ),
+        build_unique_id=lambda ucr_id, item_id: f"{ucr_id}_{item_id}",
+        entity_factory=lambda coord, item_id: DiveraUserStatusSelect(coord),
+        label="user status select",
+        domain="select",
+    )
+
+
 def _ensure_enabled(
     hass: HomeAssistant,
     unique_ids: list[str],
@@ -75,26 +100,6 @@ def _ensure_enabled(
             registry.async_update_entity(entity_entry.entity_id, disabled_by=None)
 
 
-def _remove_stale_user_status_select(
-    hass: HomeAssistant,
-    unique_id: str,
-) -> None:
-    """Remove a user status select registry entry after a permission loss.
-
-    When the Divera permission to set the user status is revoked, the
-    formerly writable select is replaced by a read-only sensor. The old
-    select registry entry must be removed explicitly so no orphan remains.
-    """
-    registry = er.async_get(hass)
-    entity_id = registry.async_get_entity_id("select", DOMAIN, unique_id)
-    if entity_id:
-        registry.async_remove(entity_id)
-        _LOGGER.info(
-            "Removed user status select %s: write permission no longer granted",
-            entity_id,
-        )
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -112,22 +117,11 @@ async def async_setup_entry(
         [f"{coordinator.ucr_id}_user_status" for coordinator in coordinators.values()],
     )
     for coordinator in coordinators.values():
-        if _coordinator_permissions(coordinator).can_write_user_status():
-            user_status_entities = [DiveraUserStatusSelect(coordinator)]
-            async_add_entities(
-                user_status_entities,
-                update_before_add=False,
-            )
-        else:
-            _LOGGER.info(
-                "User '%s' (ucr %s) may not set the user status in Divera, "
-                "creating a read-only sensor instead",
-                coordinator.user_name,
-                coordinator.ucr_id,
-            )
-            _remove_stale_user_status_select(
-                hass, f"{coordinator.ucr_id}_user_status"
-            )
+        user_status_manager = DiveraUserStatusSelectManager(
+            coordinator, async_add_entities
+        )
+        user_status_manager.start()
+        config_entry.async_on_unload(user_status_manager.stop)
 
         vehicle_manager = DiveraVehicleSelectManager(coordinator, async_add_entities)
         vehicle_manager.start()
