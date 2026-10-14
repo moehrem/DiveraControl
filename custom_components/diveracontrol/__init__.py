@@ -871,16 +871,16 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             hass.config_entries.async_update_entry(
                 config_entry,
                 data=updated_data,
-                version=current_version,
-                minor_version=current_minor_version,
+                version=VERSION,
+                minor_version=MINOR_VERSION,
                 unique_id=new_unique_id,
             )
         else:
             hass.config_entries.async_update_entry(
                 config_entry,
                 data=updated_data,
-                version=current_version,
-                minor_version=current_minor_version,
+                version=VERSION,
+                minor_version=MINOR_VERSION,
             )
 
     _LOGGER.debug(

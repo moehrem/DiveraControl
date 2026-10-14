@@ -248,12 +248,18 @@ The integration offers several actions per device/user, that can be used in **au
 
 ### 📟 Trigger
 
-The integration creates some triggers. These triggers are also available per device/user, thus can be used in **Automations** very easily.
+The integration provides triggers for each device/user. They can be used in **Automations**.
+
+> **💡 Note:** In the automation, select the trigger type **"Device"** and then the Divera device. The triggers do not appear in the "target" search because they are not bound to an entity.
 
 | **Trigger**               | **condition to trigger**        |
 |---------------------------|---------------------------------|
-| **New alarm**             | number of "open alarms" raises  |
-| **All alarms closed**     | number of "open alarms" is zero |
+| **Alarm opened**          | a new open alarm arrived        |
+| **Alarm updated**         | an open alarm changed or a closed alarm was reopened |
+| **Alarm closed**          | an open alarm was closed         |
+| **All alarms closed**     | the last open alarm was closed or archived |
+
+Each trigger provides the **alarm data** (e.g. title, priority, address) as trigger variables in the automation.
 
 ---
 
@@ -279,6 +285,8 @@ The integration **dynamically creates entities** per unit:
 > **⚠️ Version 2.0 note:** The former `sensor.*_vehicle_*` entities have been merged into the select entities (`select.*_vehicle_status_*`). The vehicle status is now shown as the select's current option and can be set directly. The old sensor entities are no longer created and can be removed; vehicle data remains available as attributes of the select entity.
 >
 > Alarms are no longer provided as sensor entities (`sensor.*_alarm_*`) but as **event entities** (`event.*_alarm_*`) with the event types *opened*, *updated* and *closed*. They remain visible until the alarm is archived in Divera. The *last alarm* state is additionally restored across restarts.
+>
+> In addition, the integration provides **device triggers** for the whole alarm lifecycle (alarm opened/updated/closed, all alarms closed). They are not selectable as a "target" in automations but via the trigger type "Device" – independent of existing alarm entities.
 
 ---
 ---

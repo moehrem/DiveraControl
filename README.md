@@ -235,12 +235,18 @@ Es werden für jedes Gerät/jeden Nutzer verschiedene Aktionen bereitgestellt. D
 ---
 ### 📟 Auslöser
 
-Die Integration stellt einige Auslöser zu jedem Gerät/Nutzer bereit. Auch diese Auslöser können in **Automationen** genutzt werden.
+Die Integration stellt Auslöser zu jedem Gerät/Nutzer bereit. Sie können in **Automationen** genutzt werden.
+
+> **💡 Hinweis:** Wähle in der Automation als Auslöser den Typ **"Gerät"** und danach das Divera-Gerät aus. Die Auslöser erscheinen nicht in der Suche nach "Ziel", da sie nicht an eine Entität gebunden sind.
 
 | **Auslöser**                    | **Bedingung zur Auslösung**            |
 |---------------------------------|----------------------------------------|
-| **Neuer Alarm**                 | Anzahl "offene Alarme" erhöht sich     |
-| **Alle Alarme geschlossen**     | Anzahl "offene Alarme" ist gleich Null |
+| **Alarm geöffnet**              | Ein neuer, offener Alarm ist eingegangen |
+| **Alarm aktualisiert**          | Ein offener Alarm hat sich geändert oder ein geschlossener Alarm wurde wieder geöffnet |
+| **Alarm geschlossen**           | Ein offener Alarm wurde geschlossen   |
+| **Alle Alarme geschlossen**     | Der letzte offene Alarm wurde geschlossen oder archiviert |
+
+Zu jedem Auslöser stehen in der Automation die **Alarmdaten** (z. B. Titel, Priorität, Adresse) als Trigger-Variablen zur Verfügung.
 
 ---
 #### ⚠️ Wichtige Hinweise zu Aktionen
@@ -257,13 +263,15 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 |---------------------|---------------------------------------------------|------------------------------------|
 | **Steuerelemente**  | Nutzerstatus setzen, Fahrzeugstatus (FMS) setzen     | Statusänderung per Klick           |
 | **Sensoren**        | Verfügbarkeiten, Offene-Alarme-Zähler, Letzter Alarm, Diagnose-Sensoren | Datenabfrage & Monitoring |
-| **Events**          | Alarm-Events (geöffnet, aktualisiert, geschlossen)  | Alarm-Verfolgung in Automationen   |
+| **Events**          | Alarm-Events (geöffnet, aktualisiert, geschlossen) je nicht archiviertem Alarm | Alarm-Verfolgung in Automationen   |
 | **Device Tracker**  | Alarmpositionen, Fahrzeugpositionen               | Standortverfolgung in Karten        |
 | **Kalender**        | Termine aus Divera                                 | Integration in Kalender-Views      |
 
 > **⚠️ Hinweis zur Version 2.0:** Die bisherigen `sensor.*_vehicle_*`-Entitäten wurden in die Select-Entitäten (`select.*_vehicle_status_*`) integriert. Der Fahrzeugstatus wird jetzt als Option des Selects angezeigt und kann direkt gesetzt werden. Alte Sensor-Entitäten werden nicht mehr erstellt und können gelöscht werden; Fahrzeugdaten stehen weiterhin als Attribute der Select-Entität bereit.
 >
 > Alarme werden nicht mehr als Sensor-Entitäten (`sensor.*_alarm_*`), sondern als **Event-Entitäten** (`event.*_alarm_*`) mit den Event-Typen *geöffnet*, *aktualisiert* und *geschlossen* bereitgestellt. Sie bleiben sichtbar, bis der Alarm in Divera archiviert wird. Der Status *Letzter Alarm* wird zusätzlich über Neustarts hinweg wiederhergestellt.
+>
+> Zusätzlich stellt die Integration **Geräte-Auslöser** für den gesamten Alarm-Lebenszyklus bereit (Alarm geöffnet/aktualisiert/geschlossen, Alle Alarme geschlossen). Diese sind nicht als "Ziel" in Automationen wählbar, sondern werden über den Auslösertyp "Gerät" ausgewählt – unabhängig davon, ob bereits Alarm-Entitäten existieren.
 
 ---
 ---
