@@ -540,9 +540,7 @@ def test_user_status_select_option_rejected_without_permission(
     from homeassistant.exceptions import HomeAssistantError
 
     data = {
-        D_CLUSTER: {
-            D_STATUS: {"1": {"name": "Verfügbar"}, "3": {"name": "Gesperrt"}}
-        }
+        D_CLUSTER: {D_STATUS: {"1": {"name": "Verfügbar"}, "3": {"name": "Gesperrt"}}}
     }
     coordinator = _mock_coordinator(
         hass,
