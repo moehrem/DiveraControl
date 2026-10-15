@@ -1,7 +1,7 @@
 """Support for Divera dynamic entities."""
 
-from collections.abc import Callable
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.const import EntityCategory
@@ -11,22 +11,22 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    D_CLUSTER,
     D_ALARM,
+    D_CLUSTER,
+    D_LAST_ALARM,
     D_MONITOR,
     D_OPEN_ALARMS,
-    D_LAST_ALARM,
     D_STATUS,
     D_VEHICLE,
     DOMAIN,
     I_AVAILABILITY,
     I_CLOSED_ALARM,
     I_COUNTER_ACTIVE_ALARMS,
+    I_FIRESTATION,
     I_OPEN_ALARM,
     I_OPEN_ALARM_NOPRIO,
     I_PERSON,
     I_VEHICLE,
-    I_FIRESTATION,
 )
 from .coordinator import DiveraCoordinator
 from .divera_permissions import DiveraPermissions
@@ -155,7 +155,11 @@ def DiveraAvailabilitySensorManager(  # pylint: disable=invalid-name
     coordinator: DiveraCoordinator,
     async_add_entities: AddEntitiesCallback,
 ) -> DiveraSensorManager:
-    """Create a DiveraSensorManager pre-configured for availability sensors."""
+    """Create a DiveraSensorManager pre-configured for availability sensors.
+
+    Only set if user has permission to read the status data;
+    otherwise, no sensors are created.
+    """
     return DiveraSensorManager(
         coordinator=coordinator,
         async_add_entities=async_add_entities,
@@ -423,7 +427,9 @@ class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
             return (
                 I_CLOSED_ALARM
                 if _closed
-                else I_OPEN_ALARM if _priority else I_OPEN_ALARM_NOPRIO
+                else I_OPEN_ALARM
+                if _priority
+                else I_OPEN_ALARM_NOPRIO
             )
         return I_OPEN_ALARM_NOPRIO
 
