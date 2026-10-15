@@ -10,6 +10,7 @@ from .const import (
     D_SHORTNAME,
     D_USER,
     DOMAIN,
+    MANUFACTURER,
     MINOR_VERSION,
     PATCH_VERSION,
     VERSION,
@@ -41,12 +42,17 @@ class BaseDiveraEntity(CoordinatorEntity):
     def _get_device_info(self) -> DeviceInfo:
         """Return device info for the user device."""
 
+        _base_api_url = self.coordinator.config_entry.data.get(
+            BASE_API_URL, BASE_API_URL
+        )
+
         return {
             "identifiers": {(DOMAIN, self.ucr_id)},
-            "configuration_url": f"{BASE_API_URL}{CONF_URL}",
-            "model": self.user_name,
-            "model_id": self.ucr_id,
+            "configuration_url": f"{_base_api_url}{CONF_URL}",
+            # "model": self.user_name,
+            "model_id": str(self.ucr_id),
             "name": f"{self.user_name} ({self.cluster_shortname})",
-            "manufacturer": f"{self.cluster_name} ({self.cluster_id})",
+            "manufacturer": MANUFACTURER,  # f"{self.cluster_name} ({self.cluster_id})",
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+            "via_device": {(DOMAIN, self.cluster_id)},
         }
