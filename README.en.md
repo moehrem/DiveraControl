@@ -267,6 +267,7 @@ Each trigger provides the **alarm data** (e.g. title, priority, address) as trig
 - **Local Update:** Changes to existing data (e.g., vehicle position) are applied **immediately locally** in Home Assistant. No waiting for Divera sync!
 - **New Data Records:** Are **first created in Divera** and then synchronized with Home Assistant.
 - **Permissions:** Actions are **technically available to all users**, but **checked before execution** and aborted if permissions are missing.
+- **Entities:** Input entities (e.g. user status, vehicle FMS status) are **only created for users with the corresponding write permissions**; otherwise **read-only sensors** are created. Changes to Divera permissions are applied **dynamically**.
 
 ---
 
@@ -276,7 +277,7 @@ The integration **dynamically creates entities** per unit:
 
 | **Platform** | **Entities** (Examples) | **Purpose** |
 |--------------|-------------------------|-------------|
-| **Input Select** | Set user status, set vehicle FMS status | Change status with one click |
+| **Input Select** | Set user status, set vehicle FMS status | Change status with one click – **only with write permissions** (otherwise read-only sensor) |
 | **Sensors** | Availability, open alarms counter, last alarm, diagnostic sensors | Data querying & monitoring |
 | **Events** | Alarm events (opened, updated, closed) | Alarm tracking in automations |
 | **Device Tracker** | Alarm positions, vehicle positions | Location tracking on maps |
