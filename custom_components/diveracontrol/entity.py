@@ -57,5 +57,4 @@ class BaseDiveraEntity(CoordinatorEntity):
             "name": f"{self.user_name} ({self.cluster_shortname})",
             "manufacturer": MANUFACTURER,  # f"{self.cluster_name} ({self.cluster_id})",
             "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
-            "via_device": (DOMAIN, self.cluster_id),
         }
