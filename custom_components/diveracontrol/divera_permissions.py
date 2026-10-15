@@ -12,7 +12,9 @@ from .const import (
     D_USER,
     PERM_MANAGEMENT,
     PERM_STATUS,
-    PERM_STATUS_USER,
+    PERM_STATUS_ACTION_SET_ALL,
+    PERM_STATUS_ACTION_VEHICLE_ALL,
+    PERM_STATUS_MANUAL,
     PERM_STATUS_VEHICLE,
 )
 
@@ -139,7 +141,7 @@ class DiveraPermissions:
             return False
         if not self.has_permission(PERM_STATUS_VEHICLE):
             return False
-        if self.status_actions.get("vehicle_all", False):
+        if self.status_actions.get(PERM_STATUS_ACTION_VEHICLE_ALL, False):
             return True
         if vehicle_id is None:
             return False
@@ -160,11 +162,11 @@ class DiveraPermissions:
         """
         if self.has_permission(PERM_MANAGEMENT):
             return True
-        if not self.has_permission(PERM_STATUS_USER):
+        if not self.has_permission(PERM_STATUS_MANUAL):
             return False
         if not self.has_permission(PERM_STATUS):
             return False
-        if self.status_actions.get("set_all", False):
+        if self.status_actions.get(PERM_STATUS_ACTION_SET_ALL, False):
             return True
         allowed_ids = self.status_actions.get("set_ids", [])
         if not isinstance(allowed_ids, list):

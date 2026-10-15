@@ -102,9 +102,11 @@ PERM_MESSAGES = "messages"
 PERM_ALARM = "alarm"
 PERM_STATUS = "status"
 PERM_STATUS_VEHICLE = "status_vehicle"
-PERM_STATUS_USER = "status_manual"
+PERM_STATUS_MANUAL = "status_manual"
 PERM_MANAGEMENT = "management"
 PERM_NEWS = "news"
+PERM_STATUS_ACTION_VEHICLE_ALL = "vehicle_all"
+PERM_STATUS_ACTION_SET_ALL = "set_all"
 
 # icons
 I_OPEN_ALARM = "mdi:alarm-light-outline"
