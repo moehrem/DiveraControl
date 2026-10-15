@@ -19,7 +19,7 @@ from .divera_permissions import DiveraPermissions
 from .entity import BaseDiveraEntity
 
 
-def _coordinator_permissions(coordinator: DiveraCoordinator) -> DiveraPermissions:
+def _coordinator_permissions(coordinator: Any) -> DiveraPermissions:
     """Return the coordinator's permission handler, tolerating mocks."""
     permissions = getattr(getattr(coordinator, "api", None), "permissions", None)
     if isinstance(permissions, DiveraPermissions):
