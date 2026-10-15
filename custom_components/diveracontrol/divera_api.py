@@ -1008,11 +1008,13 @@ class DiveraAPI(DiveraAPIClient):
             payload: Dictionary of data to send to Divera-API.
 
         Raises:
-            HomeAssistantError: If the user may not write their own status.
+            HomeAssistantError: If the user may not write the given status.
         """
-        if not self.permissions.can_write_user_status():
+        status_id = payload.get("Status", {}).get("id")
+        if not self.permissions.can_write_user_status(status_id):
             raise HomeAssistantError(
-                f"Permission to set the user status denied for cluster '{self.ucr_id}'"
+                f"Permission to set the user status {status_id} denied "
+                f"for cluster '{self.ucr_id}'"
             )
         _LOGGER.debug("Posting user status update for cluster %s", self.ucr_id)
         await self._api_request(

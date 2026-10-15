@@ -150,15 +150,20 @@ class DiveraPermissions:
             return False
         return str(vehicle_id) in {str(item) for item in allowed_ids}
 
-    def can_write_user_status(self) -> bool:
+    def can_write_user_status(self, status_id: str | int | None = None) -> bool:
         """Return whether the user may set their own status.
 
-        Requires the ``status`` and ``status_manual`` access flags plus
-        ``status_actions.set_all`` or the user relation in
-        ``status_actions.set_ids``. Management access bypasses all.
+        Requires the ``status`` and ``status_manual`` access flags. The
+        writable statuses are determined by ``status_actions``: with
+        ``set_all`` every status may be set, otherwise only the status
+        ids listed in ``set_ids``. Management access bypasses all.
+
+        Args:
+            status_id: Optional status id to check against the
+                ``set_ids`` restriction.
 
         Returns:
-            bool: True when the user status may be written.
+            bool: True when the given (or any) user status may be written.
         """
         if self.has_permission(PERM_MANAGEMENT):
             return True
@@ -171,7 +176,9 @@ class DiveraPermissions:
         allowed_ids = self.status_actions.get("set_ids", [])
         if not isinstance(allowed_ids, list):
             return False
-        return str(self.ucr_id) in {str(item) for item in allowed_ids}
+        if status_id is None:
+            return bool(allowed_ids)
+        return str(status_id) in {str(item) for item in allowed_ids}
 
     def has_status_permission(self) -> bool:
         """Return whether the user may view status information at all.

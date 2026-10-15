@@ -15,7 +15,16 @@ from .const import (
     I_VEHICLE,
 )
 from .coordinator import DiveraCoordinator
+from .divera_permissions import DiveraPermissions
 from .entity import BaseDiveraEntity
+
+
+def _coordinator_permissions(coordinator: DiveraCoordinator) -> DiveraPermissions:
+    """Return the coordinator's permission handler, tolerating mocks."""
+    permissions = getattr(getattr(coordinator, "api", None), "permissions", None)
+    if isinstance(permissions, DiveraPermissions):
+        return permissions
+    return DiveraPermissions()
 
 
 class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
@@ -64,10 +73,21 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
             return None
         return entity_entry.device_id
 
+    def _writable_status_ids(self) -> list[str]:
+        """Return the status ids the user may select."""
+        permissions = _coordinator_permissions(self.coordinator)
+        return [
+            status_id
+            for status_id in self._get_status_items()
+            if permissions.can_write_user_status(status_id)
+        ]
+
     @property
     def options(self) -> list[str]:
         """Return available select options."""
-        return [self._status_label(status_id) for status_id in self._get_status_items()]
+        return [
+            self._status_label(status_id) for status_id in self._writable_status_ids()
+        ]
 
     @property
     def current_option(self) -> str | None:
@@ -86,6 +106,8 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         status_id = self._option_to_status_id(option)
         if status_id is None:
             raise HomeAssistantError(f"Unknown user status option selected: {option}")
+        if status_id not in self._writable_status_ids():
+            raise HomeAssistantError(f"User status option not permitted: {option}")
 
         device_id = self._get_device_id()
         if not device_id:

@@ -464,15 +464,15 @@ def test_no_permission_dataset_denies_all_status_writes(hass: HomeAssistant) -> 
     }
     permissions = _permissions(no_permission_access)
     assert not permissions.can_write_user_status()
-    assert not permissions.can_write_vehicle_status("113090")
+    assert not permissions.can_write_vehicle_status("222222")
     assert not permissions.has_status_permission()
 
     data = {
         D_CLUSTER: {
             D_VEHICLE: {
-                "113090": {"shortname": "MZF", "name": "86-14-01", "fmsstatus_id": 2}
+                "222222": {"shortname": "MZF", "name": "11-22-33", "fmsstatus_id": 2}
             },
-            D_STATUS: {"91768": {"name": "10 Minuten"}},
+            D_STATUS: {"333333": {"name": "Status A"}},
         }
     }
     coordinator = _mock_coordinator(hass, data, permissions=permissions)
@@ -488,3 +488,85 @@ def test_no_permission_dataset_denies_all_status_writes(hass: HomeAssistant) -> 
     assert added == []
     user_manager.stop()
     vehicle_manager.stop()
+
+
+def test_user_status_select_options_filtered_by_set_ids(hass: HomeAssistant) -> None:
+    """Test that the user status select only offers permitted statuses."""
+    data = {
+        D_CLUSTER: {
+            D_STATUS: {
+                "1": {"name": "Verfügbar"},
+                "2": {"name": "Eingeschränkt A"},
+                "3": {"name": "Eingeschränkt B"},
+            }
+        }
+    }
+
+    # set_ids limits the selectable statuses to 1 and 2
+    coordinator = _mock_coordinator(
+        hass,
+        data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": True,
+                "status_actions": {"set_all": False, "set_ids": [1, 2]},
+            }
+        ),
+    )
+    select = DiveraUserStatusSelect(coordinator)
+    assert select.options == ["Verfügbar", "Eingeschränkt A"]
+
+    # set_all permits every status
+    coordinator = _mock_coordinator(
+        hass,
+        data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": True,
+                "status_actions": {"set_all": True, "set_ids": []},
+            }
+        ),
+    )
+    select = DiveraUserStatusSelect(coordinator)
+    assert select.options == ["Verfügbar", "Eingeschränkt A", "Eingeschränkt B"]
+
+
+def test_user_status_select_option_rejected_without_permission(
+    hass: HomeAssistant,
+) -> None:
+    """Test that selecting a non-permitted status raises an error."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    data = {
+        D_CLUSTER: {
+            D_STATUS: {"1": {"name": "Verfügbar"}, "3": {"name": "Gesperrt"}}
+        }
+    }
+    coordinator = _mock_coordinator(
+        hass,
+        data,
+        permissions=_permissions(
+            {
+                "status": True,
+                "status_manual": True,
+                "status_actions": {"set_all": False, "set_ids": [1]},
+            }
+        ),
+    )
+    select = DiveraUserStatusSelect(coordinator)
+    assert select.options == ["Verfügbar"]
+
+    import pytest
+
+    with pytest.raises(HomeAssistantError):
+        select.hass = hass
+        hass.services.async_register(
+            "diveracontrol", "post_user_status", lambda call: None
+        )
+        import asyncio
+
+        asyncio.get_event_loop().run_until_complete(
+            select.async_select_option("Gesperrt")
+        )
