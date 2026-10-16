@@ -603,7 +603,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Required) Sensor of the alarm to change"
+          "description": "(Optional) Alarm to change. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "title": {
           "name": "Keyword",
@@ -747,7 +747,7 @@
         },
         "use_last_alarm": {
           "name": "Use last alarm",
-          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -757,7 +757,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Required) Sensor of the alarm to be opened or closed."
+          "description": "(Optional) Alarm to change. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "closed": {
           "name": "Closed",
@@ -769,7 +769,7 @@
         },
         "use_last_alarm": {
           "name": "Use last alarm",
-          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -779,7 +779,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm ID",
-          "description": "(Required) ID of the alarm to be confirmed. Only exactly one ID allowed"
+          "description": "(Optional) Alarm to confirm. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "id": {
           "name": "User Status",
@@ -791,7 +791,7 @@
         },
         "use_last_alarm": {
           "name": "Use last alarm",
-          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -805,7 +805,7 @@
         },
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Or) Sensor of the alarm whose message channel should be used"
+          "description": "(Or) Alarm whose message channel is used. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "text": {
           "name": "Message",
@@ -837,7 +837,7 @@
         },
         "use_last_alarm": {
           "name": "Use last alarm",
-          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
