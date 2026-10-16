@@ -350,6 +350,26 @@ class TestResolveAlarmIdUseLastAlarm:
             _validate_data({}, PUT_ALARM_VALIDATION_RULES)
         assert exc_info.value.translation_key == "no_alarm_id"
 
+    def test_validation_fails_with_toggle_false_and_no_alarm_id(self):
+        """GUI default case: use_last_alarm False and no alarm_id given."""
+        data = {"use_last_alarm": False}
+        for rules in (
+            PUT_ALARM_VALIDATION_RULES,
+            POST_CLOSE_ALARM_VALIDATION_RULES,
+            POST_CONFIRM_ALARM_VALIDATION_RULES,
+        ):
+            with pytest.raises(ServiceValidationError) as exc_info:
+                _validate_data(
+                    {**data, "title": "t", "notification_type": 1, "id": 2},
+                    rules,
+                )
+            assert exc_info.value.translation_key == "no_alarm_id"
+        with pytest.raises(ServiceValidationError) as exc_info:
+            _validate_data(data, POST_MESSAGE_VALIDATION_RULES)
+        assert (
+            exc_info.value.translation_key == "no_message_channel_or_alarm_id"
+        )
+
     def test_message_rules_with_toggle(self):
         """post_message rules accept the toggle as alarm source."""
         _validate_data({"use_last_alarm": True}, POST_MESSAGE_VALIDATION_RULES)
