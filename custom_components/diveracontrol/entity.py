@@ -39,8 +39,11 @@ class BaseDiveraEntity(CoordinatorEntity):
     def _get_device_info(self) -> DeviceInfo:
         """Return device info for the user device."""
 
-        _base_api_url = self.coordinator.config_entry.data.get(
-            D_BASE_API_URL, BASE_API_URL
+        config_entry = self.coordinator.config_entry
+        _base_api_url = (
+            config_entry.data.get(D_BASE_API_URL, BASE_API_URL)
+            if config_entry is not None
+            else BASE_API_URL
         )
 
         return {
@@ -49,5 +52,5 @@ class BaseDiveraEntity(CoordinatorEntity):
             "model": self.user_name,
             "model_id": self.ucr_id,
             "name": f"{self.cluster_shortname} · {self.user_name}",
-            "manufacturer": self.cluster_name,  # f"{self.cluster_name} ({self.cluster_id})",
+            "manufacturer": self.cluster_name,
         }
