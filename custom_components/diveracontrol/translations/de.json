@@ -599,7 +599,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Erforderlich) Sensor des Alarms, der geändert werden soll."
+          "description": "(Optional) Alarm, der geändert werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "title": {
           "name": "Stichwort",
@@ -611,7 +611,7 @@
         },
         "alarmcode_id": {
           "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+          "description": "(Optional) Vorlage zur Vorbelegung von Feldern in Divera."
         },
         "foreign_id": {
           "name": "Einsatznummer/Fremdschlüssel",
@@ -743,7 +743,7 @@
         },
         "use_last_alarm": {
           "name": "Letzten Alarm verwenden",
-          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -753,7 +753,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Erforderlich) Sensor des zu öffnenden oder zu schließenden Alarms."
+          "description": "(Optional) Alarm, der geändert werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "closed": {
           "name": "Geschlossen",
@@ -765,7 +765,7 @@
         },
         "use_last_alarm": {
           "name": "Letzten Alarm verwenden",
-          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -775,7 +775,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu bestätigenden Alarms. Nur genau eine ID zulässig!"
+          "description": "(Optional) Zu bestätigender Alarm. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein. Nur genau eine ID zulässig!"
         },
         "id": {
           "name": "Nutzerstatus",
@@ -787,7 +787,7 @@
         },
         "use_last_alarm": {
           "name": "Letzten Alarm verwenden",
-          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -801,7 +801,7 @@
         },
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Oder) Sensor des Alarms, dessen Nachrichtenkanal verwendet werden soll."
+          "description": "(Oder) Alarm, dessen Nachrichtenkanal verwendet werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "text": {
           "name": "Nachricht",
@@ -833,7 +833,7 @@
         },
         "use_last_alarm": {
           "name": "Letzten Alarm verwenden",
-          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
