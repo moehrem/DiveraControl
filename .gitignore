@@ -35,3 +35,6 @@ coverage.xml
 htmlcov/
 tests.ods
 DiveraControl.code-workspace
+testdata.json
+testdata_admin.json
+testdate_user.json

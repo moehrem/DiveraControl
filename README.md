@@ -254,6 +254,7 @@ Zu jedem Auslöser stehen in der Automation die **Alarmdaten** (z. B. Titel, Pri
 - **Lokale Aktualisierung:** Änderungen bestehender Daten (z. B. Fahrzeugposition) werden **sofort lokal** in Home Assistant umgesetzt. Keine Wartezeit auf Divera-Sync!
 - **Neue Datensätze:** Werden **zuerst in Divera erstellt** und dann mit Home Assistant synchronisiert.
 - **Berechtigungen:** Aktionen sind **technisch für alle Nutzer verfügbar**, werden aber **vor Ausführung geprüft** und bei fehlenden Rechten abgebrochen.
+- **Entitäten:** Steuerelemente (z. B. Nutzerstatus, Fahrzeugstatus) werden **nur für Nutzer mit entsprechenden Schreibrechten** erstellt; andernfalls werden **read-only Sensoren** angelegt. Änderungen der Divera-Berechtigungen werden **dynamisch** übernommen.
 
 ---
 ### 🧩 Entitäten (Überblick)
@@ -262,7 +263,7 @@ Die Integration erzeugt **dynamisch Entitäten** je Einheit:
 
 | **Plattform**       | **Entitäten** (Beispiele)                          | **Zweck**                          |
 |---------------------|---------------------------------------------------|------------------------------------|
-| **Steuerelemente**  | Nutzerstatus setzen, Fahrzeugstatus (FMS) setzen     | Statusänderung per Klick           |
+| **Steuerelemente**  | Nutzerstatus setzen, Fahrzeugstatus (FMS) setzen     | Statusänderung per Klick – **nur mit Schreibrechten** (sonst read-only Sensor) |
 | **Sensoren**        | Verfügbarkeiten, Offene-Alarme-Zähler, Letzter Alarm, Diagnose-Sensoren | Datenabfrage & Monitoring |
 | **Events**          | Alarm-Events (geöffnet, aktualisiert, geschlossen) je nicht archiviertem Alarm | Alarm-Verfolgung in Automationen   |
 | **Device Tracker**  | Alarmpositionen, Fahrzeugpositionen               | Standortverfolgung in Karten        |
