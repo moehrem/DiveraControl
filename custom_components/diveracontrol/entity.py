@@ -10,10 +10,7 @@ from .const import (
     D_SHORTNAME,
     D_USER,
     DOMAIN,
-    MANUFACTURER,
-    MINOR_VERSION,
-    PATCH_VERSION,
-    VERSION,
+    D_BASE_API_URL,
 )
 from .coordinator import DiveraCoordinator
 
@@ -42,19 +39,15 @@ class BaseDiveraEntity(CoordinatorEntity):
     def _get_device_info(self) -> DeviceInfo:
         """Return device info for the user device."""
 
-        config_entry = self.coordinator.config_entry
-        _base_api_url = (
-            config_entry.data.get(BASE_API_URL, BASE_API_URL)
-            if config_entry is not None
-            else BASE_API_URL
+        _base_api_url = self.coordinator.config_entry.data.get(
+            D_BASE_API_URL, BASE_API_URL
         )
 
         return {
             "identifiers": {(DOMAIN, self.ucr_id)},
             "configuration_url": f"{_base_api_url}{CONF_URL}",
-            # "model": self.user_name,
-            "model_id": str(self.ucr_id),
-            "name": f"{self.user_name} ({self.cluster_shortname})",
-            "manufacturer": MANUFACTURER,  # f"{self.cluster_name} ({self.cluster_id})",
-            "sw_version": f"{VERSION}.{MINOR_VERSION}.{PATCH_VERSION}",
+            "model": self.user_name,
+            "model_id": self.ucr_id,
+            "name": f"{self.cluster_shortname} · {self.user_name}",
+            "manufacturer": self.cluster_name,  # f"{self.cluster_name} ({self.cluster_id})",
         }
