@@ -280,7 +280,7 @@ put_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: "12345678"
       selector:
         entity:
@@ -516,7 +516,7 @@ post_close_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: 12345678
       selector:
         entity:
@@ -546,7 +546,7 @@ post_confirm_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: 12345678
       selector:
         entity:
