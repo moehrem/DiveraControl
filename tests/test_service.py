@@ -366,9 +366,7 @@ class TestResolveAlarmIdUseLastAlarm:
             assert exc_info.value.translation_key == "no_alarm_id"
         with pytest.raises(ServiceValidationError) as exc_info:
             _validate_data(data, POST_MESSAGE_VALIDATION_RULES)
-        assert (
-            exc_info.value.translation_key == "no_message_channel_or_alarm_id"
-        )
+        assert exc_info.value.translation_key == "no_message_channel_or_alarm_id"
 
     def test_message_rules_with_toggle(self):
         """post_message rules accept the toggle as alarm source."""
