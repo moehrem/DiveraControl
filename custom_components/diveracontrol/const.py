@@ -15,7 +15,7 @@ PATCH_VERSION = int(_VERSION_PARTS[2])
 
 # general
 DOMAIN = "diveracontrol"
-MANUFACTURER = "Divera GmbH"
+MANUFACTURER = "Divera 24/7"
 UPDATE_INTERVAL_DATA = 60
 UPDATE_INTERVAL_ALARM = 30
 DEFAULT_COORDINATOR = "coordinator"
@@ -88,6 +88,7 @@ D_MESSAGE = "message"
 D_LOCALMONITOR = "localmonitor"
 D_STATUSPLAN = "statusplan"
 D_ACCESS = "access"
+D_STATUS_ACTIONS = "status_actions"
 D_VEHICLE = "vehicle"
 D_FMS_STATUS = "fms_status"
 D_USE_WEBHOOKS = "use_webhooks"
@@ -99,10 +100,13 @@ D_USERNAME = "username"
 # permissions
 PERM_MESSAGES = "messages"
 PERM_ALARM = "alarm"
+PERM_STATUS = "status"
 PERM_STATUS_VEHICLE = "status_vehicle"
-PERM_STATUS_USER = "status_manual"
+PERM_STATUS_MANUAL = "status_manual"
 PERM_MANAGEMENT = "management"
 PERM_NEWS = "news"
+PERM_STATUS_ACTION_VEHICLE_ALL = "vehicle_all"
+PERM_STATUS_ACTION_SET_ALL = "set_all"
 
 # icons
 I_OPEN_ALARM = "mdi:alarm-light-outline"

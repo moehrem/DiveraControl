@@ -124,6 +124,9 @@
       },
       "last_alarm": {
         "name": "Letzter Alarm"
+      },
+      "user_status": {
+        "name": "Nutzerstatus"
       }
     },
     "calendar": {

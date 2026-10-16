@@ -26,7 +26,7 @@ from .const import (
     PERM_MANAGEMENT,
     PERM_MESSAGES,
     PERM_NEWS,
-    PERM_STATUS_USER,
+    PERM_STATUS_MANUAL,
     PERM_STATUS_VEHICLE,
 )
 from .utils import (
@@ -249,7 +249,7 @@ async def async_get_actions(
         except HomeAssistantError:
             pass
         try:
-            permissions.check(PERM_STATUS_USER)
+            permissions.check(PERM_STATUS_MANUAL)
             action_types.extend(["post_user_status"])
         except HomeAssistantError:
             pass

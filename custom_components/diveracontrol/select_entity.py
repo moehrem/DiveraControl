@@ -15,14 +15,20 @@ from .const import (
     I_VEHICLE,
 )
 from .coordinator import DiveraCoordinator
+from .divera_permissions import DiveraPermissions
 from .entity import BaseDiveraEntity
+
+
+def _coordinator_permissions(coordinator: Any) -> DiveraPermissions:
+    """Return the coordinator's permission handler, tolerating mocks."""
+    permissions = getattr(getattr(coordinator, "api", None), "permissions", None)
+    if isinstance(permissions, DiveraPermissions):
+        return permissions
+    return DiveraPermissions()
 
 
 class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
     """Select entity to set the user status."""
-
-    _attr_has_entity_name = True
-    _attr_icon = I_AVAILABILITY
 
     def __init__(self, coordinator: DiveraCoordinator) -> None:
         """Initialize user status select entity."""
@@ -31,6 +37,8 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         self._selected_status_id: str | None = None
         self.entity_id = f"select.{self.ucr_id}_user_status"
         self._attr_unique_id = f"{self.ucr_id}_user_status"
+        self._attr_has_entity_name = True
+        self._attr_icon = I_AVAILABILITY
 
     def _get_status_items(self) -> dict[str, dict[str, Any]]:
         """Get user status mapping from coordinator data."""
@@ -65,10 +73,21 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
             return None
         return entity_entry.device_id
 
+    def _writable_status_ids(self) -> list[str]:
+        """Return the status ids the user may select."""
+        permissions = _coordinator_permissions(self.coordinator)
+        return [
+            status_id
+            for status_id in self._get_status_items()
+            if permissions.can_write_user_status(status_id)
+        ]
+
     @property
     def options(self) -> list[str]:
         """Return available select options."""
-        return [self._status_label(status_id) for status_id in self._get_status_items()]
+        return [
+            self._status_label(status_id) for status_id in self._writable_status_ids()
+        ]
 
     @property
     def current_option(self) -> str | None:
@@ -87,6 +106,8 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
         status_id = self._option_to_status_id(option)
         if status_id is None:
             raise HomeAssistantError(f"Unknown user status option selected: {option}")
+        if status_id not in self._writable_status_ids():
+            raise HomeAssistantError(f"User status option not permitted: {option}")
 
         device_id = self._get_device_id()
         if not device_id:
@@ -103,13 +124,6 @@ class DiveraUserStatusSelect(BaseDiveraEntity, SelectEntity):
 
         self._selected_status_id = status_id
         self.async_write_ha_state()
-
-    # def select_option(self, option: str) -> None:
-    #     """Select option fallback for sync context.
-
-    #     Home Assistant should call `async_select_option` for this entity.
-    #     """
-    #     raise NotImplementedError
 
 
 class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
