@@ -401,6 +401,9 @@
     },
     "api_request_refresh_failed": {
       "message": "Aktualisieren der Divera-Daten fehlgeschlagen: {err}"
+    },
+    "no_last_alarm": {
+      "message": "Kein Alarm vorhanden. Die Option 'Letzten Alarm verwenden' kann nicht aufgelöst werden."
     }
   },
   "services": {
@@ -737,6 +740,10 @@
         "ts_close": {
           "name": "Schließungszeitpunkt",
           "description": "(Optional) Datum und Uhrzeit der Schließung."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
         }
       }
     },
@@ -755,6 +762,10 @@
         "report": {
           "name": "Bericht",
           "description": "(Optional) Einsatzbericht."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
         }
       }
     },
@@ -773,6 +784,10 @@
         "note": {
           "name": "Notiz",
           "description": "(Optional) Notiz zur Bestätigung des Alarms."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
         }
       }
     },
@@ -815,6 +830,10 @@
         "message_channel": {
           "name": "Nachrichtenkanal erstellen",
           "description": "(Optional) Nachrichtenkanal erstellen, falls keiner für den Alarm existiert."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Optional) Verwendet automatisch die ID des letzten Alarms (Sensor 'Letzter Alarm') anstelle einer expliziten Alarm-ID. Unabhängig davon, ob der Alarm offen oder geschlossen ist."
         }
       }
     },

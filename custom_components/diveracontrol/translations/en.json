@@ -405,6 +405,9 @@
     },
     "api_request_refresh_failed": {
       "message": "Refreshing Divera data failed: {err}"
+    },
+    "no_last_alarm": {
+      "message": "No alarm available. The 'Use last alarm' option cannot be resolved."
     }
   },
   "services": {
@@ -741,6 +744,10 @@
         "ts_close": {
           "name": "Closing time",
           "description": "(Optional) Date and time of closing"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
         }
       }
     },
@@ -759,6 +766,10 @@
         "report": {
           "name": "Report",
           "description": "(Optional) Incident report"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
         }
       }
     },
@@ -777,6 +788,10 @@
         "note": {
           "name": "Note",
           "description": "(Optional) Note for confirming the alarm."
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
         }
       }
     },
@@ -819,6 +834,10 @@
         "message_channel": {
           "name": "Create message channel",
           "description": "(Optional) Create message channel if none exists for the alarm"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Optional) Automatically uses the ID of the last alarm (sensor 'Last alarm') instead of an explicit alarm ID, regardless of whether the alarm is open or closed."
         }
       }
     },

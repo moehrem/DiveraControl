@@ -14,6 +14,7 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, selector
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -397,7 +398,7 @@ async def async_get_action_capabilities(
 
         alarm_selector: dict[Any, Any] = (
             {
-                vol.Required("alarm_id"): (
+                vol.Optional("alarm_id"): (
                     selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=alarm_options,
@@ -406,7 +407,8 @@ async def async_get_action_capabilities(
                     )
                     if alarm_options
                     else vol.Coerce(int)
-                )
+                ),
+                vol.Optional("use_last_alarm"): BooleanSelector(),
             }
             if action_type == "put_alarm"
             else {}
@@ -554,7 +556,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("alarm_id"): (
+                    vol.Optional("alarm_id"): (
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
                                 options=alarm_options,
@@ -564,6 +566,7 @@ async def async_get_action_capabilities(
                         if alarm_options
                         else vol.Coerce(int)
                     ),
+                    vol.Optional("use_last_alarm"): BooleanSelector(),
                     vol.Required("id"): (
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
@@ -586,7 +589,7 @@ async def async_get_action_capabilities(
         return {
             "extra_fields": vol.Schema(
                 {
-                    vol.Required("alarm_id"): (
+                    vol.Optional("alarm_id"): (
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
                                 options=alarm_options,
@@ -596,6 +599,7 @@ async def async_get_action_capabilities(
                         if alarm_options
                         else vol.Coerce(int)
                     ),
+                    vol.Optional("use_last_alarm"): BooleanSelector(),
                     vol.Optional("closed"): bool,
                     vol.Optional("report"): str,
                 }
@@ -633,6 +637,7 @@ async def async_get_action_capabilities(
                         if alarm_options
                         else vol.Coerce(int)
                     ),
+                    vol.Optional("use_last_alarm"): BooleanSelector(),
                     vol.Optional("text"): str,
                 }
             )
