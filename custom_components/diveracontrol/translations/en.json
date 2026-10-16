@@ -267,7 +267,8 @@
       "destination": "Destination",
       "destination_address": "Destination address",
       "destination_lat": "Destination latitude",
-      "destination_lng": "Destination longitude"
+      "destination_lng": "Destination longitude",
+      "use_last_alarm": "Use last alarm"
     }
   },
   "exceptions": {

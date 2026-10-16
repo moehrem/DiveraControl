@@ -458,7 +458,7 @@ async def async_get_action_capabilities(
                         if user_cluster_relation_options
                         else str
                     ),  # Comma-separated list als Fallback
-                    vol.Optional("notification_filter_vehicle"): bool,
+                    vol.Optional("notification_filter_vehicle"): BooleanSelector(),
                     vol.Optional("vehicle"): (
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
@@ -470,7 +470,7 @@ async def async_get_action_capabilities(
                         if vehicle_options
                         else str
                     ),  # Comma-separated list
-                    vol.Optional("notification_filter_status"): bool,
+                    vol.Optional("notification_filter_status"): BooleanSelector(),
                     vol.Optional("status"): (
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
@@ -482,7 +482,7 @@ async def async_get_action_capabilities(
                         if user_status_options
                         else str
                     ),  # Comma-separated list
-                    vol.Optional("priority"): bool,
+                    vol.Optional("priority"): BooleanSelector(),
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
                     vol.Optional("lat"): NumberSelector(
@@ -511,7 +511,7 @@ async def async_get_action_capabilities(
                             multiple=True,
                         )
                     ),
-                    vol.Optional("destination"): bool,
+                    vol.Optional("destination"): BooleanSelector(),
                     vol.Optional("destination_address"): str,
                     vol.Optional("destination_lat"): NumberSelector(
                         NumberSelectorConfig(
@@ -531,14 +531,14 @@ async def async_get_action_capabilities(
                     ),
                     vol.Optional("remarks"): str,
                     vol.Optional("response_time"): vol.Coerce(int),
-                    vol.Optional("send_push"): bool,
-                    vol.Optional("send_sms"): bool,
-                    vol.Optional("send_call"): bool,
-                    vol.Optional("send_mail"): bool,
-                    vol.Optional("send_pager"): bool,
-                    vol.Optional("closed"): bool,
-                    vol.Optional("message_channel"): bool,
-                    vol.Optional("notification_filter_access"): bool,
+                    vol.Optional("send_push"): BooleanSelector(),
+                    vol.Optional("send_sms"): BooleanSelector(),
+                    vol.Optional("send_call"): BooleanSelector(),
+                    vol.Optional("send_mail"): BooleanSelector(),
+                    vol.Optional("send_pager"): BooleanSelector(),
+                    vol.Optional("closed"): BooleanSelector(),
+                    vol.Optional("message_channel"): BooleanSelector(),
+                    vol.Optional("notification_filter_access"): BooleanSelector(),
                     vol.Optional("ts_publish"): selector.DateTimeSelector(),
                     vol.Optional("ts_close"): selector.DateTimeSelector(),
                 }
@@ -600,7 +600,7 @@ async def async_get_action_capabilities(
                         else vol.Coerce(int)
                     ),
                     vol.Optional("use_last_alarm"): BooleanSelector(),
-                    vol.Optional("closed"): bool,
+                    vol.Optional("closed"): BooleanSelector(),
                     vol.Optional("report"): str,
                 }
             )
@@ -762,14 +762,14 @@ async def async_get_action_capabilities(
                     ),  # Comma-separated list
                     vol.Optional("text"): str,
                     vol.Optional("address"): str,
-                    vol.Optional("survey"): bool,
-                    vol.Optional("private_mode"): bool,
-                    vol.Optional("send_push"): bool,
-                    vol.Optional("send_sms"): bool,
-                    vol.Optional("send_call"): bool,
-                    vol.Optional("send_mail"): bool,
-                    vol.Optional("send_pager"): bool,
-                    vol.Optional("archive"): bool,
+                    vol.Optional("survey"): BooleanSelector(),
+                    vol.Optional("private_mode"): BooleanSelector(),
+                    vol.Optional("send_push"): BooleanSelector(),
+                    vol.Optional("send_sms"): BooleanSelector(),
+                    vol.Optional("send_call"): BooleanSelector(),
+                    vol.Optional("send_mail"): BooleanSelector(),
+                    vol.Optional("send_pager"): BooleanSelector(),
+                    vol.Optional("archive"): BooleanSelector(),
                     vol.Optional("ts_archive"): selector.DateTimeSelector(),
                     # survey-specific fields
                     vol.Optional("newssurvey_title"): str,
@@ -793,9 +793,9 @@ async def async_get_action_capabilities(
                         if newssurvey_show_result_names_options
                         else vol.Coerce(int)
                     ),
-                    vol.Optional("newssurvey_multiple_answers"): bool,
-                    vol.Optional("newssurvey_custom_answers"): bool,
-                    vol.Optional("newssurvey_response_until"): bool,
+                    vol.Optional("newssurvey_multiple_answers"): BooleanSelector(),
+                    vol.Optional("newssurvey_custom_answers"): BooleanSelector(),
+                    vol.Optional("newssurvey_response_until"): BooleanSelector(),
                     vol.Optional("newssurvey_ts_response"): selector.DateTimeSelector(),
                     vol.Optional("newssurvey_answers"): selector.ObjectSelector(),
                     vol.Optional("newssurvey_sorting"): selector.ObjectSelector(),
@@ -847,9 +847,9 @@ async def async_get_action_capabilities(
                         if user_status_options
                         else vol.Coerce(int)
                     ),
-                    vol.Optional("alarm_skip"): bool,
-                    vol.Optional("status_skip_statusplan"): bool,
-                    vol.Optional("status_skip_geofence"): bool,
+                    vol.Optional("alarm_skip"): BooleanSelector(),
+                    vol.Optional("status_skip_statusplan"): BooleanSelector(),
+                    vol.Optional("status_skip_geofence"): BooleanSelector(),
                 }
             )
         }

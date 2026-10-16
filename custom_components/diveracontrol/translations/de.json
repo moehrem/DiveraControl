@@ -263,7 +263,8 @@
       "destination": "Ziel",
       "destination_address": "Zieladresse",
       "destination_lat": "Ziel-Breitengrad",
-      "destination_lng": "Ziel-Längengrad"
+      "destination_lng": "Ziel-Längengrad",
+      "use_last_alarm": "Letzten Alarm verwenden"
     }
   },
   "exceptions": {
