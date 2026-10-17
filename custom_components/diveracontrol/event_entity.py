@@ -1,6 +1,6 @@
 """Support for Divera event entities."""
 
-from typing import Any, ClassVar
+from typing import Any
 
 from homeassistant.components.event import EventEntity
 
@@ -17,7 +17,7 @@ from .entity import BaseDiveraEntity
 class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
     """Event entity to represent a single alarm."""
 
-    _attr_event_types: ClassVar[list[str]] = ["opened", "updated", "closed"]
+    _attr_event_types = ["opened", "updated", "closed"]  # noqa: RUF012
 
     _attr_translation_key = "alarm"
 
