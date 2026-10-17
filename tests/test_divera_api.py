@@ -34,7 +34,6 @@ from custom_components.diveracontrol.divera_api import (
     DiveraAPIClient,
 )
 
-
 # Since DiveraAPIClient requires async setup, we'll test the helper methods
 # that don't require a session
 
