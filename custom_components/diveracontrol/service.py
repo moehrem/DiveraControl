@@ -20,7 +20,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import D_ALARM, DOMAIN
+from .const import D_ALARM, D_LAST_ALARM, DOMAIN
 from .coordinator import DiveraCoordinator
 from .data_normalizer import normalize_service_call_data
 from .divera_api import DiveraAPI
@@ -76,7 +76,9 @@ POST_ALARM_VALIDATION_RULES = _ALARM_BASE_VALIDATION_RULES
 
 PUT_ALARM_VALIDATION_RULES = {
     "alarm_id": {
-        "condition": lambda data: not data.get("alarm_id"),
+        "condition": lambda data: (
+            not data.get("use_last_alarm") and not data.get("alarm_id")
+        ),
         "error_key": "no_alarm_id",
     },
     **_ALARM_BASE_VALIDATION_RULES,
@@ -84,14 +86,18 @@ PUT_ALARM_VALIDATION_RULES = {
 
 POST_CLOSE_ALARM_VALIDATION_RULES = {
     "alarm_id": {
-        "condition": lambda data: not data.get("alarm_id"),
+        "condition": lambda data: (
+            not data.get("use_last_alarm") and not data.get("alarm_id")
+        ),
         "error_key": "no_alarm_id",
     }
 }
 
 POST_CONFIRM_ALARM_VALIDATION_RULES = {
     "alarm_id": {
-        "condition": lambda data: not data.get("alarm_id"),
+        "condition": lambda data: (
+            not data.get("use_last_alarm") and not data.get("alarm_id")
+        ),
         "error_key": "no_alarm_id",
     },
     "id": {
@@ -103,13 +109,16 @@ POST_CONFIRM_ALARM_VALIDATION_RULES = {
 POST_MESSAGE_VALIDATION_RULES = {
     "both_message_channel_and_alarm_id": {
         "condition": lambda data: (
-            data.get("message_channel_id") and data.get("alarm_id")
+            data.get("message_channel_id")
+            and (data.get("alarm_id") or data.get("use_last_alarm"))
         ),
         "error_key": "both_message_channel_and_alarm_id",
     },
     "no_message_channel_or_alarm_id": {
         "condition": lambda data: (
-            not data.get("message_channel_id") and not data.get("alarm_id")
+            not data.get("message_channel_id")
+            and not data.get("alarm_id")
+            and not data.get("use_last_alarm")
         ),
         "error_key": "no_message_channel_or_alarm_id",
     },
@@ -250,6 +259,37 @@ def _resolve_single_id(value: Any, field_name: str, allow_empty: bool = False) -
     return int(value)
 
 
+def _resolve_alarm_id(
+    data: dict[str, Any],
+    coordinator: DiveraCoordinator,
+) -> int:
+    """Resolve the alarm ID to use for an alarm-related service call.
+
+    If 'use_last_alarm' is set, the alarm ID of the last known alarm is read
+    from the coordinator data and a given 'alarm_id' is ignored.
+
+    Args:
+        data: Normalized service call data.
+        coordinator: DiveraCoordinator of the targeted device.
+
+    Returns:
+        Alarm ID as integer.
+
+    Raises:
+        ServiceValidationError: If no alarm ID can be resolved.
+    """
+    if data.get("use_last_alarm"):
+        last_alarm = coordinator.data.get(D_ALARM, {}).get(D_LAST_ALARM) or {}
+        alarm_id = last_alarm.get("id")
+        if not alarm_id:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="no_last_alarm",
+            )
+        return int(alarm_id)
+    return _resolve_single_id(data.get("alarm_id"), "alarm_id")
+
+
 def _prepare_data(
     hass: HomeAssistant,
     call_data: dict[str, Any],
@@ -384,7 +424,7 @@ def _build_payload(
         )
     """
     exclude = exclude_keys or set()
-    exclude.update({"device_id", "cluster_id"})
+    exclude.update({"device_id", "cluster_id", "use_last_alarm"})
 
     # No keys specified = flat payload
     if not keys:
@@ -517,7 +557,7 @@ async def handle_put_alarm(
     payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
-    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
+    alarm_id = _resolve_alarm_id(data, coordinator)
     try:
         await api.put_alarms(alarm_id, payload)
         await coordinator.async_request_refresh()
@@ -557,7 +597,7 @@ async def handle_post_close_alarm(
     payload = _build_payload(data, keys={"Alarm": {}})
 
     # call api function and handle entity
-    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
+    alarm_id = _resolve_alarm_id(data, coordinator)
     try:
         await api.post_close_alarm(alarm_id, payload)
         await coordinator.async_request_refresh()
@@ -600,7 +640,7 @@ async def handle_post_confirm_alarm(
     payload = {"Status": status_data}
 
     # call api function and handle entity
-    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id")
+    alarm_id = _resolve_alarm_id(data, coordinator)
     try:
         await api.post_confirm_alarm(payload, alarm_id)
         await coordinator.async_request_refresh()
@@ -638,7 +678,12 @@ async def handle_post_message(
 
     # Determine message_channel_id from alarm_id if not given
     message_channel_id: int = data.get("message_channel_id") or 0
-    alarm_id = _resolve_single_id(data.get("alarm_id"), "alarm_id", allow_empty=True)
+    if data.get("use_last_alarm"):
+        alarm_id = _resolve_alarm_id(data, coordinator)
+    else:
+        alarm_id = _resolve_single_id(
+            data.get("alarm_id"), "alarm_id", allow_empty=True
+        )
 
     # Try to get message_channel_id from alarm_id if not provided
     if not message_channel_id and alarm_id:

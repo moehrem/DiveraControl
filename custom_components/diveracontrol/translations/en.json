@@ -267,7 +267,8 @@
       "destination": "Destination",
       "destination_address": "Destination address",
       "destination_lat": "Destination latitude",
-      "destination_lng": "Destination longitude"
+      "destination_lng": "Destination longitude",
+      "use_last_alarm": "Use last alarm"
     }
   },
   "exceptions": {
@@ -405,6 +406,9 @@
     },
     "api_request_refresh_failed": {
       "message": "Refreshing Divera data failed: {err}"
+    },
+    "no_last_alarm": {
+      "message": "No alarm available. The 'Use last alarm' option cannot be resolved."
     }
   },
   "services": {
@@ -600,7 +604,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Required) Sensor of the alarm to change"
+          "description": "(Optional) Alarm to change. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "title": {
           "name": "Keyword",
@@ -741,6 +745,10 @@
         "ts_close": {
           "name": "Closing time",
           "description": "(Optional) Date and time of closing"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -750,7 +758,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Required) Sensor of the alarm to be opened or closed."
+          "description": "(Optional) Alarm to change. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "closed": {
           "name": "Closed",
@@ -759,6 +767,10 @@
         "report": {
           "name": "Report",
           "description": "(Optional) Incident report"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -768,7 +780,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm ID",
-          "description": "(Required) ID of the alarm to be confirmed. Only exactly one ID allowed"
+          "description": "(Optional) Alarm to confirm. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "id": {
           "name": "User Status",
@@ -777,6 +789,10 @@
         "note": {
           "name": "Note",
           "description": "(Optional) Note for confirming the alarm."
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },
@@ -790,7 +806,7 @@
         },
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Or) Sensor of the alarm whose message channel should be used"
+          "description": "(Or) Alarm whose message channel is used. If no alarm is given, 'Use last alarm' must be enabled."
         },
         "text": {
           "name": "Message",
@@ -819,6 +835,10 @@
         "message_channel": {
           "name": "Create message channel",
           "description": "(Optional) Create message channel if none exists for the alarm"
+        },
+        "use_last_alarm": {
+          "name": "Use last alarm",
+          "description": "(Required) If enabled, the most recent alarm is used and the given alarm ID is overridden."
         }
       }
     },

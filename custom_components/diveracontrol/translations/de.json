@@ -263,7 +263,8 @@
       "destination": "Ziel",
       "destination_address": "Zieladresse",
       "destination_lat": "Ziel-Breitengrad",
-      "destination_lng": "Ziel-Längengrad"
+      "destination_lng": "Ziel-Längengrad",
+      "use_last_alarm": "Letzten Alarm verwenden"
     }
   },
   "exceptions": {
@@ -401,6 +402,9 @@
     },
     "api_request_refresh_failed": {
       "message": "Aktualisieren der Divera-Daten fehlgeschlagen: {err}"
+    },
+    "no_last_alarm": {
+      "message": "Kein Alarm vorhanden. Die Option 'Letzten Alarm verwenden' kann nicht aufgelöst werden."
     }
   },
   "services": {
@@ -596,7 +600,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Erforderlich) Sensor des Alarms, der geändert werden soll."
+          "description": "(Optional) Alarm, der geändert werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "title": {
           "name": "Stichwort",
@@ -608,7 +612,7 @@
         },
         "alarmcode_id": {
           "name": "Alarmvorlage",
-          "description": "(Optional) Vorlage zur Vorbelegung von Alarmfeldern."
+          "description": "(Optional) Vorlage zur Vorbelegung von Feldern in Divera."
         },
         "foreign_id": {
           "name": "Einsatznummer/Fremdschlüssel",
@@ -737,6 +741,10 @@
         "ts_close": {
           "name": "Schließungszeitpunkt",
           "description": "(Optional) Datum und Uhrzeit der Schließung."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -746,7 +754,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Erforderlich) Sensor des zu öffnenden oder zu schließenden Alarms."
+          "description": "(Optional) Alarm, der geändert werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "closed": {
           "name": "Geschlossen",
@@ -755,6 +763,10 @@
         "report": {
           "name": "Bericht",
           "description": "(Optional) Einsatzbericht."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -764,7 +776,7 @@
       "fields": {
         "alarm_id": {
           "name": "Alarm-ID",
-          "description": "(Erforderlich) ID des zu bestätigenden Alarms. Nur genau eine ID zulässig!"
+          "description": "(Optional) Zu bestätigender Alarm. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein. Nur genau eine ID zulässig!"
         },
         "id": {
           "name": "Nutzerstatus",
@@ -773,6 +785,10 @@
         "note": {
           "name": "Notiz",
           "description": "(Optional) Notiz zur Bestätigung des Alarms."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },
@@ -786,7 +802,7 @@
         },
         "alarm_id": {
           "name": "Alarm",
-          "description": "(Oder) Sensor des Alarms, dessen Nachrichtenkanal verwendet werden soll."
+          "description": "(Oder) Alarm, dessen Nachrichtenkanal verwendet werden soll. Wenn kein Alarm angegeben wird, muss 'Letzten Alarm verwenden' aktiviert sein."
         },
         "text": {
           "name": "Nachricht",
@@ -815,6 +831,10 @@
         "message_channel": {
           "name": "Nachrichtenkanal erstellen",
           "description": "(Optional) Nachrichtenkanal erstellen, falls keiner für den Alarm existiert."
+        },
+        "use_last_alarm": {
+          "name": "Letzten Alarm verwenden",
+          "description": "(Erforderlich) Wenn aktiv, wird der aktuellste Alarm verwendet und die angegebene Alarm-ID überschrieben."
         }
       }
     },

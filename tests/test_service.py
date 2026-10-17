@@ -9,6 +9,11 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from custom_components.diveracontrol.const import DOMAIN
 from custom_components.diveracontrol.service import (
     POST_ALARM_VALIDATION_RULES,
+    POST_CLOSE_ALARM_VALIDATION_RULES,
+    POST_CONFIRM_ALARM_VALIDATION_RULES,
+    POST_MESSAGE_VALIDATION_RULES,
+    PUT_ALARM_VALIDATION_RULES,
+    _resolve_alarm_id,
     POST_USING_VEHICLE_CREW_VALIDATION_RULES,
     POST_USING_VEHICLE_PROPERTY_VALIDATION_RULES,
     POST_VEHICLE_VALIDATION_RULES,
@@ -301,6 +306,80 @@ class TestHandlePostAlarm:
         mock_translation.assert_called_once()
 
 
+class TestResolveAlarmIdUseLastAlarm:
+    """Test alarm ID resolution with the use_last_alarm toggle."""
+
+    def _coordinator(self, last_alarm=None):
+        coordinator = MagicMock()
+        coordinator.data = {"alarm": {"last_alarm": last_alarm}}
+        return coordinator
+
+    def test_use_last_alarm_resolves_from_coordinator(self):
+        """Toggle set: alarm id is read from coordinator last_alarm."""
+        data = {"use_last_alarm": True, "alarm_id": [111]}
+        coordinator = self._coordinator({"id": 789})
+        assert _resolve_alarm_id(data, coordinator) == 789
+
+    def test_use_last_alarm_without_alarm_raises(self):
+        """Toggle set but no last alarm available: ServiceValidationError."""
+        data = {"use_last_alarm": True}
+        with pytest.raises(ServiceValidationError) as exc_info:
+            _resolve_alarm_id(data, self._coordinator(None))
+        assert exc_info.value.translation_key == "no_last_alarm"
+
+    def test_without_toggle_resolves_alarm_id(self):
+        """Toggle not set: regular alarm_id resolution."""
+        data = {"alarm_id": [789]}
+        assert _resolve_alarm_id(data, self._coordinator(None)) == 789
+
+    def test_validation_accepts_toggle_only(self):
+        """alarm_id rules pass when only the toggle is set."""
+        for rules in (
+            PUT_ALARM_VALIDATION_RULES,
+            POST_CLOSE_ALARM_VALIDATION_RULES,
+            POST_CONFIRM_ALARM_VALIDATION_RULES,
+        ):
+            _validate_data(
+                {"use_last_alarm": True, "title": "t", "notification_type": 1},
+                {k: r for k, r in rules.items() if k == "alarm_id"},
+            )
+
+    def test_validation_fails_without_toggle_and_id(self):
+        """alarm_id rules fail when neither toggle nor alarm_id is set."""
+        with pytest.raises(ServiceValidationError) as exc_info:
+            _validate_data({}, PUT_ALARM_VALIDATION_RULES)
+        assert exc_info.value.translation_key == "no_alarm_id"
+
+    def test_validation_fails_with_toggle_false_and_no_alarm_id(self):
+        """GUI default case: use_last_alarm False and no alarm_id given."""
+        data = {"use_last_alarm": False}
+        for rules in (
+            PUT_ALARM_VALIDATION_RULES,
+            POST_CLOSE_ALARM_VALIDATION_RULES,
+            POST_CONFIRM_ALARM_VALIDATION_RULES,
+        ):
+            with pytest.raises(ServiceValidationError) as exc_info:
+                _validate_data(
+                    {**data, "title": "t", "notification_type": 1, "id": 2},
+                    rules,
+                )
+            assert exc_info.value.translation_key == "no_alarm_id"
+        with pytest.raises(ServiceValidationError) as exc_info:
+            _validate_data(data, POST_MESSAGE_VALIDATION_RULES)
+        assert exc_info.value.translation_key == "no_message_channel_or_alarm_id"
+
+    def test_message_rules_with_toggle(self):
+        """post_message rules accept the toggle as alarm source."""
+        _validate_data({"use_last_alarm": True}, POST_MESSAGE_VALIDATION_RULES)
+        with pytest.raises(ServiceValidationError):
+            _validate_data(
+                {"message_channel_id": 5, "use_last_alarm": True},
+                POST_MESSAGE_VALIDATION_RULES,
+            )
+        with pytest.raises(ServiceValidationError):
+            _validate_data({}, POST_MESSAGE_VALIDATION_RULES)
+
+
 class TestHandlePutAlarm:
     """Test handle_put_alarm handler."""
 
@@ -329,6 +408,40 @@ class TestHandlePutAlarm:
         call_args = mock_api_instance.put_alarms.call_args
         assert call_args[0][0] == 789  # alarm_id
         assert "Alarm" in call_args[0][1]
+
+
+class TestHandlePutAlarmUseLastAlarm:
+    """Test handle_put_alarm with use_last_alarm toggle."""
+
+    @patch("custom_components.diveracontrol.service.normalize_service_call_data")
+    @patch("custom_components.diveracontrol.service.get_ucr_data_from_device")
+    async def test_success_with_toggle(
+        self,
+        mock_get_coordinator,
+        mock_normalize,
+        mock_hass,
+        mock_api_instance,
+        mock_service_call,
+    ):
+        """Toggle set: alarm id resolved from coordinator last_alarm."""
+        mock_coordinator = MagicMock()
+        mock_coordinator.data = {"alarm": {"last_alarm": {"id": 789}}}
+        mock_coordinator.async_request_refresh = AsyncMock()
+        mock_normalize.return_value = {
+            "device_id": "test_device",
+            "use_last_alarm": True,
+            "title": "Updated Alert",
+            "notification_type": 3,
+        }
+        mock_get_coordinator.side_effect = [
+            mock_coordinator,
+            mock_api_instance,
+        ]
+        await handle_put_alarm(mock_hass, mock_service_call)
+        mock_api_instance.put_alarms.assert_called_once()
+        call_args = mock_api_instance.put_alarms.call_args
+        assert call_args[0][0] == 789
+        assert "use_last_alarm" not in call_args[0][1]["Alarm"]
 
 
 class TestHandlePostCloseAlarm:

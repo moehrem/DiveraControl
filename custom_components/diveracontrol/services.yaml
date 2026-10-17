@@ -280,13 +280,18 @@ put_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: "12345678"
       selector:
         entity:
           integration: diveracontrol
           multiple: true
           domain: event
+    use_last_alarm:
+      required: true
+      example: false
+      selector:
+        boolean:
     title:
       required: true
       example: "FEU"
@@ -511,13 +516,18 @@ post_close_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: 12345678
       selector:
         entity:
           integration: diveracontrol
           multiple: true
           domain: event
+    use_last_alarm:
+      required: true
+      example: false
+      selector:
+        boolean:
     closed:
       required: true
       example: true
@@ -536,13 +546,18 @@ post_confirm_alarm:
       integration: diveracontrol
   fields:
     alarm_id:
-      required: true
+      required: false
       example: 12345678
       selector:
         entity:
           integration: diveracontrol
           multiple: true
           domain: event
+    use_last_alarm:
+      required: true
+      example: false
+      selector:
+        boolean:
     id:
       required: true
       example: 1
@@ -573,6 +588,11 @@ post_message:
           integration: diveracontrol
           multiple: true
           domain: event
+    use_last_alarm:
+      required: true
+      example: false
+      selector:
+        boolean:
     text:
       required: false
       example: "Dies ist eine Testnachricht."
