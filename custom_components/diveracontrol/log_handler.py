@@ -1,7 +1,7 @@
 """In-memory log handler for DiveraControl diagnostics."""
 
-from collections import deque
 import logging
+from collections import deque
 
 from homeassistant.core import HomeAssistant
 

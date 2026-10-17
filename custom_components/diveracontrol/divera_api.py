@@ -11,14 +11,13 @@ The module implements:
 
 # from __future__ import annotations
 import asyncio
-from enum import Enum
 import logging
 from collections.abc import Mapping
+from enum import Enum
 from typing import Any, Literal, TypeAlias, TypedDict
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from aiohttp import ClientError, ClientResponseError, ClientTimeout
-
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -565,8 +564,8 @@ class DiveraAPIClient:
         except (ClientError, TimeoutError, ConfigEntryAuthFailed) as err:
             _LOGGER.error("Connection error during login validation: %s", err)
             return ""
-        except Exception as ex:
-            _LOGGER.exception("Unexpected error during login validation: %s", ex)
+        except Exception:
+            _LOGGER.exception("Unexpected error during login validation")
             return ""
 
     async def _fetch_and_validate_clusters(
@@ -620,10 +619,8 @@ class DiveraAPIClient:
             validation_errors["base"] = ConfigFlowErrorCode.CANNOT_CONNECT.value
         except (TypeError, AttributeError):
             validation_errors["base"] = ConfigFlowErrorCode.NO_DATA.value
-        except Exception as ex:
-            _LOGGER.exception(
-                "Unexpected error in _fetch_and_validate_clusters: %s", ex
-            )
+        except Exception:
+            _LOGGER.exception("Unexpected error in _fetch_and_validate_clusters")
             validation_errors["base"] = ConfigFlowErrorCode.UNKNOWN.value
 
         return validation_errors, clusters

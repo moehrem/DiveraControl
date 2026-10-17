@@ -194,9 +194,7 @@ class DiveraVehicleStatusSelect(BaseDiveraEntity, SelectEntity):
     @property
     def available(self) -> bool:
         """Return availability of the vehicle."""
-        if super().available and self._get_vehicle_data() is not None:
-            return True
-        return False
+        return bool(super().available and self._get_vehicle_data() is not None)
 
     @property
     def options(self) -> list[str]:

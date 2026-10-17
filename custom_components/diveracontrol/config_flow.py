@@ -2,9 +2,9 @@
 
 import logging
 
-# from typing import Any, dict, List, Optional, Set
+# from typing import Any, ClassVar, dict, List, Optional, Set
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any, ClassVar
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
@@ -52,7 +52,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
     MINOR_VERSION = MINOR_VERSION
 
     # Form handlers mapping (class-level constant)
-    FORM_HANDLERS: dict[str, Any] = {
+    FORM_HANDLERS: ClassVar[dict[str, Any]] = {
         STEP_USER: "_show_login_form",
         STEP_LOGIN: "_show_login_form",
         STEP_API_KEY: "_show_api_key_form",
@@ -61,7 +61,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self.final_entry: Optional[dict[str, Any]] = None
+        self.final_entry: dict[str, Any] | None = None
         self.possible_entries: dict[str, dict[str, Any]] = {}
         self.errors: dict[str, str] = {}
 
@@ -244,16 +244,14 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         if not isinstance(existing_relations, dict):
             return set()
 
-        return {str(ucr_id) for ucr_id in existing_relations.keys()}
+        return {str(ucr_id) for ucr_id in existing_relations}
 
     def _find_duplicate_ucr_ids(
         self, new_relations: dict[str, Any], existing_ucr_ids: set[str]
     ) -> set[str]:
         """Find duplicate UCR IDs in new_relations that already exist."""
         return {
-            str(ucr_id)
-            for ucr_id in new_relations.keys()
-            if str(ucr_id) in existing_ucr_ids
+            str(ucr_id) for ucr_id in new_relations if str(ucr_id) in existing_ucr_ids
         }
 
     def _handle_duplicates(self) -> None:
@@ -303,7 +301,7 @@ class DiveraControlConfigFlow(ConfigFlow, domain=DOMAIN):
         for cluster_id in clusters_to_remove:
             self.possible_entries.pop(cluster_id, None)
 
-    def _find_existing_cluster_entry(self, cluster_id: str) -> Optional[ConfigEntry]:
+    def _find_existing_cluster_entry(self, cluster_id: str) -> ConfigEntry | None:
         """Return existing config entry for a cluster id, if configured.
 
         Args:

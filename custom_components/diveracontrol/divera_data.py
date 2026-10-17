@@ -1,7 +1,7 @@
 """Updates and processes data from Divera API."""
 
-import logging
 import asyncio
+import logging
 from typing import Any
 
 from homeassistant.exceptions import HomeAssistantError
@@ -12,11 +12,13 @@ from .const import (
     D_DATA,
     D_DM,
     D_EVENTS,
+    D_LAST_ALARM,
     D_LOCALMONITOR,
     D_MESSAGE,
     D_MESSAGE_CHANNEL,
     D_MONITOR,
     D_NEWS,
+    D_OPEN_ALARMS,
     D_STATUS,
     D_STATUSPLAN,
     D_TS,
@@ -25,8 +27,6 @@ from .const import (
     D_UCR_DEFAULT,
     D_USER,
     D_VEHICLE,
-    D_OPEN_ALARMS,
-    D_LAST_ALARM,
 )
 from .divera_api import DiveraAPI
 

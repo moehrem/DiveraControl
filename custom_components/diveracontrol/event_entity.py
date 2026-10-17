@@ -17,7 +17,7 @@ from .entity import BaseDiveraEntity
 class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
     """Event entity to represent a single alarm."""
 
-    _attr_event_types = ["opened", "updated", "closed"]
+    _attr_event_types = ["opened", "updated", "closed"]  # noqa: RUF012
 
     _attr_translation_key = "alarm"
 
@@ -50,9 +50,7 @@ class DiveraAlarmEvent(BaseDiveraEntity, EventEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if super().available and self._get_alarm_data() is not None:
-            return True
-        return False
+        return bool(super().available and self._get_alarm_data() is not None)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
