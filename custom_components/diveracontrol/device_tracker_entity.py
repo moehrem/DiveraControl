@@ -1,7 +1,7 @@
 """Support for Divera device tracker entities."""
 
-from collections.abc import Callable
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.components.device_tracker import TrackerEntity

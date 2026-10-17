@@ -131,14 +131,13 @@ async def async_setup_entry(
             ucr_info.append((ucr_id, user_name, coordinator))
             coordinators[ucr_id] = coordinator  # Add coordinator immediately
             setup_tasks.append(coordinator._async_setup())
-        except Exception as err:
+        except Exception:
             _LOGGER.exception(
-                "Unexpected error creating coordinator for cluster %s, user %s (ID: "
-                "%s): %s",
+                "Unexpected error creating coordinator for cluster %s,"
+                " user %s (ID: %s)",
                 cluster_name,
                 user_name,
                 ucr_id,
-                err,
             )
 
     # Wait for all setup tasks to complete
@@ -283,11 +282,9 @@ async def async_setup_entry(
                         )
                 except asyncio.CancelledError:
                     pass  # Task was cancelled, ignore
-                except Exception as err:
-                    _LOGGER.exception(
-                        "Unexpected error while processing refresh task: %s", err
-                    )
-        except asyncio.TimeoutError:
+                except Exception:
+                    _LOGGER.exception("Unexpected error while processing refresh task")
+        except TimeoutError:
             _LOGGER.warning("Timeout while waiting for refresh tasks to complete")
             # Cancel all tasks on timeout
             for task in refresh_tasks:

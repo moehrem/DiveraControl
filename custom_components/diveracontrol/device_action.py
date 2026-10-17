@@ -6,13 +6,13 @@ from collections.abc import Sequence
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr, selector
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import selector
 from homeassistant.helpers.selector import (
     BooleanSelector,
     NumberSelector,

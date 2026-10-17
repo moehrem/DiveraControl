@@ -7,8 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .coordinator import DiveraCoordinator
 from .const import D_ALARM, DOMAIN
+from .coordinator import DiveraCoordinator
 from .event_entity import DiveraAlarmEvent
 from .utils import get_cluster_coordinators_ucrs_from_config_hass
 

@@ -188,7 +188,7 @@ def DiveraVehicleStatusSensorManager(  # pylint: disable=invalid-name
         async_add_entities=async_add_entities,
         get_current_ids=lambda data: {
             item_id
-            for item_id in data.get(D_CLUSTER, {}).get(D_VEHICLE, {}).keys()
+            for item_id in data.get(D_CLUSTER, {}).get(D_VEHICLE, {})
             if not _coordinator_permissions(coordinator).can_write_vehicle_status(
                 item_id
             )
@@ -402,9 +402,7 @@ class DiveraLastAlarmSensor(BaseDiveraEntity, RestoreEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if super().available and self._get_last_alarm_data() is not None:
-            return True
-        return False
+        return bool(super().available and self._get_last_alarm_data() is not None)
 
     @property
     def state(self) -> str:
@@ -487,9 +485,7 @@ class DiveraVehicleStatusSensor(BaseDiveraEntity):
     @property
     def available(self) -> bool:
         """Return availability of the vehicle."""
-        if super().available and self._get_vehicle_data() is not None:
-            return True
-        return False
+        return bool(super().available and self._get_vehicle_data() is not None)
 
     @property
     def state(self) -> str:

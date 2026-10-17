@@ -3,7 +3,6 @@
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
     SelectOptionDict,

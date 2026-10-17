@@ -6,11 +6,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     BASE_API_URL,
     CONF_URL,
+    D_BASE_API_URL,
     D_CLUSTER,
     D_SHORTNAME,
     D_USER,
     DOMAIN,
-    D_BASE_API_URL,
 )
 from .coordinator import DiveraCoordinator
 

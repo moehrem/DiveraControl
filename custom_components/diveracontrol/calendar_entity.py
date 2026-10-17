@@ -1,7 +1,7 @@
 """Support for Divera Control calendar events."""
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent

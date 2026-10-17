@@ -12,9 +12,9 @@ Thats why its necessary to check for mandatory fields in each function.
 
 """
 
-from collections.abc import Callable, Coroutine
 import functools
 import logging
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from homeassistant.core import HomeAssistant, ServiceCall
