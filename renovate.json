@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 5am on Monday"],
+  "pinDigests": false,
+  "packageRules": [
+    {
+      "description": "Group linter/formatter CI dependencies",
+      "matchDepNames": ["pylint", "mypy", "black", "ruff"],
+      "matchFileNames": [".github/workflows/**"],
+      "groupName": "ci-linters"
+    },
+    {
+      "description": "Home Assistant test stack must move together",
+      "matchDepNames": ["pytest-homeassistant-custom-component"],
+      "groupName": "homeassistant-test-stack"
+    }
+  ]
+}

@@ -16,13 +16,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Build HACS ZIP
         run: |
           mkdir -p dist
           cd custom_components/diveracontrol
           zip -r ../../dist/DiveraControl.zip . \
-            -x "*/__pycache__/*" "*.pyc"
+            -x "*.py[cod]" "__pycache__/*" "*/__pycache__/*"
 
       - name: Generate Changelog
         run: |

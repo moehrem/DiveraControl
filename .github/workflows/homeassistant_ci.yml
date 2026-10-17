@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Wichtig für pylint!
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,11 +33,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install \
-            pylint==4.0.9 \
-            flake8==6.1.0 \
-            mypy==1.13.0 \
-            black==24.3.0 \
-            ruff==0.4.4
+            pylint==4.1.3 \
+            mypy==2.4.0 \
+            black==26.10.1 \
+            ruff==0.17.1
 
       - name: Check Black Formatting
         run: black . --check --diff --line-length=88
@@ -50,8 +47,6 @@ jobs:
       - name: Run pylint
         run: pylint custom_components/diveracontrol --rcfile=.pylintrc
 
-      - name: Run flake8
-        run: flake8 custom_components/diveracontrol
 
       - name: Run mypy (Type Checking)
         run: mypy custom_components/diveracontrol
