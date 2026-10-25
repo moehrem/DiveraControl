@@ -17,7 +17,18 @@ from enum import Enum
 from typing import Any, Literal, TypeAlias, TypedDict
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from aiohttp import ClientError, ClientResponseError, ClientTimeout
+from aiohttp import (
+    ClientConnectionResetError,
+    ClientConnectorCertificateError,
+    ClientConnectorDNSError,
+    ClientConnectorError,
+    ClientError,
+    ClientResponseError,
+    ClientSSLError,
+    ClientTimeout,
+    ServerDisconnectedError,
+    ServerTimeoutError,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -299,13 +310,68 @@ class DiveraAPIClient:
                 else self._redact_url(url, sensitive_keys)
             )
             raise HomeAssistantError(
-                f"Failed to connect to Divera API ({method} {url_for_log}): {err}. "
-                "Possible causes: network/DNS issue, firewall blocking the "
-                "request, or the Divera service is unreachable. "
-                "Check your network connection and try again."
+                f"Failed to connect to Divera API ({method} {url_for_log}): "
+                f"{self._describe_client_error(err)}"
             ) from err
 
     # ========== Config Flow Helper Methods ==========
+
+    @staticmethod
+    def _describe_client_error(err: ClientError) -> str:
+        """Build a human-readable description of an aiohttp ClientError.
+
+        Extracts the structured information carried by aiohttp connection
+        errors (os_error with errno/strerror, affected host/port, SSL
+        certificate errors) and translates them into an actionable message.
+
+        Args:
+            err: The ClientError raised by aiohttp.
+
+        Returns:
+            Human-readable, multi-sentence description of the failure.
+        """
+        parts: list[str] = [str(err) or err.__class__.__name__]
+
+        os_error = getattr(err, "os_error", None)
+        if os_error is not None:
+            if os_error.errno is not None and os_error.strerror:
+                parts.append(f"OS error {os_error.errno}: {os_error.strerror}")
+            elif str(os_error) and str(os_error) not in parts[0]:
+                parts.append(str(os_error))
+
+        hint: str | None = None
+        if isinstance(err, ClientConnectorDNSError):
+            hint = (
+                "DNS resolution failed: Home Assistant could not resolve the "
+                "Divera hostname. Check your DNS server/internet connection."
+            )
+        elif isinstance(err, ClientConnectorCertificateError):
+            hint = (
+                "TLS certificate rejected: check the system clock and the "
+                "certificate chain of the Divera server (or of a filtering "
+                "proxy in between)."
+            )
+        elif isinstance(err, ClientSSLError):
+            hint = "TLS/SSL handshake failed. A filtering proxy may interfere."
+        elif isinstance(err, ServerDisconnectedError):
+            hint = (
+                "The Divera server closed the connection unexpectedly. "
+                "This is usually temporary; the request will be retried "
+                "automatically."
+            )
+        elif isinstance(err, ServerTimeoutError):
+            hint = "The connection to the Divera server timed out."
+        elif isinstance(err, ClientConnectionResetError):
+            hint = "The connection was reset during the request."
+        elif isinstance(err, ClientConnectorError):
+            hint = (
+                "The TCP connection could not be established. Check network "
+                "and firewall (outbound HTTPS to the Divera API host)."
+            )
+        if hint:
+            parts.append(hint)
+
+        return " ".join(parts)
 
     async def _request_pull_all(self, accesskey: str) -> dict[str, Any]:
         """Request pull_all data from Divera API for config flow.
