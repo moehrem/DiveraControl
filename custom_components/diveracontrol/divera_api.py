@@ -358,7 +358,10 @@ class DiveraAPIClient:
         return HomeAssistantError(
             translation_domain=DOMAIN,
             translation_key="api_http_error",
-            translation_placeholders={"status": str(err.status), "message": err.message},
+            translation_placeholders={
+                "status": str(err.status),
+                "message": err.message,
+            },
         )
 
     # ========== Config Flow Helper Methods ==========
