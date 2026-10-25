@@ -296,10 +296,13 @@ class DiveraAPIClient:
             url_for_log = (
                 self._redact_url(str(request_url), sensitive_keys)
                 if request_url
-                else "unknown"
+                else self._redact_url(url, sensitive_keys)
             )
             raise HomeAssistantError(
-                f"Failed to connect to Divera API at URL: {url_for_log}"
+                f"Failed to connect to Divera API ({method} {url_for_log}): {err}. "
+                "Possible causes: network/DNS issue, firewall blocking the "
+                "request, or the Divera service is unreachable. "
+                "Check your network connection and try again."
             ) from err
 
     # ========== Config Flow Helper Methods ==========
