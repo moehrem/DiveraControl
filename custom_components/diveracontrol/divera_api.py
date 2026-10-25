@@ -62,6 +62,7 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_USER,
     D_USERNAME,
+    DOMAIN,
     PERM_ALARM,
     PERM_MESSAGES,
     PERM_NEWS,
@@ -279,9 +280,13 @@ class DiveraAPIClient:
 
             except ClientError as err:
                 raise HomeAssistantError(
-                    f"Failed to connect to Divera API "
-                    f"({method} {self._request_url_for_log(err, url, sensitive_keys)}): "
-                    f"{self._describe_client_error(err)}"
+                    translation_domain=DOMAIN,
+                    translation_key="api_connect_failed",
+                    translation_placeholders={
+                        "method": method,
+                        "url": self._request_url_for_log(err, url, sensitive_keys),
+                        "details": self._describe_client_error(err),
+                    },
                 ) from err
 
         raise RuntimeError(  # pragma: no cover - loop always returns or raises
@@ -329,18 +334,31 @@ class DiveraAPIClient:
         """
         if isinstance(err, TimeoutError):
             return ConfigEntryNotReady(
-                f"Timeout connecting to Divera API "
-                f"({method} {self._redact_url(url, sensitive_keys)}) "
-                f"after multiple attempts. Check your network connection "
-                f"or increase the timeout."
+                translation_domain=DOMAIN,
+                translation_key="api_timeout",
+                translation_placeholders={
+                    "method": method,
+                    "url": self._redact_url(url, sensitive_keys),
+                    "attempts": str(self._max_retries + 1),
+                },
             )
         assert isinstance(err, ClientResponseError)
         if err.status in (401, 403):
-            return ConfigEntryAuthFailed(f"Invalid credentials (HTTP {err.status})")
+            return ConfigEntryAuthFailed(
+                translation_domain=DOMAIN,
+                translation_key="api_invalid_credentials",
+                translation_placeholders={"status": str(err.status)},
+            )
         if err.status >= 500:
-            return ConfigEntryNotReady(f"Divera API unavailable (HTTP {err.status})")
+            return ConfigEntryNotReady(
+                translation_domain=DOMAIN,
+                translation_key="api_unavailable",
+                translation_placeholders={"status": str(err.status)},
+            )
         return HomeAssistantError(
-            f"Divera API error (HTTP {err.status}): {err.message}"
+            translation_domain=DOMAIN,
+            translation_key="api_http_error",
+            translation_placeholders={"status": str(err.status), "message": err.message},
         )
 
     # ========== Config Flow Helper Methods ==========

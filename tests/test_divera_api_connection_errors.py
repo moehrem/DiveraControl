@@ -44,11 +44,17 @@ async def test_connection_error_includes_url_and_cause(
     with pytest.raises(HomeAssistantError) as exc_info:
         await client._request("/v2/pullall", "GET", params={"accesskey": "secret"})
 
-    msg = str(exc_info.value)
-    assert "Failed to connect to Divera API" in msg
-    assert "GET https://www.divera247.com/api/v2/pullall" in msg
-    assert "secret" not in msg
-    assert "Connection refused" in msg
+    err = exc_info.value
+    assert err.translation_domain == "diveracontrol"
+    assert err.translation_key == "api_connect_failed"
+    placeholders = err.translation_placeholders
+    assert placeholders["method"] == "GET"
+    assert (
+        placeholders["url"]
+        == "https://www.divera247.com/api/v2/pullall?accesskey=%2A%2A%2A"
+    )
+    assert "secret" not in placeholders["url"]
+    assert "Connection refused" in placeholders["details"]
 
 
 async def test_connection_error_uses_request_info_url(
@@ -64,10 +70,10 @@ async def test_connection_error_uses_request_info_url(
     with pytest.raises(HomeAssistantError) as exc_info:
         await client._request("/v2/pullall", "GET")
 
-    msg = str(exc_info.value)
-    assert "GET https://www.divera247.com/api/v2/pullall" in msg
-    assert "Cannot resolve host" in msg
-    assert "accesskey=x" not in msg
+    placeholders = exc_info.value.translation_placeholders
+    assert placeholders["url"].startswith("https://www.divera247.com/api/v2/pullall")
+    assert "Cannot resolve host" in placeholders["details"]
+    assert "accesskey=x" not in placeholders["url"]
 
 
 async def test_connection_error_never_reports_unknown_url(
@@ -80,9 +86,9 @@ async def test_connection_error_never_reports_unknown_url(
     with pytest.raises(HomeAssistantError) as exc_info:
         await client._request("/v2/pullall", "POST")
 
-    msg = str(exc_info.value)
-    assert "URL: unknown" not in msg
-    assert "ssl handshake failed" in msg
+    placeholders = exc_info.value.translation_placeholders
+    assert placeholders["url"].startswith("https://www.divera247.com/api/v2/pullall")
+    assert "ssl handshake failed" in placeholders["details"]
 
 
 def _connector_error(cls: type, errno: int | None, strerror: str | None) -> ClientError:
@@ -150,9 +156,9 @@ async def test_connection_error_message_includes_os_error_details(
     with pytest.raises(HomeAssistantError) as exc_info:
         await client._request("/v2/pullall", "GET")
 
-    msg = str(exc_info.value)
-    assert "OS error -2: Name or service not known" in msg
-    assert "DNS resolution failed" in msg
+    placeholders = exc_info.value.translation_placeholders
+    assert "OS error -2: Name or service not known" in placeholders["details"]
+    assert "DNS resolution failed" in placeholders["details"]
 
 
 async def test_request_retries_transient_server_error(
@@ -219,10 +225,12 @@ async def test_request_maps_timeout_to_not_ready(
     with pytest.raises(ConfigEntryNotReady) as exc_info:
         await client._request("/v2/pullall", "GET")
 
-    msg = str(exc_info.value)
-    assert "Timeout connecting to Divera API" in msg
-    assert "GET https://www.divera247.com/api/v2/pullall" in msg
-    assert "after multiple attempts" in msg
+    err = exc_info.value
+    assert err.translation_key == "api_timeout"
+    placeholders = err.translation_placeholders
+    assert placeholders["method"] == "GET"
+    assert placeholders["url"].startswith("https://www.divera247.com/api/v2/pullall")
+    assert placeholders["attempts"] == "2"
 
 
 async def test_request_maps_5xx_to_not_ready(
@@ -245,7 +253,9 @@ async def test_request_maps_5xx_to_not_ready(
     with pytest.raises(ConfigEntryNotReady) as exc_info:
         await client._request("/v2/pullall", "GET")
 
-    assert "HTTP 500" in str(exc_info.value)
+    err = exc_info.value
+    assert err.translation_key == "api_unavailable"
+    assert err.translation_placeholders["status"] == "500"
 
 
 async def test_request_maps_401_to_auth_failed(
@@ -268,5 +278,7 @@ async def test_request_maps_401_to_auth_failed(
     with pytest.raises(ConfigEntryAuthFailed) as exc_info:
         await client._request("/v2/pullall", "GET")
 
-    assert "HTTP 401" in str(exc_info.value)
+    err = exc_info.value
+    assert err.translation_key == "api_invalid_credentials"
+    assert err.translation_placeholders["status"] == "401"
     assert mock_session.request.call_count == 1
