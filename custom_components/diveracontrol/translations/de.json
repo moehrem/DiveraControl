@@ -268,6 +268,11 @@
     }
   },
   "exceptions": {
+    "api_connect_failed": {"message": "Verbindung zur Divera API fehlgeschlagen ({method} {url}): {details}"},
+    "api_timeout": {"message": "Zeitüberschreitung bei Verbindung zur Divera API ({method} {url}) nach {attempts} Versuchen. Prüfe die Netzwerkverbindung oder erhöhe das Timeout."},
+    "api_invalid_credentials": {"message": "Ungültige Zugangsdaten (HTTP {status})"},
+    "api_unavailable": {"message": "Divera API nicht verfügbar (HTTP {status})"},
+    "api_http_error": {"message": "Divera API Fehler (HTTP {status}): {message}"},
     "no_device_id": {
       "message": "Keine Geräte-ID angegeben, bitte wähle ein Gerät aus."
     },

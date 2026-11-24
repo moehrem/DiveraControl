@@ -17,7 +17,18 @@ from enum import Enum
 from typing import Any, Literal, TypeAlias, TypedDict
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from aiohttp import ClientError, ClientResponseError, ClientTimeout
+from aiohttp import (
+    ClientConnectionResetError,
+    ClientConnectorCertificateError,
+    ClientConnectorDNSError,
+    ClientConnectorError,
+    ClientError,
+    ClientResponseError,
+    ClientSSLError,
+    ClientTimeout,
+    ServerDisconnectedError,
+    ServerTimeoutError,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -51,6 +62,7 @@ from .const import (
     D_UPDATE_INTERVAL_DATA,
     D_USER,
     D_USERNAME,
+    DOMAIN,
     PERM_ALARM,
     PERM_MESSAGES,
     PERM_NEWS,
@@ -178,9 +190,12 @@ class DiveraAPIClient:
         params: dict[str, str] | None = None,
         payload: Mapping[str, Any] | None = None,
         timeout: float | None = None,
-        retry_count: int = 0,
     ) -> DiveraAPIResponse:
         """Make a request to the Divera API with retry logic.
+
+        Retries transient failures (HTTP 5xx, timeouts) with linear backoff,
+        then classifies the final failure into the matching Home Assistant
+        exception type.
 
         Args:
             endpoint: API endpoint path.
@@ -188,7 +203,6 @@ class DiveraAPIClient:
             params: Query parameters for the request.
             payload: Data to send with the request (for POST/PUT).
             timeout: Request timeout in seconds. Uses instance timeout if None.
-            retry_count: Current retry attempt number.
 
         Returns:
             DiveraAPIResponse: JSON response from the API.
@@ -208,101 +222,206 @@ class DiveraAPIClient:
                 k for k in params if "key" in k.lower() or "password" in k.lower()
             )
 
-        _LOGGER.debug(
-            "API request [attempt %d]: %s %s",
-            retry_count + 1,
-            method,
-            self._redact_url(url, sensitive_keys),
-            extra={"endpoint": endpoint},
+        for attempt in range(self._max_retries + 1):
+            _LOGGER.debug(
+                "API request [attempt %d]: %s %s",
+                attempt + 1,
+                method,
+                self._redact_url(url, sensitive_keys),
+                extra={"endpoint": endpoint},
+            )
+
+            try:
+                async with self._session.request(
+                    method,
+                    url,
+                    json=payload,
+                    headers={
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                        "User-Agent": "HomeAssistant-DiveraControl",
+                    },
+                    timeout=ClientTimeout(total=effective_timeout),
+                ) as response:
+                    response_data = await response.json()
+
+                    # Check for Divera-specific success flag
+                    # IMPORTANT: Divera API may return HTTP 200 even for
+                    # application-level errors, so check the 'success' field
+                    # in the response
+                    if (
+                        response.status == 200
+                        and response_data.get("success") is not True
+                    ):
+                        raise HomeAssistantError(
+                            f"Divera API error: "
+                            f"{response_data.get('message', 'Unknown error')}"
+                        )
+
+                    response.raise_for_status()
+                    return response_data
+
+            except (ClientResponseError, TimeoutError) as err:
+                retryable = isinstance(err, TimeoutError) or err.status >= 500
+                if retryable and attempt < self._max_retries:
+                    _LOGGER.warning(
+                        "Divera API %s, retrying... (%d/%d)",
+                        (
+                            "timeout"
+                            if isinstance(err, TimeoutError)
+                            else f"server error (HTTP {err.status})"
+                        ),
+                        attempt + 1,
+                        self._max_retries,
+                    )
+                    await asyncio.sleep(1 * (attempt + 1))  # Linear backoff
+                    continue
+                raise self._classify_request_error(err, method, url, sensitive_keys)
+
+            except ClientError as err:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="api_connect_failed",
+                    translation_placeholders={
+                        "method": method,
+                        "url": self._request_url_for_log(err, url, sensitive_keys),
+                        "details": self._describe_client_error(err),
+                    },
+                ) from err
+
+        raise RuntimeError(  # pragma: no cover - loop always returns or raises
+            "unreachable: last attempt always returns or raises"
         )
 
-        try:
-            async with self._session.request(
-                method,
-                url,
-                json=payload,
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "User-Agent": "HomeAssistant-DiveraControl",
+    def _request_url_for_log(
+        self, err: ClientError, url: str, sensitive_keys: set[str]
+    ) -> str:
+        """Return the redacted URL of a failed request.
+
+        Prefers the URL recorded by aiohttp in the error and falls back to
+        the locally built URL when none is available.
+
+        Args:
+            err: The ClientError raised by aiohttp.
+            url: Locally built request URL as fallback.
+            sensitive_keys: Parameter names to redact.
+
+        Returns:
+            Redacted URL safe for user-facing messages.
+        """
+        request_url = getattr(getattr(err, "request_info", None), "real_url", None)
+        if request_url:
+            return self._redact_url(str(request_url), sensitive_keys)
+        return self._redact_url(url, sensitive_keys)
+
+    def _classify_request_error(
+        self,
+        err: Exception,
+        method: str,
+        url: str,
+        sensitive_keys: set[str],
+    ) -> Exception:
+        """Map a non-retryable request failure to a Home Assistant exception.
+
+        Args:
+            err: TimeoutError or ClientResponseError after retries are exhausted.
+            method: HTTP method of the failed request.
+            url: Redacted-safe request URL (redaction applied here).
+            sensitive_keys: Parameter names to redact in the URL.
+
+        Returns:
+            The Home Assistant exception to raise.
+        """
+        if isinstance(err, TimeoutError):
+            return ConfigEntryNotReady(
+                translation_domain=DOMAIN,
+                translation_key="api_timeout",
+                translation_placeholders={
+                    "method": method,
+                    "url": self._redact_url(url, sensitive_keys),
+                    "attempts": str(self._max_retries + 1),
                 },
-                timeout=ClientTimeout(total=effective_timeout),
-            ) as response:
-                response_data = await response.json()
-
-                # Check for Divera-specific success flag
-                # IMPORTANT: Divera API may return HTTP 200 even for
-                # application-level errors, so check the 'success' field in
-                # the response
-                if response.status == 200 and response_data.get("success") is not True:
-                    raise HomeAssistantError(
-                        f"Divera API error: "
-                        f"{response_data.get('message', 'Unknown error')}"
-                    )
-
-                response.raise_for_status()
-                return response_data
-
-        except ClientResponseError as err:
-            # Retry on server errors (5xx) and rate limiting (429)
-            if err.status >= 500 and retry_count < self._max_retries:
-                _LOGGER.warning(
-                    "Divera API server error (HTTP %d), retrying... (%d/%d)",
-                    err.status,
-                    retry_count + 1,
-                    self._max_retries,
-                )
-                await asyncio.sleep(1 * (retry_count + 1))  # Exponential backoff
-                return await self._request(
-                    endpoint,
-                    method,
-                    params,
-                    payload,
-                    timeout,
-                    retry_count + 1,
-                )
-
-            if err.status in [401, 403]:
-                raise ConfigEntryAuthFailed(
-                    f"Invalid credentials (HTTP {err.status})"
-                ) from err
-            if err.status >= 500:
-                raise ConfigEntryNotReady(
-                    f"Divera API unavailable (HTTP {err.status})"
-                ) from err
-            raise HomeAssistantError(
-                f"Divera API error (HTTP {err.status}): {err.message}"
-            ) from err
-
-        except TimeoutError as err:
-            if retry_count < self._max_retries:
-                _LOGGER.warning(
-                    "Divera API timeout, retrying... (%d/%d)",
-                    retry_count + 1,
-                    self._max_retries,
-                )
-                return await self._request(
-                    endpoint,
-                    method,
-                    params,
-                    payload,
-                    timeout,
-                    retry_count + 1,
-                )
-            raise ConfigEntryNotReady("Timeout connecting to Divera API") from err
-
-        except ClientError as err:
-            request_url = getattr(getattr(err, "request_info", None), "real_url", None)
-            url_for_log = (
-                self._redact_url(str(request_url), sensitive_keys)
-                if request_url
-                else "unknown"
             )
-            raise HomeAssistantError(
-                f"Failed to connect to Divera API at URL: {url_for_log}"
-            ) from err
+        assert isinstance(err, ClientResponseError)
+        if err.status in (401, 403):
+            return ConfigEntryAuthFailed(
+                translation_domain=DOMAIN,
+                translation_key="api_invalid_credentials",
+                translation_placeholders={"status": str(err.status)},
+            )
+        if err.status >= 500:
+            return ConfigEntryNotReady(
+                translation_domain=DOMAIN,
+                translation_key="api_unavailable",
+                translation_placeholders={"status": str(err.status)},
+            )
+        return HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="api_http_error",
+            translation_placeholders={
+                "status": str(err.status),
+                "message": err.message,
+            },
+        )
 
     # ========== Config Flow Helper Methods ==========
+
+    @staticmethod
+    def _describe_client_error(err: ClientError) -> str:
+        """Build a human-readable description of an aiohttp ClientError.
+
+        Extracts the structured information carried by aiohttp connection
+        errors (os_error with errno/strerror, affected host/port, SSL
+        certificate errors) and translates them into an actionable message.
+
+        Args:
+            err: The ClientError raised by aiohttp.
+
+        Returns:
+            Human-readable, multi-sentence description of the failure.
+        """
+        parts: list[str] = [str(err) or err.__class__.__name__]
+
+        os_error = getattr(err, "os_error", None)
+        if os_error is not None:
+            if os_error.errno is not None and os_error.strerror:
+                parts.append(f"OS error {os_error.errno}: {os_error.strerror}")
+            elif str(os_error) and str(os_error) not in parts[0]:
+                parts.append(str(os_error))
+
+        hint: str | None = None
+        if isinstance(err, ClientConnectorDNSError):
+            hint = (
+                "DNS resolution failed: Home Assistant could not resolve the "
+                "Divera hostname. Check your DNS server/internet connection."
+            )
+        elif isinstance(err, ClientConnectorCertificateError):
+            hint = (
+                "TLS certificate rejected: check the system clock and the "
+                "certificate chain of the Divera server (or of a filtering "
+                "proxy in between)."
+            )
+        elif isinstance(err, ClientSSLError):
+            hint = "TLS/SSL handshake failed. A filtering proxy may interfere."
+        elif isinstance(err, ServerDisconnectedError):
+            hint = (
+                "The Divera server closed the connection unexpectedly. "
+                "This is usually temporary; the request will be retried "
+                "automatically."
+            )
+        elif isinstance(err, ServerTimeoutError):
+            hint = "The connection to the Divera server timed out."
+        elif isinstance(err, ClientConnectionResetError):
+            hint = "The connection was reset during the request."
+        elif isinstance(err, ClientConnectorError):
+            hint = (
+                "The TCP connection could not be established. Check network "
+                "and firewall (outbound HTTPS to the Divera API host)."
+            )
+        if hint:
+            parts.append(hint)
+
+        return " ".join(parts)
 
     async def _request_pull_all(self, accesskey: str) -> dict[str, Any]:
         """Request pull_all data from Divera API for config flow.
